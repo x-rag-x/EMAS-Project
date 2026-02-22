@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Teacher | Sri Shakthi</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;--gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;--red:#ef4444;--td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;--br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);--shd:0 8px 32px rgba(0,0,0,0.08);--sb-w:240px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
+
+.sb{width:var(--sb-w);background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;transition:transform .28s ease;}
+.sb.sb-hidden{transform:translateX(-100%);}
+.sb-toggle-btn{position:fixed;top:14px;left:252px;z-index:300;width:32px;height:32px;border-radius:50%;background:var(--gD);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(27,94,32,.3);transition:left .28s ease;line-height:1;}
+.sb-toggle-btn.closed{left:12px;}
+.mc{transition:margin-left .28s ease;}
+.mc.sb-expanded{margin-left:0!important;}
+.sb-logo{padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brl);}
+.sb-logomark{width:36px;height:36px;border:2.5px solid var(--gD);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.sb-brand{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--td);line-height:1.3;}
+.sb-brand small{display:block;font-family:'Poppins',sans-serif;font-size:9.5px;font-weight:400;color:var(--tdi);}
+.si{display:flex;align-items:center;gap:10px;padding:11px 14px 11px 16px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:14.5px;font-weight:500;color:var(--tmu);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:all .18s;}
+.si:hover{background:var(--gLt);color:var(--gK);}
+.si.act{background:var(--gLt);color:var(--gD);font-weight:700;border-left:3px solid var(--gD);border-radius:0 10px 10px 0;padding-left:13px;}
+.si .ic{width:22px;text-align:center;font-size:17px;flex-shrink:0;}
+.ss{display:flex;align-items:center;gap:9px;padding:9px 14px 9px 50px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tdi);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:all .18s;}
+.ss:hover{background:var(--gLt);color:var(--gK);}
+.ss.act{color:var(--gD);font-weight:700;background:rgba(76,175,80,.06);}
+.navs{flex:1;overflow-y:auto;padding:8px 0;}
+.sb-bot{padding:12px;border-top:1px solid var(--brl);}
+.logoutbtn{width:100%;padding:9px;border:1.5px solid rgba(239,68,68,.22);border-radius:10px;background:rgba(239,68,68,.04);color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;}
+.logoutbtn:hover{background:rgba(239,68,68,.10);}
+.mc{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+#app{display:none;width:100%;}#app.vis{display:flex;}
+.topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.tbic{width:36px;height:36px;border-radius:50%;background:#fff;border:1.5px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;position:relative;}
+.tbic:hover{background:var(--gLt);}
+.tbbadge{position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.pchip{display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 12px 4px 4px;border-radius:28px;border:1.5px solid var(--br);background:#fff;}
+.pchip:hover{background:var(--gLt);border-color:var(--gLr);}
+.pav{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gD);}
+.pn{font-size:12px;font-weight:700;color:var(--td);}
+.pe{font-size:10px;color:var(--tmu);}
+.ndrop{position:absolute;top:46px;right:0;width:320px;background:#fff;border:1px solid var(--br);border-radius:16px;box-shadow:var(--shd);z-index:500;display:none;}
+.ndrop.open{display:block;}
+.ndh{padding:12px 16px;border-bottom:1px solid var(--brl);display:flex;align-items:center;justify-content:space-between;}
+.ndht{font-size:13px;font-weight:700;color:var(--td);}
+.ndhc{font-size:11px;color:var(--gK);cursor:pointer;font-weight:600;}
+.ndl{max-height:300px;overflow-y:auto;}
+.ndi{padding:10px 14px;border-bottom:1px solid var(--brl);cursor:pointer;display:flex;gap:9px;}
+.ndi:hover{background:var(--gP);}
+.ndi.unread{background:#f0fdf4;}
+.ndic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--gLt);}
+.pg{display:none;padding:22px 24px;animation:pi .28s ease;}
+.pg.act{display:block;}
+@keyframes pi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.phd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.pt{font-size:25px;font-weight:800;color:var(--td);letter-spacing:-.5px;}
+.ps{font-size:12px;color:var(--tmu);margin-top:3px;}
+.pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btnp{background:var(--gD);color:#fff;border:none;border-radius:22px;padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(27,94,32,.22);}
+.btnp:hover{background:var(--gM);}
+.btno{background:#fff;color:var(--td);border:1.5px solid #cdd8cd;border-radius:22px;padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:6px;}
+.btno:hover{border-color:var(--gLr);background:var(--gLt);}
+.bsm{padding:5px 12px!important;font-size:11.5px!important;border-radius:14px!important;}
+.card{background:#fff;border-radius:18px;border:1px solid var(--br);overflow:hidden;}
+.chd{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 11px;}
+.ct{font-size:13.5px;font-weight:700;color:var(--td);}
+.cb{padding:0 18px 16px;}
+.scard{background:#fff;border-radius:12px;border:1px solid var(--br);padding:12px 14px;display:flex;align-items:center;gap:11px;margin-bottom:8px;}
+.scard:hover{border-color:var(--gLr);}
+.scard.uc{border-left:3px solid var(--gB);}
+.scard.dn{opacity:.58;}
+.stb{background:var(--gLt);border:1.5px solid var(--gLr);border-radius:9px;padding:5px 8px;text-align:center;flex-shrink:0;min-width:52px;}
+.stb .t{font-size:10.5px;font-weight:700;color:var(--gK);}
+.stb .d{font-size:9px;color:var(--tdi);display:block;}
+.sinfo{flex:1;min-width:0;}
+.scls{font-size:12.5px;font-weight:700;color:var(--td);}
+.ssub{font-size:11px;color:var(--tmu);margin-top:1px;}
+.attbtn{background:var(--gD);color:#fff;border:none;border-radius:11px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;flex-shrink:0;}
+.attbtn:hover{background:var(--gM);}
+.donetag{background:var(--gLt);color:var(--gK);padding:4px 10px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.fwrap{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;padding:0 18px 12px;}
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fl{font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.7px;}
+.fc{background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:6px 9px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;}
+.fc:focus{border-color:var(--gM);}
+.bwrap{padding:12px 18px 6px;height:160px;}
+.bchart{display:flex;align-items:flex-end;gap:8px;height:145px;}
+.bcol{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.bout{width:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative;}
+.bpct{position:absolute;top:-17px;font-size:9px;font-weight:700;color:var(--gK);}
+.bpill{width:100%;max-width:28px;border-radius:26px 26px 6px 6px;}
+.bpill.hi{background:var(--gD);}
+.bpill.mi{background:var(--gL);}
+.bpill.lo{background:repeating-linear-gradient(135deg,#fecaca 0,#fecaca 4px,#fff5f5 4px,#fff5f5 10px);border:1.5px dashed #fca5a5;}
+.bday{font-size:9.5px;font-weight:600;color:var(--tmu);}
+.bday.td{color:var(--gK);font-weight:800;}
+.legwrap{display:flex;gap:12px;padding:0 18px 12px;flex-wrap:wrap;}
+.legi{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tmu);}
+.legd{width:9px;height:9px;border-radius:3px;}
+.csumwrap{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 14px;}
+.csbox{background:var(--gP);border-radius:9px;padding:9px 12px;text-align:center;}
+.csv{font-size:19px;font-weight:800;}
+.csl{font-size:9.5px;color:var(--tmu);text-transform:uppercase;margin-top:1px;}
+.rpill{padding:4px 12px;border-radius:18px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--br);color:var(--tmu);background:#fff;font-family:'Poppins',sans-serif;}
+.rpill.act{background:var(--gD);border-color:var(--gD);color:#fff;}
+.calw{padding:0 14px 14px;}
+.calh{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;}
+.calm{font-size:12.5px;font-weight:700;color:var(--td);}
+.caln{background:none;border:1.5px solid var(--br);border-radius:7px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:'Poppins',sans-serif;}
+.caln:hover{background:var(--gLt);}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.caldow{text-align:center;font-size:8.5px;font-weight:700;color:var(--tdi);padding:3px 0;text-transform:uppercase;}
+.cday{text-align:center;font-size:10.5px;font-weight:500;color:var(--tmu);padding:5px 1px;border-radius:6px;cursor:pointer;position:relative;}
+.cday:hover{background:var(--gLt);color:var(--gK);}
+.cday.today{background:var(--gD);color:#fff;font-weight:700;}
+.cday.sel{background:var(--gLt);color:var(--gD);font-weight:700;border:1.5px solid var(--gLr);}
+.cday.hc::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--gB);}
+.cday.today::after{background:rgba(255,255,255,.7);}
+.cday.emp{opacity:.2;cursor:default;}
+.cday.wknd{color:var(--tdi);}
+.uccard{background:linear-gradient(135deg,var(--gD),#2d6a30);border-radius:15px;padding:15px;color:#fff;position:relative;overflow:hidden;}
+.uccard::before{content:'';position:absolute;top:-22px;right:-22px;width:80px;height:80px;background:rgba(255,255,255,.06);border-radius:50%;}
+.uclbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;opacity:.7;margin-bottom:5px;}
+.uctime{font-size:18px;font-weight:800;}
+.ucsub{font-size:12px;font-weight:600;margin-top:2px;opacity:.9;}
+.uccls{font-size:10px;opacity:.65;margin-top:2px;}
+.uccnt{background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;display:inline-block;margin-top:8px;}
+.defrow{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(239,68,68,.04);border-radius:10px;margin-bottom:5px;border:1px solid rgba(239,68,68,.09);}
+.defav{width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,.14);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#dc2626;flex-shrink:0;}
+.asel{background:var(--gLt);border-radius:14px;padding:15px;border:1.5px solid var(--gLr);margin-bottom:14px;}
+.aselrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;}
+.ainfobar{background:var(--gP);border-radius:11px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border:1px solid var(--br);flex-wrap:wrap;gap:8px;}
+.asumwrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.asbox{background:#fff;border-radius:11px;padding:10px 12px;text-align:center;border:1px solid var(--br);}
+.asval{font-size:21px;font-weight:800;}
+.aslbl{font-size:9.5px;color:var(--tmu);text-transform:uppercase;}
+.atbl{width:100%;border-collapse:collapse;}
+.atbl th{text-align:left;padding:9px 12px;font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;background:var(--gP);border-bottom:1.5px solid var(--brl);}
+.atbl td{padding:9px 12px;border-bottom:1px solid var(--brl);font-size:12.5px;color:var(--td);}
+.atbl tr:last-child td{border-bottom:none;}
+.atbl tr.pr td{background:rgba(76,175,80,.04);}
+.atbl tr.ab td{background:rgba(239,68,68,.03);}
+.attog{display:flex;gap:4px;justify-content:center;}
+.abp{padding:4px 11px;border-radius:10px;border:1.5px solid rgba(76,175,80,.35);background:transparent;color:var(--gK);font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
+.abp.act{background:var(--gD);border-color:var(--gD);color:#fff;}
+.aba{padding:4px 11px;border-radius:10px;border:1.5px solid rgba(239,68,68,.3);background:transparent;color:#dc2626;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
+.aba.act{background:#dc2626;border-color:#dc2626;color:#fff;}
+.rtwrap{overflow-x:auto;padding:0 18px 18px;}
+.rtbl{width:100%;border-collapse:collapse;font-size:12px;}
+.rtbl th{text-align:left;padding:8px 10px;font-size:9.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid var(--brl);background:var(--gP);}
+.rtbl td{padding:9px 10px;border-bottom:1px solid var(--brl);color:var(--td);}
+.rtbl tr:hover td{background:var(--gP);}
+.rtbl tr:last-child td{border-bottom:none;}
+.pb{padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;}
+.ph{background:rgba(76,175,80,.12);color:var(--gK);}
+.pm{background:rgba(245,158,11,.1);color:#b45309;}
+.pl{background:rgba(239,68,68,.1);color:#dc2626;}
+.wdblk{background:#fff;border-radius:14px;border:1px solid var(--br);overflow:hidden;height:fit-content;}.wdblk.today-col{border:2px solid var(--gM);box-shadow:0 4px 16px rgba(27,94,32,.12);}
+.wdhd{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--brl);background:var(--gP);}
+.wdnm{font-size:13px;font-weight:700;color:var(--td);}
+.wddt{font-size:11px;color:var(--tdi);background:#fff;padding:2px 8px;border-radius:7px;border:1px solid var(--brl);}
+.wdtd{font-size:9px;font-weight:700;color:var(--gK);background:var(--gLt);padding:2px 8px;border-radius:10px;border:1px solid var(--gLr);}
+.wdslots{padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
+.slotc{background:var(--gP);border-radius:11px;border:1px solid var(--brl);padding:11px 13px;display:flex;align-items:center;gap:11px;}
+.slotc:hover{border-color:var(--gLr);background:var(--gLt);}
+.slott{font-size:11px;font-weight:700;color:var(--gK);background:#fff;padding:4px 8px;border-radius:8px;border:1.5px solid var(--gLr);text-align:center;min-width:70px;flex-shrink:0;line-height:1.4;}
+.sloti{flex:1;min-width:0;}
+.slotcl{font-size:12.5px;font-weight:700;color:var(--td);}
+.slotsb{font-size:11px;color:var(--tmu);}
+.slota{display:flex;gap:5px;flex-shrink:0;align-items:center;}
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.mbg.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:22px;width:500px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,.2);transform:scale(.95);transition:transform .22s;}
+.mbg.open .modal{transform:scale(1);}
+.msm{width:420px;}
+.mhd{padding:18px 22px;border-bottom:1px solid var(--brl);display:flex;align-items:flex-start;justify-content:space-between;}
+.mtit{font-size:16px;font-weight:700;color:var(--td);}
+.msub{font-size:11px;color:var(--tmu);margin-top:2px;}
+.mclose{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:var(--tmu);flex-shrink:0;margin-left:8px;border:none;background:none;}
+.mclose:hover{background:var(--gP);}
+.mbody{padding:20px 22px;overflow-y:auto;flex:1;}
+.mfoot{padding:14px 22px;border-top:1px solid var(--brl);display:flex;justify-content:flex-end;gap:8px;}
+.mfp{background:var(--gD);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+.mfp:hover{background:var(--gM);}
+.mfg{background:var(--gP);color:var(--tmu);border:1px solid var(--br);border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+.flbl{font-size:10.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
+.finp{background:var(--gP);border:1.5px solid var(--br);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;}
+.finp:focus{border-color:var(--gM);}
+textarea.finp{resize:vertical;min-height:80px;}
+.fr{display:grid;gap:12px;margin-bottom:14px;}
+.fr2{grid-template-columns:1fr 1fr;}
+.fr3{grid-template-columns:1fr 1fr 1fr;}
+.prbav{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;margin:0 auto 12px;}
+.pdrcard{background:var(--gP);border-radius:12px;padding:14px;border:1px solid var(--brl);margin-bottom:14px;}
+.pdrrow{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--brl);}
+.pdrrow:last-child{border-bottom:none;}
+.pdric{width:30px;height:30px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--br);}
+.pdrlbl{font-size:9.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;}
+.pdrval{font-size:12.5px;font-weight:600;color:var(--td);margin-top:1px;}
+.gcard{background:#fff;border-radius:13px;border:1px solid var(--br);padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;}
+.gic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.gic.pend{background:rgba(245,158,11,.12);}
+.gic.res{background:rgba(76,175,80,.12);}
+.spill{padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;}
+.spend{background:rgba(245,158,11,.1);color:#b45309;}
+.sres{background:rgba(76,175,80,.1);color:var(--gK);}
+.bge{padding:2px 9px;border-radius:10px;font-size:10px;font-weight:600;display:inline-block;background:rgba(245,158,11,.1);color:#b45309;}
+.toast{position:fixed;bottom:24px;right:24px;background:#fff;border:1px solid var(--br);border-left:4px solid var(--gM);border-radius:12px;padding:12px 18px;font-size:12.5px;color:var(--td);box-shadow:var(--shd);z-index:9999;transform:translateY(70px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);max-width:320px;}
+.toast.show{transform:none;opacity:1;}
+.est{text-align:center;padding:28px 16px;color:var(--tdi);}
+.est .ei{font-size:32px;display:block;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<!-- APP -->
+<div id="app">
+<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">&#9776;</button>
+<nav class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-brand">Sri Shakthi EAMS<small>Teacher Portal</small></div>
+  </div>
+  <div class="navs">
+    <button class="si act" id="sn-dash" onclick="nav('dash')"><span class="ic">&#128202;</span>Dashboard</button>
+    <button class="si" id="sn-sched" onclick="nav('sched')"><span class="ic">&#128197;</span>My Schedule</button>
+    <button class="si" id="sn-att" onclick="nav('att')"><span class="ic">&#9989;</span>Take Attendance</button>
+    <button class="si" style="cursor:default;color:var(--td);font-weight:600;pointer-events:none;"><span class="ic">&#128200;</span>Report</button>
+    <div style="overflow:hidden;">
+      <button class="ss" id="sn-stu" onclick="nav('rep-stu')">&#128101; Student List</button>
+      <button class="ss" id="sn-ratt" onclick="nav('rep-att')">&#128203; Attendance Record</button>
+      <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
+    </div>
+    <button class="si" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
+  </div>
+  <div class="sb-bot">
+    <button class="logoutbtn" onclick="doLogout()">&#128682; Logout</button>
+  </div>
+</nav>
+
+<div class="mc" id="maincontent">
+<!-- TOPBAR -->
+<div class="topbar">
+  <div><div style="font-size:11px;color:var(--tmu);background:var(--gLt);padding:3px 10px;border-radius:11px;border:1px solid var(--br);" id="datelbl"></div></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tbic" style="position:relative;" onclick="togNotif()">&#128276;
+      <div class="tbbadge" id="nbadge">0</div>
+      <div class="ndrop" id="ndrop">
+        <div class="ndh"><div class="ndht">Notifications</div><div class="ndhc" onclick="clearNotifs(event)">Mark all read</div></div>
+        <div class="ndl" id="ndlist"></div>
+      </div>
+    </div>
+    <div class="pchip" onclick="nav('profile')">
+      <div class="pav" id="tpav">T</div>
+      <div><div class="pn" id="tpname">Teacher</div><div class="pe" id="tpdept">Sri Shakthi</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="pg act" id="pg-dash">
+  <div class="phd">
+    <div><div class="pt" id="dashtit">Dashboard</div><div class="ps" id="dashsub">Here's your day at a glance.</div></div>
+    <div class="pa">
+      <button class="btnp" onclick="nav('att')">&#9989; Take Attendance</button>
+      <button class="btno" onclick="nav('sched')">&#128197; My Schedule</button>
+    </div>
+  </div>
+  <!-- ROW 1: Today Schedule | Calendar -->
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:14px;">
+    <div class="card">
+      <div class="chd"><div class="ct">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:11px;color:var(--tdi);font-weight:600;"></div></div>
+      <div class="cb" style="padding-top:6px;max-height:320px;overflow-y:auto;" id="todaysched"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes today.</p></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card" style="flex:1;">
+        <div class="chd" style="padding-bottom:6px;"><div class="ct">&#128197; Calendar</div></div>
+        <div class="calw">
+          <div class="calh"><button class="caln" onclick="calNav(-1)">&#8249;</button><div class="calm" id="calmth"></div><button class="caln" onclick="calNav(1)">&#8250;</button></div>
+          <div class="calg" id="calgrid"></div>
+        </div>
+      </div>
+      <div id="ucwrap"><div class="uccard"><div class="uclbl">&#8987; Upcoming Class</div><div class="uctime">—</div><div class="ucsub">—</div></div></div>
+    </div>
+  </div>
+  <!-- ROW 2: Attendance Overview | Defaulters -->
+  <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;">
+    <div class="card">
+      <div class="chd"><div class="ct">&#128202; Attendance Overview</div></div>
+      <div class="fwrap" style="padding-top:0;">
+        <div class="fg"><label class="fl">Class</label><select class="fc" id="fc" onchange="renderChart()"><option value="">All</option></select></div>
+        <div class="fg"><label class="fl">Subject</label><select class="fc" id="fs" onchange="renderChart()"><option value="">All</option></select></div>
+        <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="ff" onchange="renderChart()"></div>
+        <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ft" onchange="renderChart()"></div>
+      </div>
+      <div style="display:flex;gap:5px;padding:0 18px 10px;flex-wrap:wrap;">
+        <button class="rpill act" id="rpw" onclick="setRange('week')">This Week</button>
+        <button class="rpill" id="rplw" onclick="setRange('lweek')">Last Week</button>
+        <button class="rpill" id="rpm" onclick="setRange('month')">This Month</button>
+      </div>
+      <div class="bwrap"><div class="bchart" id="bchart"></div></div>
+      <div class="legwrap">
+        <div class="legi"><div class="legd" style="background:var(--gD);"></div>High (&#8805;75%)</div>
+        <div class="legi"><div class="legd" style="background:var(--gL);"></div>Moderate</div>
+        <div class="legi"><div class="legd" style="background:repeating-linear-gradient(135deg,#fecaca 0,#fecaca 3px,#fff5f5 3px,#fff5f5 7px);border:1px solid #fca5a5;"></div>Low</div>
+      </div>
+      <div class="csumwrap">
+        <div class="csbox"><div class="csv" id="csv-p" style="color:var(--gD);">—</div><div class="csl">Avg Present</div></div>
+        <div class="csbox"><div class="csv" id="csv-a" style="color:#ef4444;">—</div><div class="csl">Avg Absent</div></div>
+        <div class="csbox"><div class="csv" id="csv-pct" style="color:var(--gK);">—%</div><div class="csl">Avg %</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chd"><div class="ct">&#128308; Defaulters</div><span id="defcnt" style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#dc2626;padding:2px 8px;border-radius:10px;">0</span></div>
+      <div class="cb" style="padding-top:0;max-height:360px;overflow-y:auto;" id="defmini"><div class="est"><span class="ei">&#127881;</span><p style="font-size:12px;">No defaulters!</p></div></div>
+      <div style="padding:10px 18px;border-top:1px solid var(--brl);"><button class="btno bsm" style="width:100%;justify-content:center;" onclick="nav('rep-def')">View All &#8594;</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- MY SCHEDULE -->
+<div class="pg" id="pg-sched">
+  <div class="phd">
+    <div><div class="pt">&#128197; My Schedule</div><div class="ps">Manage your weekly timetable — add, edit or remove slots.</div></div>
+    <div class="pa"><button class="btnp" onclick="openAddSlot()">&#65291; Add Slot</button></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+    <button class="btno bsm" onclick="schedNav(-1)">&#8249; Prev</button>
+    <div style="font-size:13px;font-weight:700;color:var(--td);" id="weeklbl">—</div>
+    <button class="btno bsm" onclick="schedNav(1)">Next &#8250;</button>
+    <button class="btnp bsm" onclick="schedOff=0;renderSchedPage()">Today</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-height:520px;" id="schedbyday"></div>
+</div>
+
+<!-- TAKE ATTENDANCE -->
+<div class="pg" id="pg-att">
+  <div class="phd"><div><div class="pt">&#9989; Take Attendance</div><div class="ps">Select class and subject to mark attendance.</div></div></div>
+  <div class="asel">
+    <div class="aselrow">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="attcls" onchange="attLoadSubs()"><option value="">— Select —</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="attsub"><option value="">— Select —</option></select></div>
+      <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="attdate"></div>
+      <button class="btnp" onclick="loadAttSheet()">Load Students</button>
+    </div>
+  </div>
+  <div id="attsheet" style="display:none;">
+    <div class="ainfobar">
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Class</div><div style="font-size:12.5px;font-weight:700;" id="ainfc">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Subject</div><div style="font-size:12.5px;font-weight:700;" id="ainfs">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Date</div><div style="font-size:12.5px;font-weight:700;" id="ainfd">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Students</div><div style="font-size:12.5px;font-weight:700;" id="ainft">—</div></div>
+    </div>
+    <div class="asumwrap">
+      <div class="asbox"><div class="asval" id="stotal">0</div><div class="aslbl">Total</div></div>
+      <div class="asbox"><div class="asval" id="spres" style="color:var(--gD);">0</div><div class="aslbl">Present</div></div>
+      <div class="asbox"><div class="asval" id="sabs" style="color:#ef4444;">0</div><div class="aslbl">Absent</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btnp bsm" onclick="markAll('present')">&#9989; Mark All Present</button>
+      <button class="btno bsm" onclick="markAll('absent')">&#10060; Mark All Absent</button>
+      <div style="flex:1;"></div>
+      <button class="btnp" onclick="submitAtt()">&#128190; Save Attendance</button>
+    </div>
+    <div class="card" style="overflow:auto;">
+      <table class="atbl">
+        <thead><tr><th style="width:50px;">S.No</th><th>Reg No</th><th>Student Name</th><th style="text-align:center;">Present / Absent</th></tr></thead>
+        <tbody id="atttbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE RECORD -->
+<div class="pg" id="pg-rep-att">
+  <div class="phd">
+    <div><div class="pt">&#128203; Attendance Record</div><div class="ps">Student-wise attendance for selected date range.</div></div>
+    <button class="btno" onclick="exportAttCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="rfc" onchange="renderAttRec()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="rfs" onchange="renderAttRec()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="rff" onchange="renderAttRec()"></div>
+      <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="rft" onchange="renderAttRec()"></div>
+    </div>
+  </div>
+  <div class="card"><div class="rtwrap">
+    <table class="rtbl"><thead><tr><th>#</th><th>Student Name</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Total Hours</th><th>Present Hours</th><th>Attendance %</th></tr></thead>
+    <tbody id="attrec"></tbody></table>
+  </div></div>
+</div>
+
+<!-- DEFAULTERS -->
+<div class="pg" id="pg-rep-def">
+  <div class="phd">
+    <div><div class="pt">&#128308; Defaulters List</div><div class="ps">Students below attendance threshold.</div></div>
+    <button class="btno" onclick="exportDefCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr 1fr;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="dfc" onchange="renderDefs()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="dfs" onchange="renderDefs()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Threshold</label><select class="fc" id="dfth" onchange="renderDefs()"><option value="75">Below 75%</option><option value="50">Below 50%</option><option value="85">Below 85%</option></select></div>
+    </div>
+  </div>
+  <div class="card"><div class="rtwrap">
+    <table class="rtbl"><thead><tr><th>#</th><th>Student</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
+    <tbody id="deftbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- STUDENT LIST -->
+<div class="pg" id="pg-rep-stu">
+  <div class="phd">
+    <div><div class="pt">&#128101; Student List</div><div class="ps">Students in your assigned classes.</div></div>
+    <button class="btno" onclick="exportStuCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="slc" onchange="renderStuList()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Search</label><input type="text" class="fc" id="slq" placeholder="Name or Reg No…" oninput="renderStuList()"></div>
+    </div>
+  </div>
+  <div class="card"><div class="rtwrap">
+    <table class="rtbl"><thead><tr><th>#</th><th>Name</th><th>Reg No</th><th>Class</th><th>Section</th><th>Department</th></tr></thead>
+    <tbody id="stutbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- GRIEVANCE -->
+<div class="pg" id="pg-griev">
+  <div class="phd">
+    <div><div class="pt">&#128225; Grievance</div><div class="ps">Raise a complaint — admin will be notified immediately.</div></div>
+    <button class="btnp" onclick="openModal('mgriev')">&#65291; New Grievance</button>
+  </div>
+  <div id="grievlist"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div></div>
+</div>
+
+<!-- PROFILE -->
+<div class="pg" id="pg-profile">
+  <div class="phd"><div><div class="pt">&#128100; My Profile</div><div class="ps">View your details and update your password.</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;">
+    <div class="card">
+      <div class="chd"><div class="ct">Personal Details</div></div>
+      <div class="cb">
+        <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid var(--brl);margin-bottom:16px;">
+          <div class="prbav" id="profav">T</div>
+          <div style="font-size:18px;font-weight:800;color:var(--td);" id="profname">—</div>
+          <div style="margin-top:6px;"><span style="background:var(--gLt);color:var(--gK);padding:2px 12px;border-radius:10px;font-size:11px;font-weight:700;">Faculty</span></div>
+        </div>
+        <div class="pdrcard">
+          <div class="pdrrow"><div class="pdric">&#127891;</div><div><div class="pdrlbl">Designation</div><div class="pdrval" id="pdrdesig">—</div></div></div>
+          <div class="pdrrow"><div class="pdric">&#129514;</div><div><div class="pdrlbl">Employee ID</div><div class="pdrval" id="pdremp">—</div></div></div>
+          <div class="pdrrow"><div class="pdric">&#127963;</div><div><div class="pdrlbl">Department</div><div class="pdrval" id="pdrdept">—</div></div></div>
+          <div class="pdrrow"><div class="pdric">&#128218;</div><div><div class="pdrlbl">Assigned Classes</div><div class="pdrval" id="pdrcls">—</div></div></div>
+          <div class="pdrrow"><div class="pdric">&#128100;</div><div><div class="pdrlbl">Username</div><div class="pdrval" id="pdrusr">—</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chd"><div class="ct">&#128274; Change Password</div></div>
+      <div class="cb">
+        <div style="margin-bottom:14px;"><label class="flbl">Current Password</label><input type="password" class="finp" id="pwcur" placeholder="Current password"></div>
+        <div style="margin-bottom:14px;"><label class="flbl">New Password</label><input type="password" class="finp" id="pwnew" placeholder="Min 6 characters"></div>
+        <div style="margin-bottom:18px;"><label class="flbl">Confirm New Password</label><input type="password" class="finp" id="pwconf" placeholder="Re-enter new password"></div>
+        <div id="pwerr" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:9px 13px;font-size:12px;color:#dc2626;margin-bottom:12px;"></div>
+        <button class="mfp" style="width:100%;" onclick="changePw()">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></div>
+
+<!-- MODAL: Schedule Slot -->
+<div class="mbg" id="msched">
+  <div class="modal msm">
+    <div class="mhd"><div><div class="mtit" id="mschedtit">&#10133; Add Schedule Slot</div><div class="msub">Add a slot to your weekly timetable.</div></div><button class="mclose" onclick="closeModal('msched')">&#10005;</button></div>
+    <div class="mbody">
+      <input type="hidden" id="schedeid">
+      <div class="fr fr2">
+        <div><label class="flbl">Class</label><select class="finp" id="schedcls" onchange="populateSchedSubs()"><option value="">— Select —</option></select></div>
+        <div><label class="flbl">Subject</label><select class="finp" id="schedsub"><option value="">— Select —</option></select></div>
+      </div>
+      <div class="fr fr3">
+        <div><label class="flbl">Day</label><select class="finp" id="schedday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option></select></div>
+        <div><label class="flbl">Start</label><input type="time" class="finp" id="schedst" value="08:00"></div>
+        <div><label class="flbl">End</label><input type="time" class="finp" id="schedet" value="09:00"></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="mfg" onclick="closeModal('msched')">Cancel</button><button class="mfp" onclick="saveSlot()">Save Slot</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Grievance -->
+<div class="mbg" id="mgriev">
+  <div class="modal msm">
+    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">&#10005;</button></div>
+    <div class="mbody">
+      <div style="margin-bottom:14px;"><label class="flbl">Title / Subject</label><input type="text" class="finp" id="gsubj" placeholder="Brief title of the issue"></div>
+      <div style="margin-bottom:14px;"><label class="flbl">Category</label><select class="finp" id="gcat"><option>Timetable Issue</option><option>Attendance Correction</option><option>Facilities / Infrastructure</option><option>Student Behaviour</option><option>Administrative</option><option>Other</option></select></div>
+      <div><label class="flbl">Details</label><textarea class="finp" id="gdetail" rows="4" placeholder="Describe the issue in detail…"></textarea></div>
+    </div>
+    <div class="mfoot"><button class="mfg" onclick="closeModal('mgriev')">Cancel</button><button class="mfp" onclick="submitGriev()">&#128228; Submit</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const DB={get(c){try{return JSON.parse(localStorage.getItem('ss3_'+c)||'[]')}catch{return[]}},set(c,d){localStorage.setItem('ss3_'+c,JSON.stringify(d))},insert(c,doc){const d=DB.get(c);doc._id='_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);d.push(doc);DB.set(c,d);return doc},update(c,id,u){const d=DB.get(c),i=d.findIndex(x=>x._id===id);if(i>=0){d[i]={...d[i],...u};DB.set(c,d);return d[i];}return null},delete(c,id){DB.set(c,DB.get(c).filter(x=>x._id!==id))},one(c,q={}){return DB.get(c).find(doc=>Object.keys(q).every(k=>doc[k]===q[k]))||null}};
+const DW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function toISO(){return new Date().toISOString().split('T')[0];}
+function fmtD(iso){return new Date(iso+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtS(iso){return new Date(iso+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'});}
+function tAgo(iso){const d=(Date.now()-new Date(iso))/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
+
+function ensureDB(){
+  if(!DB.get('users').length){DB.insert('users',{name:'Administrator',username:'admin',password:'admin123',role:'admin'});DB.insert('users',{name:'Default Teacher',username:'teacher',password:'teacher',role:'teacher',empId:'EMP001',dept:'Computer Science Engineering',desig:'Assistant Professor'});}
+  if(!DB.get('depts').length){[{name:'Computer Science Engineering',code:'CSE'},{name:'Information Technology',code:'IT'},{name:'Electronics & Communication',code:'ECE'}].forEach(d=>DB.insert('depts',d));const deps=DB.get('depts');const sems=['I','II','III','IV','V','VI'];const yrs=['I Year','I Year','II Year','II Year','III Year','III Year'];deps.slice(0,2).forEach(dept=>sems.forEach((sem,i)=>DB.insert('classes',{deptId:dept._id,deptName:dept.name,deptCode:dept.code,year:yrs[i],sem,section:'A',name:dept.code+'-'+sem+'-A'})));const cse=deps[0];[{name:'Engineering Mathematics',code:'MA101'},{name:'Programming Fundamentals',code:'CS101'},{name:'Data Structures',code:'CS201'},{name:'Operating Systems',code:'CS301'},{name:'DBMS',code:'CS302'}].forEach(s=>DB.insert('subjects',{...s,deptId:cse._id,deptName:cse.name,deptCode:cse.code}));}
+  if(!DB.get('students').length){const fn=['Aarav','Priya','Karthik','Sneha','Rajesh','Divya','Arun','Meena','Vijay','Lakshmi','Suresh','Anitha','Deepak','Kavitha','Ravi','Nithya','Ganesh','Pooja','Santhosh','Revathi'];const ln=['Kumar','Sharma','Raj','Devi','Krishnan','Nair','Murugan','Rajan'];const cls=DB.get('classes').find(c=>c.sem==='I');if(cls)for(let i=0;i<30;i++)DB.insert('students',{name:`${fn[i%fn.length]} ${ln[Math.floor(i/10)%ln.length]}`,regNo:`${cls.deptCode}25${String(i+1).padStart(3,'0')}`,deptId:cls.deptId,classId:cls._id,className:cls.name,section:'A'});}
+  if(!DB.get('assignments').length){const t=DB.one('users',{role:'teacher'});const classes=DB.get('classes');const subs=DB.get('subjects');if(t&&classes.length&&subs.length)classes.slice(0,3).forEach((c,i)=>{const s=subs[i%subs.length];DB.insert('assignments',{classId:c._id,className:c.name,subjectId:s._id,subjectName:s.name,teacherId:t._id,teacherName:t.name,deptName:c.deptName,deptCode:c.deptCode});});}
+  if(!DB.get('timetable').length){const t=DB.one('users',{role:'teacher'});if(t){const asgns=DB.get('assignments').filter(a=>a.teacherId===t._id);const slots=[{day:'Mon',start:'08:00',end:'09:00'},{day:'Mon',start:'11:00',end:'12:00'},{day:'Tue',start:'09:00',end:'10:00'},{day:'Wed',start:'10:00',end:'11:00'},{day:'Thu',start:'08:00',end:'09:00'},{day:'Thu',start:'11:00',end:'12:00'},{day:'Fri',start:'09:00',end:'10:00'}];asgns.forEach((a,i)=>{if(slots[i*2])DB.insert('timetable',{...slots[i*2],classId:a.classId,className:a.className,subjectId:a.subjectId,subjectName:a.subjectName,teacherId:t._id,teacherName:t.name});if(slots[i*2+1])DB.insert('timetable',{...slots[i*2+1],classId:a.classId,className:a.className,subjectId:a.subjectId,subjectName:a.subjectName,teacherId:t._id,teacherName:t.name});});}}
+  if(!DB.get('attendance').length){const t=DB.one('users',{role:'teacher'});const students=DB.get('students');const asgn=DB.get('assignments').find(a=>a.teacherId===t?._id);if(asgn&&students.length){const today=new Date();for(let d=4;d>=1;d--){const dt=new Date(today);dt.setDate(today.getDate()-d);if([0,6].includes(dt.getDay()))continue;const iso=dt.toISOString().split('T')[0];students.forEach(s=>DB.insert('attendance',{studentId:s._id,studentName:s.name,classId:asgn.classId,className:asgn.className,subjectId:asgn.subjectId,subjectName:asgn.subjectName,teacherId:t._id,teacherName:t.name,date:iso,status:Math.random()>0.2?'present':'absent',deptName:asgn.deptName}));}}}
+  if(!DB.get('teacher-notifications').length){DB.insert('teacher-notifications',{type:'info',from:'Admin',message:'New academic year timetable finalized. Please verify your schedule.',time:new Date(Date.now()-3600000).toISOString(),read:false});DB.insert('teacher-notifications',{type:'alert',from:'System',message:'Attendance for CSE-I-A has not been marked today.',time:new Date(Date.now()-7200000).toISOString(),read:false});}
+}
+
+let CU=null;
+function doLogout(){CU=null;sessionStorage.removeItem('eams_user');window.location.href='signin.html';}
+function toggleSidebar(){const sb=document.getElementById('sidebar');const mc=document.getElementById('maincontent');const btn=document.getElementById('sbtoggle');const hidden=sb.classList.toggle('sb-hidden');mc.classList.toggle('sb-expanded',hidden);btn.classList.toggle('closed',hidden);btn.innerHTML=hidden?'&#9776;':'&#10005;';}
+function bootApp(){document.getElementById('app').classList.add('vis');document.getElementById('tpav').textContent=CU.name[0];document.getElementById('tpname').textContent=CU.name;document.getElementById('tpdept').textContent=CU.dept||'Sri Shakthi';document.getElementById('datelbl').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});populateAllFilters();initCal();renderNotifs();nav('dash');}
+
+function nav(name){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('act'));document.getElementById('pg-'+name)?.classList.add('act');
+  document.querySelectorAll('.si,.ss').forEach(i=>i.classList.remove('act'));
+  const m={dash:'sn-dash',sched:'sn-sched',att:'sn-att','rep-att':'sn-ratt','rep-def':'sn-rdef','rep-stu':'sn-stu',griev:'sn-griev'};
+  if(m[name])document.getElementById(m[name])?.classList.add('act');
+  ({dash:initDash,sched:renderSchedPage,att:initAttPage,'rep-att':()=>{populateRepFilters();renderAttRec();},'rep-def':()=>{populateDefFilters();renderDefs();},'rep-stu':()=>{populateStuFilters();renderStuList();},griev:renderGrievs,profile:initProfile})[name]?.();
+}
+
+function myAsgns(){return DB.get('assignments').filter(a=>a.teacherId===CU._id);}
+function myClasses(){return[...new Map(myAsgns().map(a=>[a.classId,{id:a.classId,name:a.className}])).values()];}
+function mySubs(){return[...new Map(myAsgns().map(a=>[a.subjectId,{id:a.subjectId,name:a.subjectName}])).values()];}
+function copts(all){return(all?'<option value="">All</option>':'<option value="">— Select —</option>')+myClasses().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
+function sopts(all){return(all?'<option value="">All</option>':'<option value="">— Select —</option>')+mySubs().map(s=>`<option value="${s.id}">${s.name}</option>`).join('');}
+function populateAllFilters(){['fc','rfc','dfc','slc'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=copts(true);});['fs','rfs','dfs'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=sopts(true);});const ac=document.getElementById('attcls');if(ac)ac.innerHTML=copts(false);const td=toISO(),wa=new Date();wa.setDate(wa.getDate()-7);const ws=wa.toISOString().split('T')[0];['ff','rff'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=ws;});['ft','rft'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=td;});const ad=document.getElementById('attdate');if(ad&&!ad.value)ad.value=toISO();document.getElementById('schedcls').innerHTML=copts(false);}
+function populateRepFilters(){document.getElementById('rfc').innerHTML=copts(true);document.getElementById('rfs').innerHTML=sopts(true);}
+function populateDefFilters(){document.getElementById('dfc').innerHTML=copts(true);document.getElementById('dfs').innerHTML=sopts(true);}
+function populateStuFilters(){document.getElementById('slc').innerHTML=copts(true);}
+
+// DASHBOARD
+function initDash(){document.getElementById('dashsub').textContent=`Welcome back, ${CU.name.split(' ')[0]}! Here's your day at a glance.`;document.getElementById('todaylbl').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});renderTodaySched(toISO());renderUpcoming();renderDefMini();renderChart();renderCal();}
+
+function renderTodaySched(dateISO){
+  const dow=new Date(dateISO+'T00:00:00').getDay();const dn=DW[dow];
+  const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id&&t.day===dn).sort((a,b)=>a.start.localeCompare(b.start));
+  const att=DB.get('attendance');const isT=dateISO===toISO();
+  const lbl=document.getElementById('todaylbl');if(lbl)lbl.textContent=new Date(dateISO+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+  const c=document.getElementById('todaysched');
+  if(!tt.length){c.innerHTML='<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes on this day.</p></div>';return;}
+  c.innerHTML=tt.map(t=>{const marked=att.some(a=>a.classId===t.classId&&a.subjectId===t.subjectId&&a.date===dateISO);return`<div class="scard ${isT&&!marked?'uc':marked?'dn':''}"><div class="stb"><div class="t">${t.start}</div><span class="d">–${t.end}</span></div><div class="sinfo"><div class="scls">${t.className}</div><div class="ssub">${t.subjectName}</div></div>${marked?'<div class="donetag">&#9989; Done</div>':isT?`<button class="attbtn" onclick="navAtt('${t.classId}','${t.subjectId}')">Take Att.</button>`:'<div style="font-size:10px;color:var(--tdi);">–</div>'}</div>`;}).join('');
+}
+
+function navAtt(ci,si){nav('att');setTimeout(()=>{const cl=document.getElementById('attcls');if(cl){cl.value=ci;attLoadSubs();}setTimeout(()=>{const sb=document.getElementById('attsub');if(sb)sb.value=si;},150);},200);}
+
+function renderUpcoming(){const now=new Date();const dn=DW[now.getDay()];const nm=now.getHours()*60+now.getMinutes();const next=DB.get('timetable').filter(t=>t.teacherId===CU._id&&t.day===dn).filter(t=>{const[h,m]=t.start.split(':');return parseInt(h)*60+parseInt(m)>nm;}).sort((a,b)=>a.start.localeCompare(b.start))[0];const w=document.getElementById('ucwrap');if(!next){w.innerHTML='<div style="background:var(--gP);border-radius:15px;padding:18px;text-align:center;border:1.5px dashed var(--gLr);"><div style="font-size:28px;margin-bottom:5px;">&#127769;</div><div style="font-size:12px;color:var(--tdi);font-weight:600;">No more classes today</div></div>';return;}const[h,m]=next.start.split(':');const mins=parseInt(h)*60+parseInt(m)-nm;w.innerHTML=`<div class="uccard"><div class="uclbl">&#8987; Upcoming Class</div><div class="uctime">${next.start} – ${next.end}</div><div class="ucsub">${next.subjectName}</div><div class="uccls">${next.className}</div><div class="uccnt">In ${mins} min</div></div>`;}
+
+function renderDefMini(){const att=DB.get('attendance');const students=DB.get('students');const defs=[];myAsgns().forEach(a=>{students.filter(s=>s.classId===a.classId).forEach(s=>{const sa=att.filter(x=>x.studentId===s._id&&x.subjectId===a.subjectId&&x.teacherId===CU._id);if(!sa.length)return;const pct=Math.round(sa.filter(x=>x.status==='present').length/sa.length*100);if(pct<75)defs.push({...s,pct,subjectName:a.subjectName});});});document.getElementById('defcnt').textContent=defs.length;const c=document.getElementById('defmini');if(!defs.length){c.innerHTML='<div class="est"><span class="ei">&#127881;</span><p style="font-size:12px;">No defaulters!</p></div>';return;}c.innerHTML=defs.slice(0,5).map(d=>`<div class="defrow"><div class="defav">${d.name[0]}</div><div style="flex:1;min-width:0;"><div style="font-size:11.5px;font-weight:700;color:var(--td);">${d.name}</div><div style="font-size:10px;color:var(--tdi);">${d.regNo} · ${d.subjectName}</div></div><div style="font-size:13px;font-weight:800;color:#dc2626;">${d.pct}%</div></div>`).join('');}
+
+// CHART
+function setRange(r){['rpw','rplw','rpm'].forEach(id=>document.getElementById(id)?.classList.remove('act'));const t=new Date();let fr,to=t.toISOString().split('T')[0];if(r==='week'){document.getElementById('rpw').classList.add('act');const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));fr=d.toISOString().split('T')[0];}else if(r==='lweek'){document.getElementById('rplw').classList.add('act');const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7)-7);fr=d.toISOString().split('T')[0];const e=new Date(d);e.setDate(d.getDate()+4);to=e.toISOString().split('T')[0];}else{document.getElementById('rpm').classList.add('act');fr=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;}document.getElementById('ff').value=fr;document.getElementById('ft').value=to;renderChart();}
+
+function renderChart(){const ci=document.getElementById('fc')?.value||'',si=document.getElementById('fs')?.value||'',fr=document.getElementById('ff')?.value||'',to=document.getElementById('ft')?.value||'';let att=DB.get('attendance').filter(a=>a.teacherId===CU._id);if(ci)att=att.filter(a=>a.classId===ci);if(si)att=att.filter(a=>a.subjectId===si);if(fr)att=att.filter(a=>a.date>=fr);if(to)att=att.filter(a=>a.date<=to);const byD={};att.forEach(a=>{if(!byD[a.date])byD[a.date]={present:0,absent:0};byD[a.date][a.status==='present'?'present':'absent']++;});const dates=Object.keys(byD).sort().slice(-14);const chart=document.getElementById('bchart');if(!dates.length){chart.innerHTML='<div style="text-align:center;width:100%;color:var(--tdi);font-size:12px;align-self:center;">No data for selected filters.</div>';['csv-p','csv-a'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('csv-pct').textContent='—%';return;}let tp=0,ta=0;chart.innerHTML=dates.map(d=>{const v=byD[d];const tot=v.present+v.absent;const pct=tot?Math.round(v.present/tot*100):0;tp+=v.present;ta+=v.absent;const cls=pct>=75?'hi':pct>=50?'mi':'lo';const dy=new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short'}).slice(0,2);return`<div class="bcol"><div class="bout"><span class="bpct">${pct}%</span><div class="bpill ${cls}" style="height:${Math.max(6,pct)}%;min-height:6px;" title="${d}: ${v.present}P/${v.absent}A"></div></div><div class="bday ${d===toISO()?'td':''}">${dy}</div></div>`;}).join('');const tot=tp+ta;document.getElementById('csv-p').textContent=tp;document.getElementById('csv-a').textContent=ta;document.getElementById('csv-pct').textContent=(tot?Math.round(tp/tot*100):0)+'%';}
+
+// CALENDAR
+let calY=new Date().getFullYear(),calM=new Date().getMonth(),selDate=toISO();
+function initCal(){calY=new Date().getFullYear();calM=new Date().getMonth();renderCal();}
+function calNav(dir){calM+=dir;if(calM>11){calM=0;calY++;}else if(calM<0){calM=11;calY--;}renderCal();}
+function renderCal(){const mns=['January','February','March','April','May','June','July','August','September','October','November','December'];document.getElementById('calmth').textContent=`${mns[calM]} ${calY}`;const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id);const fd=new Date(calY,calM,1).getDay();const dim=new Date(calY,calM+1,0).getDate();const td=toISO();let html=['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>`<div class="caldow">${d}</div>`).join('');for(let i=0;i<(fd+6)%7;i++)html+=`<div class="cday emp"></div>`;for(let d=1;d<=dim;d++){const iso=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const dow=new Date(iso+'T00:00:00').getDay();const iw=dow===0||dow===6;const hc=!iw&&tt.some(t=>t.day===DW[dow]);const isT=iso===td;const isSel=iso===selDate&&!isT;html+=`<div class="${['cday',isT?'today':'',isSel?'sel':'',hc?'hc':'',iw?'wknd':''].filter(Boolean).join(' ')}" onclick="selCal('${iso}')">${d}</div>`;}document.getElementById('calgrid').innerHTML=html;}
+function selCal(iso){selDate=iso;renderCal();renderTodaySched(iso);}
+
+// NOTIFICATIONS
+function renderNotifs(){const ns=DB.get('teacher-notifications');const un=ns.filter(n=>!n.read).length;document.getElementById('nbadge').textContent=un;const list=document.getElementById('ndlist');if(!ns.length){list.innerHTML='<div style="padding:28px;text-align:center;color:var(--tdi);font-size:12px;">No notifications.</div>';return;}list.innerHTML=[...ns].reverse().map(n=>`<div class="ndi ${n.read?'':'unread'}" onclick="markNR('${n._id}')"><div class="ndic">${n.type==='alert'?'&#9888;':'&#8505;'}</div><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--td);">${n.from}</div><div style="font-size:11px;color:var(--tmu);margin-top:2px;line-height:1.4;">${n.message}</div><div style="font-size:10px;color:var(--tdi);margin-top:3px;">${tAgo(n.time)}</div></div></div>`).join('');}
+function markNR(id){DB.update('teacher-notifications',id,{read:true});renderNotifs();}
+function clearNotifs(e){if(e)e.stopPropagation();DB.get('teacher-notifications').forEach(n=>DB.update('teacher-notifications',n._id,{read:true}));renderNotifs();}
+function togNotif(){document.getElementById('ndrop').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('#ndrop')&&!e.target.closest('.tbic'))document.getElementById('ndrop').classList.remove('open');});
+
+// MY SCHEDULE
+let schedOff=0;
+function schedNav(dir){schedOff+=dir*7;renderSchedPage();}
+function renderSchedPage(){
+  const days=['Mon','Tue','Wed','Thu','Fri'];const dayL=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id);const att=DB.get('attendance');
+  const base=new Date();base.setDate(base.getDate()+schedOff);
+  const mon=new Date(base);mon.setDate(base.getDate()-((base.getDay()+6)%7));
+  const wk=days.map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toISOString().split('T')[0];});
+  document.getElementById('weeklbl').textContent=`${fmtS(wk[0])} – ${fmtS(wk[4])}`;
+  let html='';
+  days.forEach((day,di)=>{
+    const date=wk[di];const isT=date===toISO();
+    const slots=tt.filter(t=>t.day===day).sort((a,b)=>a.start.localeCompare(b.start));
+    html+=`<div class="wdblk${isT?' today-col':''}">`;
+    html+=`<div class="wdhd" style="padding:10px 12px;flex-wrap:wrap;gap:4px;">`;
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><span class="wdnm" style="font-size:12.5px;">${dayL[di]}</span>${isT?'<span class="wdtd">TODAY</span>':''}</div>`;
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:2px;"><span class="wddt">${fmtS(date)}</span><button class="btno bsm" style="font-size:10px;padding:2px 8px!important;border-radius:8px!important;" onclick="openAddSlotDay('${day}')">+ Add</button></div>`;
+    html+=`</div><div class="wdslots" style="padding:8px 10px;gap:6px;">`;
+    if(!slots.length)html+=`<div style="text-align:center;padding:14px 0;color:var(--tdi);font-size:11px;cursor:pointer;" onclick="openAddSlotDay('${day}')">No classes</div>`;
+    else slots.forEach(t=>{
+      const marked=att.some(a=>a.classId===t.classId&&a.subjectId===t.subjectId&&a.date===date&&a.teacherId===CU._id);
+      html+=`<div class="slotc" style="flex-direction:column;align-items:stretch;gap:5px;padding:9px 10px;">`;
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;"><span class="slott" style="min-width:unset;font-size:10px;padding:2px 7px;">${t.start}–${t.end}</span>${marked?'<span class="donetag" style="font-size:9px;padding:2px 6px;">&#9989;</span>':isT?`<button class="attbtn" style="font-size:9.5px;padding:2px 8px;" onclick="navAtt('${t.classId}','${t.subjectId}')">Att.</button>`:''}</div>`;
+      html+=`<div><div class="slotcl" style="font-size:11.5px;">${t.className}</div><div class="slotsb" style="font-size:10.5px;">${t.subjectName}</div></div>`;
+      html+=`<div style="display:flex;gap:4px;"><button class="btno bsm" style="font-size:10px;padding:2px 6px!important;flex:1;" onclick="openEditSlot('${t._id}')">&#9999; Edit</button><button class="btno bsm" style="font-size:10px;padding:2px 6px!important;color:#dc2626;border-color:rgba(239,68,68,.3);" onclick="delSlot('${t._id}')">&#128465;</button></div>`;
+      html+=`</div>`;
+    });
+    html+=`</div></div>`;
+  });
+  document.getElementById('schedbyday').innerHTML=html;
+}
+function openAddSlot(){document.getElementById('schedeid').value='';document.getElementById('mschedtit').textContent='&#10133; Add Schedule Slot';document.getElementById('schedday').value='Mon';document.getElementById('schedst').value='08:00';document.getElementById('schedet').value='09:00';document.getElementById('schedcls').innerHTML=copts(false);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>';openModal('msched');}
+function openAddSlotDay(day){openAddSlot();document.getElementById('schedday').value=day;}
+function openEditSlot(id){const s=DB.get('timetable').find(t=>t._id===id);if(!s)return;document.getElementById('schedeid').value=id;document.getElementById('mschedtit').textContent='&#9999; Edit Schedule Slot';document.getElementById('schedday').value=s.day;document.getElementById('schedst').value=s.start;document.getElementById('schedet').value=s.end;document.getElementById('schedcls').innerHTML=copts(false);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>';openModal('msched');setTimeout(()=>{document.getElementById('schedcls').value=s.classId;populateSchedSubs();setTimeout(()=>{document.getElementById('schedsub').value=s.subjectId;},100);},50);}
+function populateSchedSubs(){const cid=document.getElementById('schedcls').value;const a=myAsgns().filter(a=>a.classId===cid);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>'+a.map(a=>`<option value="${a.subjectId}">${a.subjectName}</option>`).join('');}
+function saveSlot(){const cid=document.getElementById('schedcls').value,sid=document.getElementById('schedsub').value,day=document.getElementById('schedday').value,st=document.getElementById('schedst').value,en=document.getElementById('schedet').value,eid=document.getElementById('schedeid').value;if(!cid||!sid||!day||!st||!en){showT('Please fill all fields','warn');return;}if(st>=en){showT('End time must be after start time','warn');return;}const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);if(!a){showT('Assignment not found','warn');return;}const data={classId:cid,className:a.className,subjectId:sid,subjectName:a.subjectName,teacherId:CU._id,teacherName:CU.name,day,start:st,end:en};if(eid){DB.update('timetable',eid,data);showT('&#9989; Slot updated!');}else{DB.insert('timetable',data);showT('&#9989; Slot added!');}closeModal('msched');renderSchedPage();}
+function delSlot(id){if(!confirm('Delete this slot?'))return;DB.delete('timetable',id);showT('Slot deleted','warn');renderSchedPage();}
+
+// TAKE ATTENDANCE
+let attStus=[];
+function initAttPage(){document.getElementById('attcls').innerHTML=copts(false);document.getElementById('attsub').innerHTML='<option value="">— Select —</option>';document.getElementById('attsheet').style.display='none';if(!document.getElementById('attdate').value)document.getElementById('attdate').value=toISO();}
+function attLoadSubs(){const cid=document.getElementById('attcls').value;const a=myAsgns().filter(a=>a.classId===cid);document.getElementById('attsub').innerHTML='<option value="">— Select —</option>'+a.map(a=>`<option value="${a.subjectId}">${a.subjectName}</option>`).join('');}
+function loadAttSheet(){const cid=document.getElementById('attcls').value,sid=document.getElementById('attsub').value,date=document.getElementById('attdate').value;if(!cid||!sid||!date){showT('Select class, subject and date','warn');return;}const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);if(!a){showT('Not assigned','warn');return;}const students=DB.get('students').filter(s=>s.classId===cid);if(!students.length){showT('No students in class','warn');return;}const ex=DB.get('attendance').filter(a=>a.classId===cid&&a.subjectId===sid&&a.date===date&&a.teacherId===CU._id);attStus=students.map(s=>{const e=ex.find(a=>a.studentId===s._id);return{...s,status:e?e.status:'present',eid:e?e._id:null};});document.getElementById('ainfc').textContent=a.className;document.getElementById('ainfs').textContent=a.subjectName;document.getElementById('ainfd').textContent=fmtD(date);document.getElementById('ainft').textContent=students.length;document.getElementById('attsheet').style.display='block';renderAttSheet();}
+function renderAttSheet(){document.getElementById('atttbody').innerHTML=attStus.map((s,i)=>`<tr class="${s.status==='present'?'pr':'ab'}" id="sr${i}"><td style="font-weight:700;color:var(--tdi);">${i+1}</td><td style="font-weight:600;color:var(--tmu);">${s.regNo}</td><td style="font-weight:600;">${s.name}</td><td><div class="attog"><button class="abp ${s.status==='present'?'act':''}" onclick="setS(${i},'present')">P</button><button class="aba ${s.status==='absent'?'act':''}" onclick="setS(${i},'absent')">A</button></div></td></tr>`).join('');updSum();}
+function setS(i,st){attStus[i].status=st;const tr=document.getElementById('sr'+i);tr.className=st==='present'?'pr':'ab';tr.querySelectorAll('.abp,.aba').forEach(b=>b.classList.remove('act'));tr.querySelector(st==='present'?'.abp':'.aba')?.classList.add('act');updSum();}
+function markAll(st){attStus.forEach((_,i)=>attStus[i].status=st);renderAttSheet();}
+function updSum(){const p=attStus.filter(s=>s.status==='present').length;document.getElementById('stotal').textContent=attStus.length;document.getElementById('spres').textContent=p;document.getElementById('sabs').textContent=attStus.length-p;}
+function submitAtt(){if(!attStus.length){showT('No students loaded','warn');return;}const cid=document.getElementById('attcls').value,sid=document.getElementById('attsub').value,date=document.getElementById('attdate').value;const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);attStus.forEach(s=>{if(s.eid)DB.update('attendance',s.eid,{status:s.status});else DB.insert('attendance',{studentId:s._id,studentName:s.name,classId:cid,className:a.className,subjectId:sid,subjectName:a.subjectName,teacherId:CU._id,teacherName:CU.name,date,status:s.status,deptName:a.deptName});});const fresh=DB.get('attendance').filter(a=>a.classId===cid&&a.subjectId===sid&&a.date===date&&a.teacherId===CU._id);attStus=attStus.map(s=>({...s,eid:fresh.find(a=>a.studentId===s._id)?._id||s.eid}));showT('&#9989; Attendance saved!');renderAttSheet();}
+
+// REPORTS
+function renderAttRec(){const ci=document.getElementById('rfc')?.value||'',si=document.getElementById('rfs')?.value||'',fr=document.getElementById('rff')?.value||'',to=document.getElementById('rft')?.value||'';let att=DB.get('attendance').filter(a=>a.teacherId===CU._id);if(ci)att=att.filter(a=>a.classId===ci);if(si)att=att.filter(a=>a.subjectId===si);if(fr)att=att.filter(a=>a.date>=fr);if(to)att=att.filter(a=>a.date<=to);const bk={};att.forEach(a=>{const k=`${a.studentId}|${a.subjectId}`;if(!bk[k])bk[k]={studentName:a.studentName,regNo:'',className:a.className,subjectName:a.subjectName,present:0,total:0,studentId:a.studentId};bk[k].total++;if(a.status==='present')bk[k].present++;});const stus=DB.get('students');Object.values(bk).forEach(r=>{const s=stus.find(x=>x._id===r.studentId);if(s)r.regNo=s.regNo||'';});const rows=Object.values(bk).sort((a,b)=>a.studentName.localeCompare(b.studentName));const tbody=document.getElementById('attrec');if(!rows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No records found.</td></tr>';return;}tbody.innerHTML=rows.map((r,i)=>{const pct=r.total?Math.round(r.present/r.total*100):0;const cls=pct>=75?'ph':pct>=50?'pm':'pl';return`<tr><td>${i+1}</td><td style="font-weight:600;">${r.studentName}</td><td style="color:var(--tmu);">${r.regNo||'—'}</td><td>${r.className}</td><td>${r.subjectName}</td><td>${r.total}</td><td style="color:var(--gK);font-weight:600;">${r.present}</td><td><span class="pb ${cls}">${pct}%</span></td></tr>`;}).join('');}
+function exportAttCSV(){const t=document.getElementById('attrec');const rows=[['#','Student Name','Reg No','Class','Subject','Total Hours','Present Hours','Attendance %']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Attendance_Record');showT('&#8659; Downloaded!');}
+
+function renderDefs(){const ci=document.getElementById('dfc')?.value||'',si=document.getElementById('dfs')?.value||'',thresh=parseInt(document.getElementById('dfth')?.value||'75');const att=DB.get('attendance').filter(a=>a.teacherId===CU._id&&(!ci||a.classId===ci)&&(!si||a.subjectId===si));const rows=[];myAsgns().filter(a=>(!ci||a.classId===ci)&&(!si||a.subjectId===si)).forEach(a=>{DB.get('students').filter(s=>s.classId===a.classId).forEach(s=>{const sa=att.filter(x=>x.studentId===s._id&&x.subjectId===a.subjectId);if(!sa.length)return;const pct=Math.round(sa.filter(x=>x.status==='present').length/sa.length*100);if(pct<thresh)rows.push({...s,pct,present:sa.filter(x=>x.status==='present').length,total:sa.length,subjectName:a.subjectName,className:a.className});});});rows.sort((a,b)=>a.pct-b.pct);const tbody=document.getElementById('deftbody');if(!rows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No defaulters &#127881;</td></tr>';return;}tbody.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:600;">${r.name}</td><td>${r.regNo}</td><td>${r.className}</td><td>${r.subjectName}</td><td style="color:var(--gK);font-weight:600;">${r.present}</td><td>${r.total}</td><td><span class="pb ${r.pct<50?'pl':'pm'}">${r.pct}%</span></td></tr>`).join('');}
+function exportDefCSV(){const t=document.getElementById('deftbody');const rows=[['#','Name','Reg No','Class','Subject','Present','Total','%']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Defaulters_List');showT('&#8659; Downloaded!');}
+
+function renderStuList(){const ci=document.getElementById('slc')?.value||'',q=(document.getElementById('slq')?.value||'').toLowerCase();const cids=ci?[ci]:myClasses().map(c=>c.id);let students=DB.get('students').filter(s=>cids.includes(s.classId));if(q)students=students.filter(s=>s.name.toLowerCase().includes(q)||s.regNo.toLowerCase().includes(q));const tbody=document.getElementById('stutbody');if(!students.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--tdi);">No students found.</td></tr>';return;}tbody.innerHTML=students.map((s,i)=>`<tr><td>${i+1}</td><td style="font-weight:600;">${s.name}</td><td>${s.regNo}</td><td>${s.className||'—'}</td><td>${s.section||'A'}</td><td style="color:var(--tmu);">${s.deptName||'—'}</td></tr>`).join('');}
+function exportStuCSV(){const t=document.getElementById('stutbody');const rows=[['#','Name','Reg No','Class','Section','Department']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Student_List');showT('&#8659; Downloaded!');}
+
+// GRIEVANCE
+function renderGrievs(){const gs=DB.get('teacher-grievances').filter(g=>g.teacherId===CU._id);const c=document.getElementById('grievlist');if(!gs.length){c.innerHTML='<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div>';return;}c.innerHTML=[...gs].reverse().map(g=>`<div class="gcard"><div class="gic ${g.status==='Resolved'?'res':'pend'}">${g.status==='Resolved'?'&#9989;':'&#128225;'}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><div style="font-size:13px;font-weight:700;color:var(--td);">${g.subject}</div><span class="spill ${g.status==='Resolved'?'sres':'spend'}">${g.status}</span><span class="bge">${g.category}</span></div><div style="font-size:11.5px;color:var(--tmu);line-height:1.5;">${g.detail}</div><div style="font-size:10px;color:var(--tdi);margin-top:5px;">${fmtD(g.createdAt.split('T')[0])} · Sent to Admin</div></div></div>`).join('');}
+function submitGriev(){const subj=(document.getElementById('gsubj')?.value||'').trim(),cat=document.getElementById('gcat')?.value||'Other',detail=(document.getElementById('gdetail')?.value||'').trim();if(!subj||!detail){showT('Please fill all fields','warn');return;}const grievId=DB.insert('teacher-grievances',{teacherId:CU._id,teacherName:CU.name,subject:subj,category:cat,detail,status:'Pending',createdAt:new Date().toISOString()})._id;DB.insert('notifications',{type:'request',from:CU.name,fromRole:'Teacher',message:`[Grievance] ${subj} — ${detail.slice(0,100)}${detail.length>100?'…':''}`,time:new Date().toISOString(),read:false,priority:'Normal',category:cat,grievanceId:grievId});document.getElementById('gsubj').value='';document.getElementById('gdetail').value='';closeModal('mgriev');showT('&#128225; Grievance submitted to admin!');renderGrievs();}
+
+// PROFILE
+function initProfile(){const av=CU.name[0];document.getElementById('profav').textContent=av;document.getElementById('profname').textContent=CU.name;document.getElementById('pdrdesig').textContent=CU.desig||'Assistant Professor';document.getElementById('pdremp').textContent=CU.empId||'—';document.getElementById('pdrdept').textContent=CU.dept||'—';document.getElementById('pdrusr').textContent=CU.username||'—';const cls=[...new Set(myAsgns().map(a=>a.className))];document.getElementById('pdrcls').textContent=cls.length?cls.join(', '):'None assigned';['pwcur','pwnew','pwconf'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwerr').style.display='none';}
+function changePw(){const cur=document.getElementById('pwcur').value.trim(),nw=document.getElementById('pwnew').value.trim(),conf=document.getElementById('pwconf').value.trim();const e=document.getElementById('pwerr');e.style.display='none';if(!cur||!nw||!conf){e.textContent='Please fill all password fields.';e.style.display='block';return;}if(cur!==CU.password){e.textContent='Current password is incorrect.';e.style.display='block';return;}if(nw.length<6){e.textContent='New password must be at least 6 characters.';e.style.display='block';return;}if(nw!==conf){e.textContent='Passwords do not match.';e.style.display='block';return;}DB.update('users',CU._id,{password:nw});CU={...CU,password:nw};['pwcur','pwnew','pwconf'].forEach(id=>document.getElementById(id).value='');showT('&#128274; Password updated successfully!');}
+
+// UTILS
+function openModal(id){document.getElementById(id)?.classList.add('open');}
+function closeModal(id){document.getElementById(id)?.classList.remove('open');}
+document.querySelectorAll('.mbg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+function showT(msg,type='success'){const t=document.getElementById('toast');t.textContent='';t.innerHTML=msg;t.style.borderLeftColor=type==='warn'?'#ef4444':type==='info'?'#3b82f6':'var(--gM)';t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+function dlCSV(rows,name){const csv=rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'_'+toISO()+'.csv';a.click();}
+
+// BOOT
+ensureDB();
+(function(){
+  const stored=sessionStorage.getItem('eams_user');
+  if(!stored){window.location.href='signin.html';return;}
+  try{CU=JSON.parse(stored);}catch{window.location.href='signin.html';return;}
+  if(!CU||CU.role!=='teacher'){window.location.href='signin.html';return;}
+  bootApp();
+})();
+</script>
+</body>
+</html>
