@@ -530,7 +530,7 @@ function ensureDB(){
 }
 
 let CU=null;
-function doLogout(){CU=null;sessionStorage.removeItem('eams_user');window.location.href='signin.html';}
+function doLogout(){CU=null;sessionStorage.removeItem('eams_user');window.location.href='index.html';}
 function toggleSidebar(){const sb=document.getElementById('sidebar');const mc=document.getElementById('maincontent');const btn=document.getElementById('sbtoggle');const hidden=sb.classList.toggle('sb-hidden');mc.classList.toggle('sb-expanded',hidden);btn.classList.toggle('closed',hidden);btn.innerHTML=hidden?'&#9776;':'&#10005;';}
 function bootApp(){document.getElementById('app').classList.add('vis');document.getElementById('tpav').textContent=CU.name[0];document.getElementById('tpname').textContent=CU.name;document.getElementById('tpdept').textContent=CU.dept||'Sri Shakthi';document.getElementById('datelbl').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});populateAllFilters();initCal();renderNotifs();nav('dash');}
 
@@ -669,9 +669,9 @@ function dlCSV(rows,name){const csv=rows.map(r=>r.map(c=>`"${String(c||'').repla
 ensureDB();
 (function(){
   const stored=sessionStorage.getItem('eams_user');
-  if(!stored){window.location.href='signin.html';return;}
-  try{CU=JSON.parse(stored);}catch{window.location.href='signin.html';return;}
-  if(!CU||CU.role!=='teacher'){window.location.href='signin.html';return;}
+  if(!stored){window.location.href='index.html';return;}
+  try{CU=JSON.parse(stored);}catch{window.location.href='index.html';return;}
+  if(!CU||CU.role!=='teacher'){window.location.href='index.html';return;}
   bootApp();
 })();
 </script>
