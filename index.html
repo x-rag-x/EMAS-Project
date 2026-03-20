@@ -116,64 +116,127 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
 </div>
 
 <script>
-const DB={
-  get(c){try{return JSON.parse(localStorage.getItem('ss3_'+c)||'[]')}catch{return[]}},
-  set(c,d){localStorage.setItem('ss3_'+c,JSON.stringify(d))},
-  insert(c,doc){const d=DB.get(c);doc._id='_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);d.push(doc);DB.set(c,d);return doc}
-};
+  // ─── LOCAL STORAGE DATABASE ──────────────────────────────────────────────────
+  // Simple key-value store that persists data in localStorage under 'ss3_' prefix
+  const DB = {
+    get: function(collectionName) {
+      try {
+        return JSON.parse(localStorage.getItem('ss3_' + collectionName) || '[]');
+      } catch (error) {
+        return [];
+      }
+    },
+    set: function(collectionName, data) {
+      localStorage.setItem('ss3_' + collectionName, JSON.stringify(data));
+    },
+    insert: function(collectionName, doc) {
+      const collection = DB.get(collectionName);
+      // Generate a unique ID using timestamp + random suffix
+      doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      collection.push(doc);
+      DB.set(collectionName, collection);
+      return doc;
+    }
+  };
 
-// Seed default users on first visit
-(function(){
-  if(!DB.get('users').length){
-    DB.insert('users',{name:'Administrator',username:'admin',password:'admin123',role:'admin'});
-    DB.insert('users',{name:'Default Teacher',username:'teacher',password:'teacher',role:'teacher',empId:'EMP001',dept:'Computer Science Engineering',desig:'Assistant Professor'});
+  // ─── SEED DEFAULT USERS ON FIRST VISIT ───────────────────────────────────────
+  (function seedDefaultUsers() {
+    if (!DB.get('users').length) {
+      DB.insert('users', {
+        name: 'Administrator',
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin'
+      });
+      DB.insert('users', {
+        name: 'Default Teacher',
+        username: 'teacher',
+        password: 'teacher',
+        role: 'teacher',
+        empId: 'EMP001',
+        dept: 'Computer Science Engineering',
+        desig: 'Assistant Professor'
+      });
+    }
+  })();
+
+  // ─── ROLE SELECTION ──────────────────────────────────────────────────────────
+  let selectedRole = 'teacher';
+
+  function pickRole(role) {
+    selectedRole = role;
+
+    // Toggle the active tab highlight
+    document.getElementById('tab-teacher').classList.toggle('sel', role === 'teacher');
+    document.getElementById('tab-admin').classList.toggle('sel', role === 'admin');
+
+    // Hide any previous error message
+    document.getElementById('lerr').style.display = 'none';
+
+    // Move focus to the username field
+    document.getElementById('lu').focus();
   }
-})();
 
-let role='teacher';
+  // ─── SIGN IN ─────────────────────────────────────────────────────────────────
+  function doSignIn() {
+    const usernameInput = document.getElementById('lu').value.trim();
+    const passwordInput = document.getElementById('lp').value.trim();
+    const errorBox      = document.getElementById('lerr');
+    const signInButton  = document.getElementById('lbn');
 
-function pickRole(r){
-  role=r;
-  document.getElementById('tab-teacher').classList.toggle('sel',r==='teacher');
-  document.getElementById('tab-admin').classList.toggle('sel',r==='admin');
-  document.getElementById('lerr').style.display='none';
-  document.getElementById('lu').focus();
-}
+    // Clear any previous error
+    errorBox.style.display = 'none';
 
-function doSignIn(){
-  const u=document.getElementById('lu').value.trim();
-  const p=document.getElementById('lp').value.trim();
-  const err=document.getElementById('lerr');
-  const btn=document.getElementById('lbn');
-  const txt=document.getElementById('lbn-txt');
-  err.style.display='none';
-
-  if(!u||!p){err.textContent='Please enter username and password.';err.style.display='block';return;}
-
-  btn.disabled=true;
-  btn.innerHTML='<div class="spin"></div><span>Signing in…</span>';
-
-  setTimeout(()=>{
-    const user=DB.get('users').find(x=>x.username===u&&x.password===p&&x.role===role);
-
-    if(!user){
-      btn.disabled=false;
-      btn.innerHTML='<span id="lbn-txt">Sign In</span>';
-      err.textContent='Invalid credentials for '+(role==='teacher'?'Teacher':'Admin')+' role.';
-      err.style.display='block';
-      document.getElementById('lp').value='';
+    // Validate that both fields are filled
+    if (!usernameInput || !passwordInput) {
+      errorBox.textContent = 'Please enter username and password.';
+      errorBox.style.display = 'block';
       return;
     }
 
-    // Persist session so target page can auto-login
-    sessionStorage.setItem('eams_user', JSON.stringify(user));
-    window.location.href = role==='teacher' ? 'teacher.html' : 'admin.html';
-  }, 500);
-}
+    // Show loading spinner while we verify credentials
+    signInButton.disabled = true;
+    signInButton.innerHTML = '<div class="spin"></div><span>Signing in…</span>';
 
-['lu','lp'].forEach(id=>{
-  document.getElementById(id).addEventListener('keypress',e=>{if(e.key==='Enter')doSignIn();});
-});
+    // Small delay to simulate server-side authentication
+    setTimeout(function() {
+      const allUsers = DB.get('users');
+      const matchedUser = allUsers.find(function(user) {
+        return user.username === usernameInput
+          && user.password === passwordInput
+          && user.role === selectedRole;
+      });
+
+      if (!matchedUser) {
+        // Credentials did not match - restore button and show error
+        signInButton.disabled = false;
+        signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
+
+        const roleLabel = selectedRole === 'teacher' ? 'Teacher' : 'Admin';
+        errorBox.textContent = 'Invalid credentials for ' + roleLabel + ' role.';
+        errorBox.style.display = 'block';
+
+        // Clear the password field so the user can re-enter it
+        document.getElementById('lp').value = '';
+        return;
+      }
+
+      // Save the logged-in user to sessionStorage so other pages can read it
+      sessionStorage.setItem('eams_user', JSON.stringify(matchedUser));
+
+      // Redirect to the appropriate dashboard
+      window.location.href = selectedRole === 'teacher' ? 'teacher.html' : 'admin.html';
+    }, 500);
+  }
+
+  // ─── ALLOW PRESSING ENTER IN USERNAME/PASSWORD FIELDS ────────────────────────
+  ['lu', 'lp'].forEach(function(fieldId) {
+    document.getElementById(fieldId).addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        doSignIn();
+      }
+    });
+  });
 </script>
 </body>
 </html>

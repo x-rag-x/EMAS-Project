@@ -1,0 +1,172 @@
+// ═══════════════════════════════════════════════════════
+//  EAMS — MongoDB Models (Mongoose)
+//  Collections: users, students, teachers,
+//               departments, classes, attendance,
+//               notifications, grievances
+// ═══════════════════════════════════════════════════════
+
+const mongoose = require('mongoose');
+
+// ── Users (Admin + Teacher login) ────────────────────
+const UserSchema = new mongoose.Schema({
+  name:       { type: String, required: true, trim: true },
+  username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
+  password:   { type: String, required: true },          // bcrypt hash
+  role:       { type: String, enum: ['admin','teacher','student'], required: true },
+  empId:      { type: String, default: '' },
+  dept:       { type: String, default: '' },
+  desig:      { type: String, default: 'Assistant Professor' },
+  email:      { type: String, default: '', lowercase: true },
+  regNo:      { type: String, default: '' },             // students only
+  deptName:   { type: String, default: '' },
+  active:     { type: Boolean, default: true },
+}, { timestamps: true });
+
+// ── Departments ──────────────────────────────────────
+const DepartmentSchema = new mongoose.Schema({
+  name:       { type: String, required: true, unique: true, trim: true },
+  code:       { type: String, required: true, unique: true, trim: true, uppercase: true },
+  icon:       { type: String, default: '🏛️' },
+  hodId:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  hodName:    { type: String, default: '' },
+}, { timestamps: true });
+
+// ── Classes ──────────────────────────────────────────
+const ClassSchema = new mongoose.Schema({
+  name:       { type: String, required: true, trim: true },
+  deptId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
+  deptName:   { type: String, required: true },
+  deptCode:   { type: String, required: true },
+  year:       { type: String, default: 'I Year' },
+  sem:        { type: String, default: 'I' },
+  section:    { type: String, default: 'A' },
+  hallNo:     { type: String, default: '' },
+}, { timestamps: true });
+
+// ── Students ─────────────────────────────────────────
+const StudentSchema = new mongoose.Schema({
+  name:         { type: String, required: true, trim: true },
+  regNo:        { type: String, required: true, unique: true, trim: true },
+  academicYear: { type: String, default: '2025-26' },
+  courseType:   { type: String, enum: ['UG','PG','M.E','M.TECH','MBA','MCA','B.E','B.TECH'], default: 'UG' },
+  branch:       { type: String, default: '' },
+  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+  deptName:     { type: String, default: '' },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
+  className:    { type: String, default: '' },
+  year:         { type: String, default: '' },
+  section:      { type: String, default: 'A' },
+  email:        { type: String, default: '', lowercase: true },
+  userId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+}, { timestamps: true });
+
+// ── Subjects ─────────────────────────────────────────
+const SubjectSchema = new mongoose.Schema({
+  name:       { type: String, required: true, trim: true },
+  code:       { type: String, required: true, trim: true },
+  credits:    { type: Number, default: 3 },
+  type:       { type: String, enum: ['Theory','Lab','Project'], default: 'Theory' },
+  deptId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+  deptName:   { type: String, default: '' },
+  deptCode:   { type: String, default: '' },
+}, { timestamps: true });
+
+// ── Assignments (Teacher ↔ Class ↔ Subject) ──────────
+const AssignmentSchema = new mongoose.Schema({
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName:  { type: String, required: true },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  className:    { type: String, required: true },
+  subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subjectName:  { type: String, required: true },
+  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+  deptName:     { type: String, default: '' },
+}, { timestamps: true });
+
+// ── Timetable (Teacher schedule slots) ───────────────
+const TimetableSchema = new mongoose.Schema({
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName:  { type: String, required: true },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  className:    { type: String, required: true },
+  subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subjectName:  { type: String, required: true },
+  day:          { type: String, enum: ['Mon','Tue','Wed','Thu','Fri'], required: true },
+  start:        { type: String, required: true },   // "08:00"
+  end:          { type: String, required: true },   // "09:00"
+}, { timestamps: true });
+
+// ── Attendance Logs ───────────────────────────────────
+const AttendanceSchema = new mongoose.Schema({
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName:  { type: String, required: true },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  className:    { type: String, required: true },
+  subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subjectName:  { type: String, required: true },
+  date:         { type: String, required: true },   // "YYYY-MM-DD"
+  records: [{
+    studentId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    regNo:      { type: String },
+    name:       { type: String },
+    status:     { type: String, enum: ['present','absent'], required: true },
+  }],
+  totalPresent: { type: Number, default: 0 },
+  totalAbsent:  { type: Number, default: 0 },
+  markedAt:     { type: Date, default: Date.now },
+}, { timestamps: true });
+
+// ── Notifications ─────────────────────────────────────
+const NotificationSchema = new mongoose.Schema({
+  type:         { type: String, enum: ['request','error','info','attendance-alert'], default: 'request' },
+  from:         { type: String, required: true },
+  fromRole:     { type: String, default: 'Teacher' },
+  toTeacherId:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  toTeacherName:{ type: String, default: '' },
+  message:      { type: String, required: true },
+  priority:     { type: String, enum: ['Normal','High','Urgent'], default: 'Normal' },
+  status:       { type: String, enum: ['Pending','Solved','Cancelled'], default: 'Pending' },
+  read:         { type: Boolean, default: false },
+  grievanceId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Grievance', default: null },
+  solvedAt:     { type: Date, default: null },
+  cancelledAt:  { type: Date, default: null },
+  time:         { type: Date, default: Date.now },
+}, { timestamps: true });
+
+// ── Grievances ────────────────────────────────────────
+const GrievanceSchema = new mongoose.Schema({
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName:  { type: String, required: true },
+  subject:      { type: String, required: true },
+  category:     { type: String, default: 'Other' },
+  detail:       { type: String, required: true },
+  status:       { type: String, enum: ['Pending','Resolved','Cancelled'], default: 'Pending' },
+  resolvedBy:   { type: String, default: '' },
+  resolvedAt:   { type: Date, default: null },
+  cancelledAt:  { type: Date, default: null },
+}, { timestamps: true });
+
+// ── Activity Logs ─────────────────────────────────────
+const LogSchema = new mongoose.Schema({
+  userId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  userName:     { type: String, required: true },
+  role:         { type: String, default: 'admin' },
+  action:       { type: String, required: true },
+  details:      { type: String, default: '' },
+  ip:           { type: String, default: '' },
+  time:         { type: Date, default: Date.now },
+}, { timestamps: true });
+
+module.exports = {
+  User:        mongoose.model('User',        UserSchema),
+  Department:  mongoose.model('Department',  DepartmentSchema),
+  Class:       mongoose.model('Class',       ClassSchema),
+  Student:     mongoose.model('Student',     StudentSchema),
+  Subject:     mongoose.model('Subject',     SubjectSchema),
+  Assignment:  mongoose.model('Assignment',  AssignmentSchema),
+  Timetable:   mongoose.model('Timetable',   TimetableSchema),
+  Attendance:  mongoose.model('Attendance',  AttendanceSchema),
+  Notification:mongoose.model('Notification',NotificationSchema),
+  Grievance:   mongoose.model('Grievance',   GrievanceSchema),
+  Log:         mongoose.model('Log',         LogSchema),
+};

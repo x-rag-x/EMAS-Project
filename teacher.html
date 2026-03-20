@@ -58,6 +58,19 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .pg.act{display:block;}
 @keyframes pi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 .phd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.sched-tab{padding:7px 16px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--br);color:var(--tmu);background:#fff;transition:all .2s;font-family:'Poppins',sans-serif;}
+.sched-tab:hover{border-color:var(--gLr);background:var(--gLt);color:var(--gD);}
+.sched-tab.act{background:var(--gD);border-color:var(--gD);color:#fff;}
+.tt-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--br);}
+.tt-table th{background:var(--gD);color:#fff;font-size:12px;font-weight:700;padding:10px 14px;text-align:left;}
+.tt-table td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--brl);vertical-align:top;}
+.tt-table tr:last-child td{border-bottom:none;}
+.tt-table tr:hover td{background:var(--gLt);}
+.tt-slot-pill{display:inline-block;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;padding:3px 9px;font-size:11px;margin:2px 2px 2px 0;color:var(--gD);font-weight:600;}
+.day-slot-card{background:#fff;border:1.5px solid var(--br);border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:16px;}
+.day-slot-card.today-slot{border-color:var(--gM);box-shadow:0 3px 14px rgba(27,94,32,.12);}
+.day-time-col{min-width:90px;text-align:center;background:var(--gP);border-radius:10px;padding:8px;font-size:11.5px;font-weight:700;color:var(--gK);}
+.day-empty{text-align:center;padding:48px 0;color:var(--tdi);font-size:13px;}
 .pt{font-size:25px;font-weight:800;color:var(--td);letter-spacing:-.5px;}
 .ps{font-size:12px;color:var(--tmu);margin-top:3px;}
 .pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
@@ -214,12 +227,40 @@ textarea.finp{resize:vertical;min-height:80px;}
 .toast.show{transform:none;opacity:1;}
 .est{text-align:center;padding:28px 16px;color:var(--tdi);}
 .est .ei{font-size:32px;display:block;margin-bottom:8px;}
+
+/* ── RESPONSIVE MOBILE ─────────────────────── */
+@media (max-width:768px){
+  :root{--sb-w:0px;}
+  .sb{transform:translateX(-100%);}
+  .sb.sb-mobile-open{transform:translateX(0);width:240px;}
+  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:199;}
+  .sb-overlay.visible{display:block;}
+  .mc{margin-left:0!important;}
+  .sb-toggle-btn{left:12px!important;}
+  .sb-toggle-btn.closed{left:12px;}
+  .topbar{padding-left:56px!important;}
+  .phd{flex-direction:column;gap:8px;}
+  .phd .pa{width:100%;}
+  .wdblk{min-width:0;}
+  #schedbyday{grid-template-columns:1fr!important;}
+  .day-slot-card{flex-wrap:wrap;gap:10px;}
+  .stats-row,
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr 1fr!important;}
+}
+@media (max-width:480px){
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}
+  .pchip .pe{display:none;}
+  .sched-tab{padding:5px 10px;font-size:11px;}
+}
 </style>
 </head>
 <body>
 
 <!-- APP -->
 <div id="app">
+<div class="sb-overlay" id="sb-overlay-t" onclick="toggleSidebar()"></div>
 <button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">&#9776;</button>
 <nav class="sb" id="sidebar">
   <div class="sb-logo">
@@ -245,7 +286,10 @@ textarea.finp{resize:vertical;min-height:80px;}
 <div class="mc" id="maincontent">
 <!-- TOPBAR -->
 <div class="topbar">
-  <div><div style="font-size:11px;color:var(--tmu);background:var(--gLt);padding:3px 10px;border-radius:11px;border:1px solid var(--br);" id="datelbl"></div></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:32px;flex-shrink:0;"></div><!-- spacer for fixed toggle btn -->
+    <div style="font-size:11px;color:var(--tmu);background:var(--gLt);padding:4px 12px;border-radius:11px;border:1px solid var(--br);font-weight:500;white-space:nowrap;" id="datelbl"></div>
+  </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="tbic" style="position:relative;" onclick="togNotif()">&#128276;
       <div class="tbbadge" id="nbadge">0</div>
@@ -325,16 +369,47 @@ textarea.finp{resize:vertical;min-height:80px;}
 <!-- MY SCHEDULE -->
 <div class="pg" id="pg-sched">
   <div class="phd">
-    <div><div class="pt">&#128197; My Schedule</div><div class="ps">Manage your weekly timetable — add, edit or remove slots.</div></div>
+    <div><div class="pt">&#128197; My Schedule</div><div class="ps">View your week, day, and manage your timetable.</div></div>
     <div class="pa"><button class="btnp" onclick="openAddSlot()">&#65291; Add Slot</button></div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-    <button class="btno bsm" onclick="schedNav(-1)">&#8249; Prev</button>
-    <div style="font-size:13px;font-weight:700;color:var(--td);" id="weeklbl">—</div>
-    <button class="btno bsm" onclick="schedNav(1)">Next &#8250;</button>
-    <button class="btnp bsm" onclick="schedOff=0;renderSchedPage()">Today</button>
+
+  <!-- Schedule View Tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <button class="sched-tab act" id="stab-week" onclick="switchSchedTab('week')">&#128197; Week View</button>
+    <button class="sched-tab" id="stab-day" onclick="switchSchedTab('day')">&#128336; Day View</button>
+    <button class="sched-tab" id="stab-tt" onclick="switchSchedTab('tt')">&#128203; My Timetable</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;" id="sched-nav-controls">
+      <button class="btno bsm" onclick="schedNav(-1)">&#8249; Prev</button>
+      <div style="font-size:13px;font-weight:700;color:var(--td);min-width:160px;text-align:center;" id="weeklbl">—</div>
+      <button class="btno bsm" onclick="schedNav(1)">Next &#8250;</button>
+      <button class="btnp bsm" onclick="scheduleWeekOffset=0;renderSchedulePage()">Today</button>
+    </div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-height:520px;" id="schedbyday"></div>
+
+  <!-- Week View -->
+  <div id="sched-week-view">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;" id="schedbyday"></div>
+  </div>
+
+  <!-- Day View -->
+  <div id="sched-day-view" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btno bsm" onclick="dayNavStep(-1)">&#8249; Prev Day</button>
+      <div style="font-size:14px;font-weight:700;color:var(--td);min-width:180px;text-align:center;" id="daylbl">—</div>
+      <button class="btno bsm" onclick="dayNavStep(1)">Next Day &#8250;</button>
+      <button class="btnp bsm" onclick="dayOffset=0;renderDayView()">Today</button>
+    </div>
+    <div id="dayschedcont"></div>
+  </div>
+
+  <!-- My Timetable -->
+  <div id="sched-tt-view" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;color:var(--tmu);">Your reference weekly timetable — stored and editable.</div>
+      <button class="btnp bsm" onclick="openAddSlot()">&#65291; Add Slot</button>
+    </div>
+    <div id="tt-grid"></div>
+  </div>
 </div>
 
 <!-- TAKE ATTENDANCE -->
@@ -512,168 +587,1550 @@ textarea.finp{resize:vertical;min-height:80px;}
 
 <div class="toast" id="toast"></div>
 <script>
-const DB={get(c){try{return JSON.parse(localStorage.getItem('ss3_'+c)||'[]')}catch{return[]}},set(c,d){localStorage.setItem('ss3_'+c,JSON.stringify(d))},insert(c,doc){const d=DB.get(c);doc._id='_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);d.push(doc);DB.set(c,d);return doc},update(c,id,u){const d=DB.get(c),i=d.findIndex(x=>x._id===id);if(i>=0){d[i]={...d[i],...u};DB.set(c,d);return d[i];}return null},delete(c,id){DB.set(c,DB.get(c).filter(x=>x._id!==id))},one(c,q={}){return DB.get(c).find(doc=>Object.keys(q).every(k=>doc[k]===q[k]))||null}};
-const DW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-function toISO(){return new Date().toISOString().split('T')[0];}
-function fmtD(iso){return new Date(iso+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
-function fmtS(iso){return new Date(iso+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'});}
-function tAgo(iso){const d=(Date.now()-new Date(iso))/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  EAMS TEACHER PORTAL  –  teacher.html
+  //  All data is persisted in localStorage via the DB helper below.
+  // ═══════════════════════════════════════════════════════════════════════════
 
-function ensureDB(){
-  if(!DB.get('users').length){DB.insert('users',{name:'Administrator',username:'admin',password:'admin123',role:'admin'});DB.insert('users',{name:'Default Teacher',username:'teacher',password:'teacher',role:'teacher',empId:'EMP001',dept:'Computer Science Engineering',desig:'Assistant Professor'});}
-  if(!DB.get('depts').length){[{name:'Computer Science Engineering',code:'CSE'},{name:'Information Technology',code:'IT'},{name:'Electronics & Communication',code:'ECE'}].forEach(d=>DB.insert('depts',d));const deps=DB.get('depts');const sems=['I','II','III','IV','V','VI'];const yrs=['I Year','I Year','II Year','II Year','III Year','III Year'];deps.slice(0,2).forEach(dept=>sems.forEach((sem,i)=>DB.insert('classes',{deptId:dept._id,deptName:dept.name,deptCode:dept.code,year:yrs[i],sem,section:'A',name:dept.code+'-'+sem+'-A'})));const cse=deps[0];[{name:'Engineering Mathematics',code:'MA101'},{name:'Programming Fundamentals',code:'CS101'},{name:'Data Structures',code:'CS201'},{name:'Operating Systems',code:'CS301'},{name:'DBMS',code:'CS302'}].forEach(s=>DB.insert('subjects',{...s,deptId:cse._id,deptName:cse.name,deptCode:cse.code}));}
-  if(!DB.get('students').length){const fn=['Aarav','Priya','Karthik','Sneha','Rajesh','Divya','Arun','Meena','Vijay','Lakshmi','Suresh','Anitha','Deepak','Kavitha','Ravi','Nithya','Ganesh','Pooja','Santhosh','Revathi'];const ln=['Kumar','Sharma','Raj','Devi','Krishnan','Nair','Murugan','Rajan'];const cls=DB.get('classes').find(c=>c.sem==='I');if(cls)for(let i=0;i<30;i++)DB.insert('students',{name:`${fn[i%fn.length]} ${ln[Math.floor(i/10)%ln.length]}`,regNo:`${cls.deptCode}25${String(i+1).padStart(3,'0')}`,deptId:cls.deptId,classId:cls._id,className:cls.name,section:'A'});}
-  if(!DB.get('assignments').length){const t=DB.one('users',{role:'teacher'});const classes=DB.get('classes');const subs=DB.get('subjects');if(t&&classes.length&&subs.length)classes.slice(0,3).forEach((c,i)=>{const s=subs[i%subs.length];DB.insert('assignments',{classId:c._id,className:c.name,subjectId:s._id,subjectName:s.name,teacherId:t._id,teacherName:t.name,deptName:c.deptName,deptCode:c.deptCode});});}
-  if(!DB.get('timetable').length){const t=DB.one('users',{role:'teacher'});if(t){const asgns=DB.get('assignments').filter(a=>a.teacherId===t._id);const slots=[{day:'Mon',start:'08:00',end:'09:00'},{day:'Mon',start:'11:00',end:'12:00'},{day:'Tue',start:'09:00',end:'10:00'},{day:'Wed',start:'10:00',end:'11:00'},{day:'Thu',start:'08:00',end:'09:00'},{day:'Thu',start:'11:00',end:'12:00'},{day:'Fri',start:'09:00',end:'10:00'}];asgns.forEach((a,i)=>{if(slots[i*2])DB.insert('timetable',{...slots[i*2],classId:a.classId,className:a.className,subjectId:a.subjectId,subjectName:a.subjectName,teacherId:t._id,teacherName:t.name});if(slots[i*2+1])DB.insert('timetable',{...slots[i*2+1],classId:a.classId,className:a.className,subjectId:a.subjectId,subjectName:a.subjectName,teacherId:t._id,teacherName:t.name});});}}
-  if(!DB.get('attendance').length){const t=DB.one('users',{role:'teacher'});const students=DB.get('students');const asgn=DB.get('assignments').find(a=>a.teacherId===t?._id);if(asgn&&students.length){const today=new Date();for(let d=4;d>=1;d--){const dt=new Date(today);dt.setDate(today.getDate()-d);if([0,6].includes(dt.getDay()))continue;const iso=dt.toISOString().split('T')[0];students.forEach(s=>DB.insert('attendance',{studentId:s._id,studentName:s.name,classId:asgn.classId,className:asgn.className,subjectId:asgn.subjectId,subjectName:asgn.subjectName,teacherId:t._id,teacherName:t.name,date:iso,status:Math.random()>0.2?'present':'absent',deptName:asgn.deptName}));}}}
-  if(!DB.get('teacher-notifications').length){DB.insert('teacher-notifications',{type:'info',from:'Admin',message:'New academic year timetable finalized. Please verify your schedule.',time:new Date(Date.now()-3600000).toISOString(),read:false});DB.insert('teacher-notifications',{type:'alert',from:'System',message:'Attendance for CSE-I-A has not been marked today.',time:new Date(Date.now()-7200000).toISOString(),read:false});}
-}
+  // ─── DATABASE HELPER ────────────────────────────────────────────────────────
+  const DB = {
+    get: function(collection) {
+      try { return JSON.parse(localStorage.getItem('ss3_' + collection) || '[]'); }
+      catch (e) { return []; }
+    },
+    set: function(collection, data) {
+      localStorage.setItem('ss3_' + collection, JSON.stringify(data));
+    },
+    insert: function(collection, doc) {
+      const rows = DB.get(collection);
+      doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      rows.push(doc);
+      DB.set(collection, rows);
+      return doc;
+    },
+    update: function(collection, id, updates) {
+      const rows  = DB.get(collection);
+      const index = rows.findIndex(function(row) { return row._id === id; });
+      if (index >= 0) {
+        rows[index] = Object.assign({}, rows[index], updates);
+        DB.set(collection, rows);
+        return rows[index];
+      }
+      return null;
+    },
+    delete: function(collection, id) {
+      DB.set(collection, DB.get(collection).filter(function(row) { return row._id !== id; }));
+    },
+    one: function(collection, query) {
+      query = query || {};
+      return DB.get(collection).find(function(doc) {
+        return Object.keys(query).every(function(key) { return doc[key] === query[key]; });
+      }) || null;
+    }
+  };
 
-let CU=null;
-function doLogout(){CU=null;sessionStorage.removeItem('eams_user');window.location.href='index.html';}
-function toggleSidebar(){const sb=document.getElementById('sidebar');const mc=document.getElementById('maincontent');const btn=document.getElementById('sbtoggle');const hidden=sb.classList.toggle('sb-hidden');mc.classList.toggle('sb-expanded',hidden);btn.classList.toggle('closed',hidden);btn.innerHTML=hidden?'&#9776;':'&#10005;';}
-function bootApp(){document.getElementById('app').classList.add('vis');document.getElementById('tpav').textContent=CU.name[0];document.getElementById('tpname').textContent=CU.name;document.getElementById('tpdept').textContent=CU.dept||'Sri Shakthi';document.getElementById('datelbl').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});populateAllFilters();initCal();renderNotifs();nav('dash');}
+  // ─── DATE CONSTANTS ─────────────────────────────────────────────────────────
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function nav(name){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('act'));document.getElementById('pg-'+name)?.classList.add('act');
-  document.querySelectorAll('.si,.ss').forEach(i=>i.classList.remove('act'));
-  const m={dash:'sn-dash',sched:'sn-sched',att:'sn-att','rep-att':'sn-ratt','rep-def':'sn-rdef','rep-stu':'sn-stu',griev:'sn-griev'};
-  if(m[name])document.getElementById(m[name])?.classList.add('act');
-  ({dash:initDash,sched:renderSchedPage,att:initAttPage,'rep-att':()=>{populateRepFilters();renderAttRec();},'rep-def':()=>{populateDefFilters();renderDefs();},'rep-stu':()=>{populateStuFilters();renderStuList();},griev:renderGrievs,profile:initProfile})[name]?.();
-}
+  function todayISO() {
+    return new Date().toISOString().split('T')[0];
+  }
 
-function myAsgns(){return DB.get('assignments').filter(a=>a.teacherId===CU._id);}
-function myClasses(){return[...new Map(myAsgns().map(a=>[a.classId,{id:a.classId,name:a.className}])).values()];}
-function mySubs(){return[...new Map(myAsgns().map(a=>[a.subjectId,{id:a.subjectId,name:a.subjectName}])).values()];}
-function copts(all){return(all?'<option value="">All</option>':'<option value="">— Select —</option>')+myClasses().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
-function sopts(all){return(all?'<option value="">All</option>':'<option value="">— Select —</option>')+mySubs().map(s=>`<option value="${s.id}">${s.name}</option>`).join('');}
-function populateAllFilters(){['fc','rfc','dfc','slc'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=copts(true);});['fs','rfs','dfs'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=sopts(true);});const ac=document.getElementById('attcls');if(ac)ac.innerHTML=copts(false);const td=toISO(),wa=new Date();wa.setDate(wa.getDate()-7);const ws=wa.toISOString().split('T')[0];['ff','rff'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=ws;});['ft','rft'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=td;});const ad=document.getElementById('attdate');if(ad&&!ad.value)ad.value=toISO();document.getElementById('schedcls').innerHTML=copts(false);}
-function populateRepFilters(){document.getElementById('rfc').innerHTML=copts(true);document.getElementById('rfs').innerHTML=sopts(true);}
-function populateDefFilters(){document.getElementById('dfc').innerHTML=copts(true);document.getElementById('dfs').innerHTML=sopts(true);}
-function populateStuFilters(){document.getElementById('slc').innerHTML=copts(true);}
+  function formatDateLong(isoDate) {
+    return new Date(isoDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
 
-// DASHBOARD
-function initDash(){document.getElementById('dashsub').textContent=`Welcome back, ${CU.name.split(' ')[0]}! Here's your day at a glance.`;document.getElementById('todaylbl').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});renderTodaySched(toISO());renderUpcoming();renderDefMini();renderChart();renderCal();}
+  function formatDateShort(isoDate) {
+    return new Date(isoDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  }
 
-function renderTodaySched(dateISO){
-  const dow=new Date(dateISO+'T00:00:00').getDay();const dn=DW[dow];
-  const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id&&t.day===dn).sort((a,b)=>a.start.localeCompare(b.start));
-  const att=DB.get('attendance');const isT=dateISO===toISO();
-  const lbl=document.getElementById('todaylbl');if(lbl)lbl.textContent=new Date(dateISO+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
-  const c=document.getElementById('todaysched');
-  if(!tt.length){c.innerHTML='<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes on this day.</p></div>';return;}
-  c.innerHTML=tt.map(t=>{const marked=att.some(a=>a.classId===t.classId&&a.subjectId===t.subjectId&&a.date===dateISO);return`<div class="scard ${isT&&!marked?'uc':marked?'dn':''}"><div class="stb"><div class="t">${t.start}</div><span class="d">–${t.end}</span></div><div class="sinfo"><div class="scls">${t.className}</div><div class="ssub">${t.subjectName}</div></div>${marked?'<div class="donetag">&#9989; Done</div>':isT?`<button class="attbtn" onclick="navAtt('${t.classId}','${t.subjectId}')">Take Att.</button>`:'<div style="font-size:10px;color:var(--tdi);">–</div>'}</div>`;}).join('');
-}
+  function timeAgo(isoDate) {
+    const diffSeconds = (Date.now() - new Date(isoDate)) / 1000;
+    if (diffSeconds < 60)    return 'just now';
+    if (diffSeconds < 3600)  return Math.floor(diffSeconds / 60)  + 'm ago';
+    if (diffSeconds < 86400) return Math.floor(diffSeconds / 3600) + 'h ago';
+    return Math.floor(diffSeconds / 86400) + 'd ago';
+  }
 
-function navAtt(ci,si){nav('att');setTimeout(()=>{const cl=document.getElementById('attcls');if(cl){cl.value=ci;attLoadSubs();}setTimeout(()=>{const sb=document.getElementById('attsub');if(sb)sb.value=si;},150);},200);}
+  // ─── SEED / INITIAL DATA ────────────────────────────────────────────────────
+  function ensureDB() {
+    // Default users
+    if (!DB.get('users').length) {
+      DB.insert('users', { name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin' });
+      DB.insert('users', {
+        name: 'Default Teacher', username: 'teacher', password: 'teacher', role: 'teacher',
+        empId: 'EMP001', dept: 'Computer Science Engineering', desig: 'Assistant Professor'
+      });
+    }
 
-function renderUpcoming(){const now=new Date();const dn=DW[now.getDay()];const nm=now.getHours()*60+now.getMinutes();const next=DB.get('timetable').filter(t=>t.teacherId===CU._id&&t.day===dn).filter(t=>{const[h,m]=t.start.split(':');return parseInt(h)*60+parseInt(m)>nm;}).sort((a,b)=>a.start.localeCompare(b.start))[0];const w=document.getElementById('ucwrap');if(!next){w.innerHTML='<div style="background:var(--gP);border-radius:15px;padding:18px;text-align:center;border:1.5px dashed var(--gLr);"><div style="font-size:28px;margin-bottom:5px;">&#127769;</div><div style="font-size:12px;color:var(--tdi);font-weight:600;">No more classes today</div></div>';return;}const[h,m]=next.start.split(':');const mins=parseInt(h)*60+parseInt(m)-nm;w.innerHTML=`<div class="uccard"><div class="uclbl">&#8987; Upcoming Class</div><div class="uctime">${next.start} – ${next.end}</div><div class="ucsub">${next.subjectName}</div><div class="uccls">${next.className}</div><div class="uccnt">In ${mins} min</div></div>`;}
+    // Sample departments and classes
+    if (!DB.get('depts').length) {
+      [
+        { name: 'Computer Science Engineering', code: 'CSE' },
+        { name: 'Information Technology',       code: 'IT'  },
+        { name: 'Electronics & Communication',  code: 'ECE' }
+      ].forEach(function(d) { DB.insert('depts', d); });
 
-function renderDefMini(){const att=DB.get('attendance');const students=DB.get('students');const defs=[];myAsgns().forEach(a=>{students.filter(s=>s.classId===a.classId).forEach(s=>{const sa=att.filter(x=>x.studentId===s._id&&x.subjectId===a.subjectId&&x.teacherId===CU._id);if(!sa.length)return;const pct=Math.round(sa.filter(x=>x.status==='present').length/sa.length*100);if(pct<75)defs.push({...s,pct,subjectName:a.subjectName});});});document.getElementById('defcnt').textContent=defs.length;const c=document.getElementById('defmini');if(!defs.length){c.innerHTML='<div class="est"><span class="ei">&#127881;</span><p style="font-size:12px;">No defaulters!</p></div>';return;}c.innerHTML=defs.slice(0,5).map(d=>`<div class="defrow"><div class="defav">${d.name[0]}</div><div style="flex:1;min-width:0;"><div style="font-size:11.5px;font-weight:700;color:var(--td);">${d.name}</div><div style="font-size:10px;color:var(--tdi);">${d.regNo} · ${d.subjectName}</div></div><div style="font-size:13px;font-weight:800;color:#dc2626;">${d.pct}%</div></div>`).join('');}
+      const depts    = DB.get('depts');
+      const semList  = ['I','II','III','IV','V','VI'];
+      const yearList = ['I Year','I Year','II Year','II Year','III Year','III Year'];
 
-// CHART
-function setRange(r){['rpw','rplw','rpm'].forEach(id=>document.getElementById(id)?.classList.remove('act'));const t=new Date();let fr,to=t.toISOString().split('T')[0];if(r==='week'){document.getElementById('rpw').classList.add('act');const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));fr=d.toISOString().split('T')[0];}else if(r==='lweek'){document.getElementById('rplw').classList.add('act');const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7)-7);fr=d.toISOString().split('T')[0];const e=new Date(d);e.setDate(d.getDate()+4);to=e.toISOString().split('T')[0];}else{document.getElementById('rpm').classList.add('act');fr=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;}document.getElementById('ff').value=fr;document.getElementById('ft').value=to;renderChart();}
+      depts.slice(0, 2).forEach(function(dept) {
+        semList.forEach(function(sem, i) {
+          DB.insert('classes', {
+            deptId: dept._id, deptName: dept.name, deptCode: dept.code,
+            year: yearList[i], sem: sem, section: 'A',
+            name: dept.code + '-' + sem + '-A'
+          });
+        });
+      });
 
-function renderChart(){const ci=document.getElementById('fc')?.value||'',si=document.getElementById('fs')?.value||'',fr=document.getElementById('ff')?.value||'',to=document.getElementById('ft')?.value||'';let att=DB.get('attendance').filter(a=>a.teacherId===CU._id);if(ci)att=att.filter(a=>a.classId===ci);if(si)att=att.filter(a=>a.subjectId===si);if(fr)att=att.filter(a=>a.date>=fr);if(to)att=att.filter(a=>a.date<=to);const byD={};att.forEach(a=>{if(!byD[a.date])byD[a.date]={present:0,absent:0};byD[a.date][a.status==='present'?'present':'absent']++;});const dates=Object.keys(byD).sort().slice(-14);const chart=document.getElementById('bchart');if(!dates.length){chart.innerHTML='<div style="text-align:center;width:100%;color:var(--tdi);font-size:12px;align-self:center;">No data for selected filters.</div>';['csv-p','csv-a'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('csv-pct').textContent='—%';return;}let tp=0,ta=0;chart.innerHTML=dates.map(d=>{const v=byD[d];const tot=v.present+v.absent;const pct=tot?Math.round(v.present/tot*100):0;tp+=v.present;ta+=v.absent;const cls=pct>=75?'hi':pct>=50?'mi':'lo';const dy=new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short'}).slice(0,2);return`<div class="bcol"><div class="bout"><span class="bpct">${pct}%</span><div class="bpill ${cls}" style="height:${Math.max(6,pct)}%;min-height:6px;" title="${d}: ${v.present}P/${v.absent}A"></div></div><div class="bday ${d===toISO()?'td':''}">${dy}</div></div>`;}).join('');const tot=tp+ta;document.getElementById('csv-p').textContent=tp;document.getElementById('csv-a').textContent=ta;document.getElementById('csv-pct').textContent=(tot?Math.round(tp/tot*100):0)+'%';}
+      const cseDept = depts[0];
+      [
+        { name: 'Engineering Mathematics', code: 'MA101' },
+        { name: 'Programming Fundamentals', code: 'CS101' },
+        { name: 'Data Structures',          code: 'CS201' },
+        { name: 'Operating Systems',        code: 'CS301' },
+        { name: 'DBMS',                     code: 'CS302' }
+      ].forEach(function(subj) {
+        DB.insert('subjects', Object.assign({}, subj, {
+          deptId: cseDept._id, deptName: cseDept.name, deptCode: cseDept.code
+        }));
+      });
+    }
 
-// CALENDAR
-let calY=new Date().getFullYear(),calM=new Date().getMonth(),selDate=toISO();
-function initCal(){calY=new Date().getFullYear();calM=new Date().getMonth();renderCal();}
-function calNav(dir){calM+=dir;if(calM>11){calM=0;calY++;}else if(calM<0){calM=11;calY--;}renderCal();}
-function renderCal(){const mns=['January','February','March','April','May','June','July','August','September','October','November','December'];document.getElementById('calmth').textContent=`${mns[calM]} ${calY}`;const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id);const fd=new Date(calY,calM,1).getDay();const dim=new Date(calY,calM+1,0).getDate();const td=toISO();let html=['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>`<div class="caldow">${d}</div>`).join('');for(let i=0;i<(fd+6)%7;i++)html+=`<div class="cday emp"></div>`;for(let d=1;d<=dim;d++){const iso=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const dow=new Date(iso+'T00:00:00').getDay();const iw=dow===0||dow===6;const hc=!iw&&tt.some(t=>t.day===DW[dow]);const isT=iso===td;const isSel=iso===selDate&&!isT;html+=`<div class="${['cday',isT?'today':'',isSel?'sel':'',hc?'hc':'',iw?'wknd':''].filter(Boolean).join(' ')}" onclick="selCal('${iso}')">${d}</div>`;}document.getElementById('calgrid').innerHTML=html;}
-function selCal(iso){selDate=iso;renderCal();renderTodaySched(iso);}
+    // Sample students
+    if (!DB.get('students').length) {
+      const firstNames = ['Aarav','Priya','Karthik','Sneha','Rajesh','Divya','Arun','Meena',
+                          'Vijay','Lakshmi','Suresh','Anitha','Deepak','Kavitha','Ravi',
+                          'Nithya','Ganesh','Pooja','Santhosh','Revathi'];
+      const lastNames  = ['Kumar','Sharma','Raj','Devi','Krishnan','Nair','Murugan','Rajan'];
+      const firstClass = DB.get('classes').find(function(c) { return c.sem === 'I'; });
+      if (firstClass) {
+        for (let i = 0; i < 30; i++) {
+          DB.insert('students', {
+            name:     firstNames[i % firstNames.length] + ' ' + lastNames[Math.floor(i / 10) % lastNames.length],
+            regNo:    firstClass.deptCode + '25' + String(i + 1).padStart(3, '0'),
+            deptId:   firstClass.deptId,
+            classId:  firstClass._id,
+            className: firstClass.name,
+            section:  'A'
+          });
+        }
+      }
+    }
 
-// NOTIFICATIONS
-function renderNotifs(){const ns=DB.get('teacher-notifications');const un=ns.filter(n=>!n.read).length;document.getElementById('nbadge').textContent=un;const list=document.getElementById('ndlist');if(!ns.length){list.innerHTML='<div style="padding:28px;text-align:center;color:var(--tdi);font-size:12px;">No notifications.</div>';return;}list.innerHTML=[...ns].reverse().map(n=>`<div class="ndi ${n.read?'':'unread'}" onclick="markNR('${n._id}')"><div class="ndic">${n.type==='alert'?'&#9888;':'&#8505;'}</div><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--td);">${n.from}</div><div style="font-size:11px;color:var(--tmu);margin-top:2px;line-height:1.4;">${n.message}</div><div style="font-size:10px;color:var(--tdi);margin-top:3px;">${tAgo(n.time)}</div></div></div>`).join('');}
-function markNR(id){DB.update('teacher-notifications',id,{read:true});renderNotifs();}
-function clearNotifs(e){if(e)e.stopPropagation();DB.get('teacher-notifications').forEach(n=>DB.update('teacher-notifications',n._id,{read:true}));renderNotifs();}
-function togNotif(){document.getElementById('ndrop').classList.toggle('open');}
-document.addEventListener('click',e=>{if(!e.target.closest('#ndrop')&&!e.target.closest('.tbic'))document.getElementById('ndrop').classList.remove('open');});
+    // Create teacher–class–subject assignments
+    if (!DB.get('assignments').length) {
+      const defaultTeacher = DB.one('users', { role: 'teacher' });
+      const allClasses     = DB.get('classes');
+      const allSubjects    = DB.get('subjects');
+      if (defaultTeacher && allClasses.length && allSubjects.length) {
+        allClasses.slice(0, 3).forEach(function(cls, index) {
+          const subject = allSubjects[index % allSubjects.length];
+          DB.insert('assignments', {
+            classId: cls._id, className: cls.name,
+            subjectId: subject._id, subjectName: subject.name,
+            teacherId: defaultTeacher._id, teacherName: defaultTeacher.name,
+            deptName: cls.deptName, deptCode: cls.deptCode
+          });
+        });
+      }
+    }
 
-// MY SCHEDULE
-let schedOff=0;
-function schedNav(dir){schedOff+=dir*7;renderSchedPage();}
-function renderSchedPage(){
-  const days=['Mon','Tue','Wed','Thu','Fri'];const dayL=['Monday','Tuesday','Wednesday','Thursday','Friday'];
-  const tt=DB.get('timetable').filter(t=>t.teacherId===CU._id);const att=DB.get('attendance');
-  const base=new Date();base.setDate(base.getDate()+schedOff);
-  const mon=new Date(base);mon.setDate(base.getDate()-((base.getDay()+6)%7));
-  const wk=days.map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toISOString().split('T')[0];});
-  document.getElementById('weeklbl').textContent=`${fmtS(wk[0])} – ${fmtS(wk[4])}`;
-  let html='';
-  days.forEach((day,di)=>{
-    const date=wk[di];const isT=date===toISO();
-    const slots=tt.filter(t=>t.day===day).sort((a,b)=>a.start.localeCompare(b.start));
-    html+=`<div class="wdblk${isT?' today-col':''}">`;
-    html+=`<div class="wdhd" style="padding:10px 12px;flex-wrap:wrap;gap:4px;">`;
-    html+=`<div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><span class="wdnm" style="font-size:12.5px;">${dayL[di]}</span>${isT?'<span class="wdtd">TODAY</span>':''}</div>`;
-    html+=`<div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:2px;"><span class="wddt">${fmtS(date)}</span><button class="btno bsm" style="font-size:10px;padding:2px 8px!important;border-radius:8px!important;" onclick="openAddSlotDay('${day}')">+ Add</button></div>`;
-    html+=`</div><div class="wdslots" style="padding:8px 10px;gap:6px;">`;
-    if(!slots.length)html+=`<div style="text-align:center;padding:14px 0;color:var(--tdi);font-size:11px;cursor:pointer;" onclick="openAddSlotDay('${day}')">No classes</div>`;
-    else slots.forEach(t=>{
-      const marked=att.some(a=>a.classId===t.classId&&a.subjectId===t.subjectId&&a.date===date&&a.teacherId===CU._id);
-      html+=`<div class="slotc" style="flex-direction:column;align-items:stretch;gap:5px;padding:9px 10px;">`;
-      html+=`<div style="display:flex;align-items:center;justify-content:space-between;"><span class="slott" style="min-width:unset;font-size:10px;padding:2px 7px;">${t.start}–${t.end}</span>${marked?'<span class="donetag" style="font-size:9px;padding:2px 6px;">&#9989;</span>':isT?`<button class="attbtn" style="font-size:9.5px;padding:2px 8px;" onclick="navAtt('${t.classId}','${t.subjectId}')">Att.</button>`:''}</div>`;
-      html+=`<div><div class="slotcl" style="font-size:11.5px;">${t.className}</div><div class="slotsb" style="font-size:10.5px;">${t.subjectName}</div></div>`;
-      html+=`<div style="display:flex;gap:4px;"><button class="btno bsm" style="font-size:10px;padding:2px 6px!important;flex:1;" onclick="openEditSlot('${t._id}')">&#9999; Edit</button><button class="btno bsm" style="font-size:10px;padding:2px 6px!important;color:#dc2626;border-color:rgba(239,68,68,.3);" onclick="delSlot('${t._id}')">&#128465;</button></div>`;
-      html+=`</div>`;
+    // Seed default weekly timetable
+    if (!DB.get('timetable').length) {
+      const defaultTeacher = DB.one('users', { role: 'teacher' });
+      if (defaultTeacher) {
+        const myAssignments = DB.get('assignments').filter(function(a) { return a.teacherId === defaultTeacher._id; });
+        const slotTemplates = [
+          { day: 'Mon', start: '08:00', end: '09:00' },
+          { day: 'Mon', start: '11:00', end: '12:00' },
+          { day: 'Tue', start: '09:00', end: '10:00' },
+          { day: 'Wed', start: '10:00', end: '11:00' },
+          { day: 'Thu', start: '08:00', end: '09:00' },
+          { day: 'Thu', start: '11:00', end: '12:00' },
+          { day: 'Fri', start: '09:00', end: '10:00' }
+        ];
+        myAssignments.forEach(function(assignment, index) {
+          if (slotTemplates[index * 2]) {
+            DB.insert('timetable', Object.assign({}, slotTemplates[index * 2], {
+              classId: assignment.classId, className: assignment.className,
+              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
+              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name
+            }));
+          }
+          if (slotTemplates[index * 2 + 1]) {
+            DB.insert('timetable', Object.assign({}, slotTemplates[index * 2 + 1], {
+              classId: assignment.classId, className: assignment.className,
+              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
+              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name
+            }));
+          }
+        });
+      }
+    }
+
+    // Seed past attendance records (4 weekdays back)
+    if (!DB.get('attendance').length) {
+      const defaultTeacher = DB.one('users', { role: 'teacher' });
+      const students       = DB.get('students');
+      const assignment     = DB.get('assignments').find(function(a) { return a.teacherId === (defaultTeacher ? defaultTeacher._id : ''); });
+
+      if (assignment && students.length) {
+        const today = new Date();
+        for (let daysBack = 4; daysBack >= 1; daysBack--) {
+          const dt = new Date(today);
+          dt.setDate(today.getDate() - daysBack);
+          if ([0, 6].includes(dt.getDay())) continue; // skip weekends
+          const isoDate = dt.toISOString().split('T')[0];
+          students.forEach(function(student) {
+            DB.insert('attendance', {
+              studentId: student._id, studentName: student.name,
+              classId: assignment.classId, className: assignment.className,
+              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
+              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name,
+              date: isoDate,
+              status: Math.random() > 0.2 ? 'present' : 'absent',
+              deptName: assignment.deptName
+            });
+          });
+        }
+      }
+    }
+
+    // Seed teacher notifications
+    if (!DB.get('teacher-notifications').length) {
+      DB.insert('teacher-notifications', {
+        type: 'info', from: 'Admin',
+        message: 'New academic year timetable finalized. Please verify your schedule.',
+        time: new Date(Date.now() - 3600000).toISOString(), read: false
+      });
+      DB.insert('teacher-notifications', {
+        type: 'alert', from: 'System',
+        message: 'Attendance for CSE-I-A has not been marked today.',
+        time: new Date(Date.now() - 7200000).toISOString(), read: false
+      });
+    }
+  }
+
+  // ─── AUTHENTICATION ──────────────────────────────────────────────────────────
+  let currentUser = null;
+
+  function doLogout() {
+    currentUser = null;
+    sessionStorage.removeItem('eams_user');
+    window.location.href = 'index.html';
+  }
+
+  function toggleSidebar() {
+    const sidebar      = document.getElementById('sidebar');
+    const mainContent  = document.getElementById('maincontent');
+    const toggleButton = document.getElementById('sbtoggle');
+    const overlay      = document.getElementById('sb-overlay-t');
+    const isMobile     = window.innerWidth <= 768;
+
+    if (isMobile) {
+      const isOpen = sidebar.classList.toggle('sb-mobile-open');
+      if (overlay) overlay.classList.toggle('visible', isOpen);
+      toggleButton.innerHTML = isOpen ? '&#10005;' : '&#9776;';
+    } else {
+      const isHidden = sidebar.classList.toggle('sb-hidden');
+      mainContent.classList.toggle('sb-expanded', isHidden);
+      toggleButton.classList.toggle('closed', isHidden);
+      toggleButton.innerHTML = isHidden ? '&#9776;' : '&#10005;';
+    }
+  }
+
+  function bootApp() {
+    document.getElementById('app').classList.add('vis');
+    document.getElementById('tpav').textContent    = currentUser.name[0];
+    document.getElementById('tpname').textContent  = currentUser.name;
+    document.getElementById('tpdept').textContent  = currentUser.dept || 'Sri Shakthi';
+    document.getElementById('datelbl').textContent =
+      new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    populateAllFilters();
+    initCalendar();
+    renderNotifications();
+    nav('dash');
+  }
+
+  // ─── NAVIGATION ──────────────────────────────────────────────────────────────
+  function nav(pageName) {
+    document.querySelectorAll('.pg').forEach(function(p) { p.classList.remove('act'); });
+    const targetPage = document.getElementById('pg-' + pageName);
+    if (targetPage) targetPage.classList.add('act');
+
+    document.querySelectorAll('.si,.ss').forEach(function(item) { item.classList.remove('act'); });
+
+    const navMap = {
+      'dash':    'sn-dash',  'sched':   'sn-sched', 'att':     'sn-att',
+      'rep-att': 'sn-ratt',  'rep-def': 'sn-rdef',  'rep-stu': 'sn-stu',
+      'griev':   'sn-griev'
+    };
+    if (navMap[pageName]) {
+      const navEl = document.getElementById(navMap[pageName]);
+      if (navEl) navEl.classList.add('act');
+    }
+
+    const pageActions = {
+      'dash':    initDashboard,
+      'sched':   function() { switchSchedTab(currentSchedTab || 'week'); },
+      'att':     initAttendancePage,
+      'rep-att': function() { populateReportFilters(); renderAttendanceRecord(); },
+      'rep-def': function() { populateDefaulterFilters(); renderDefaultersList(); },
+      'rep-stu': function() { populateStudentListFilters(); renderStudentList(); },
+      'griev':   renderGrievances,
+      'profile': initProfilePage
+    };
+    if (pageActions[pageName]) pageActions[pageName]();
+  }
+
+  // ─── TEACHER HELPER FUNCTIONS ────────────────────────────────────────────────
+  function getMyAssignments() {
+    return DB.get('assignments').filter(function(a) { return a.teacherId === currentUser._id; });
+  }
+
+  function getMyClasses() {
+    const seen = new Map();
+    getMyAssignments().forEach(function(a) {
+      if (!seen.has(a.classId)) seen.set(a.classId, { id: a.classId, name: a.className });
     });
-    html+=`</div></div>`;
+    return Array.from(seen.values());
+  }
+
+  function getMySubjects() {
+    const seen = new Map();
+    getMyAssignments().forEach(function(a) {
+      if (!seen.has(a.subjectId)) seen.set(a.subjectId, { id: a.subjectId, name: a.subjectName });
+    });
+    return Array.from(seen.values());
+  }
+
+  function buildClassOptions(includeAll) {
+    const allOption = includeAll ? '<option value="">All</option>' : '<option value="">— Select —</option>';
+    return allOption + getMyClasses().map(function(c) {
+      return '<option value="' + c.id + '">' + c.name + '</option>';
+    }).join('');
+  }
+
+  function buildSubjectOptions(includeAll) {
+    const allOption = includeAll ? '<option value="">All</option>' : '<option value="">— Select —</option>';
+    return allOption + getMySubjects().map(function(s) {
+      return '<option value="' + s.id + '">' + s.name + '</option>';
+    }).join('');
+  }
+
+  function populateAllFilters() {
+    // Populate class dropdowns
+    ['fc', 'rfc', 'dfc', 'slc'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = buildClassOptions(true);
+    });
+
+    // Populate subject dropdowns
+    ['fs', 'rfs', 'dfs'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = buildSubjectOptions(true);
+    });
+
+    // Attendance take page class selector
+    const attClassEl = document.getElementById('attcls');
+    if (attClassEl) attClassEl.innerHTML = buildClassOptions(false);
+
+    // Set default date range (last 7 days)
+    const today       = todayISO();
+    const weekAgo     = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoISO  = weekAgo.toISOString().split('T')[0];
+
+    ['ff', 'rff'].forEach(function(id) { const el = document.getElementById(id); if (el) el.value = weekAgoISO; });
+    ['ft', 'rft'].forEach(function(id) { const el = document.getElementById(id); if (el) el.value = today;      });
+
+    // Default attendance date to today
+    const attDateEl = document.getElementById('attdate');
+    if (attDateEl && !attDateEl.value) attDateEl.value = today;
+
+    // Schedule modal class selector
+    document.getElementById('schedcls').innerHTML = buildClassOptions(false);
+  }
+
+  function populateReportFilters() {
+    document.getElementById('rfc').innerHTML = buildClassOptions(true);
+    document.getElementById('rfs').innerHTML = buildSubjectOptions(true);
+  }
+
+  function populateDefaulterFilters() {
+    document.getElementById('dfc').innerHTML = buildClassOptions(true);
+    document.getElementById('dfs').innerHTML = buildSubjectOptions(true);
+  }
+
+  function populateStudentListFilters() {
+    document.getElementById('slc').innerHTML = buildClassOptions(true);
+  }
+
+  // ─── DASHBOARD ───────────────────────────────────────────────────────────────
+  function initDashboard() {
+    const firstName = currentUser.name.split(' ')[0];
+    document.getElementById('dashsub').textContent = 'Welcome back, ' + firstName + '! Here\'s your day at a glance.';
+    document.getElementById('todaylbl').textContent =
+      new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    renderTodaySchedule(todayISO());
+    renderUpcomingClass();
+    renderDefaultersMini();
+    renderAttendanceChart();
+    renderCalendar();
+  }
+  var initDash = initDashboard;
+
+  function renderTodaySchedule(dateISO) {
+    const dayOfWeek   = new Date(dateISO + 'T00:00:00').getDay();
+    const dayName     = DAY_NAMES[dayOfWeek];
+    const timetable   = DB.get('timetable')
+      .filter(function(t) { return t.teacherId === currentUser._id && t.day === dayName; })
+      .sort(function(a, b) { return a.start.localeCompare(b.start); });
+
+    const attendance  = DB.get('attendance');
+    const isToday     = dateISO === todayISO();
+
+    const dateLabelEl = document.getElementById('todaylbl');
+    if (dateLabelEl) {
+      dateLabelEl.textContent = new Date(dateISO + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    const containerEl = document.getElementById('todaysched');
+    if (!timetable.length) {
+      containerEl.innerHTML = '<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes on this day.</p></div>';
+      return;
+    }
+
+    containerEl.innerHTML = timetable.map(function(slot) {
+      const alreadyMarked = attendance.some(function(a) {
+        return a.classId === slot.classId && a.subjectId === slot.subjectId && a.date === dateISO;
+      });
+
+      let actionHtml;
+      if (alreadyMarked) {
+        actionHtml = '<div class="donetag">&#9989; Done</div>';
+      } else if (isToday) {
+        actionHtml = '<button class="attbtn" onclick="navigateToAttendance(\'' + slot.classId + '\',\'' + slot.subjectId + '\')">Take Att.</button>';
+      } else {
+        actionHtml = '<div style="font-size:10px;color:var(--tdi);">–</div>';
+      }
+
+      const cardClass = 'scard ' + (isToday && !alreadyMarked ? 'uc' : alreadyMarked ? 'dn' : '');
+      return '<div class="' + cardClass + '">'
+        + '<div class="stb"><div class="t">' + slot.start + '</div><span class="d">–' + slot.end + '</span></div>'
+        + '<div class="sinfo"><div class="scls">' + slot.className + '</div><div class="ssub">' + slot.subjectName + '</div></div>'
+        + actionHtml
+        + '</div>';
+    }).join('');
+  }
+
+  // Navigate to the attendance page with a specific class/subject pre-selected
+  function navigateToAttendance(classId, subjectId) {
+    nav('att');
+    setTimeout(function() {
+      const classEl = document.getElementById('attcls');
+      if (classEl) { classEl.value = classId; loadSubjectsForClass(); }
+      setTimeout(function() {
+        const subjectEl = document.getElementById('attsub');
+        if (subjectEl) subjectEl.value = subjectId;
+      }, 150);
+    }, 200);
+  }
+  var navAtt = navigateToAttendance;
+
+  function renderUpcomingClass() {
+    const now          = new Date();
+    const dayName      = DAY_NAMES[now.getDay()];
+    const currentMins  = now.getHours() * 60 + now.getMinutes();
+
+    const nextSlot = DB.get('timetable')
+      .filter(function(t) { return t.teacherId === currentUser._id && t.day === dayName; })
+      .filter(function(t) {
+        const parts = t.start.split(':');
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]) > currentMins;
+      })
+      .sort(function(a, b) { return a.start.localeCompare(b.start); })[0];
+
+    const wrapperEl = document.getElementById('ucwrap');
+    if (!nextSlot) {
+      wrapperEl.innerHTML = '<div style="background:var(--gP);border-radius:15px;padding:18px;text-align:center;border:1.5px dashed var(--gLr);">'
+        + '<div style="font-size:28px;margin-bottom:5px;">&#127769;</div>'
+        + '<div style="font-size:12px;color:var(--tdi);font-weight:600;">No more classes today</div>'
+        + '</div>';
+      return;
+    }
+
+    const parts       = nextSlot.start.split(':');
+    const slotMins    = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    const minsUntil   = slotMins - currentMins;
+
+    wrapperEl.innerHTML = '<div class="uccard">'
+      + '<div class="uclbl">&#8987; Upcoming Class</div>'
+      + '<div class="uctime">' + nextSlot.start + ' – ' + nextSlot.end + '</div>'
+      + '<div class="ucsub">' + nextSlot.subjectName + '</div>'
+      + '<div class="uccls">' + nextSlot.className + '</div>'
+      + '<div class="uccnt">In ' + minsUntil + ' min</div>'
+      + '</div>';
+  }
+
+  function renderDefaultersMini() {
+    const allAttendance = DB.get('attendance');
+    const allStudents   = DB.get('students');
+    const defaulterList = [];
+
+    getMyAssignments().forEach(function(assignment) {
+      allStudents.filter(function(s) { return s.classId === assignment.classId; }).forEach(function(student) {
+        const stuAtt = allAttendance.filter(function(a) {
+          return a.studentId === student._id && a.subjectId === assignment.subjectId && a.teacherId === currentUser._id;
+        });
+        if (!stuAtt.length) return;
+        const pct = Math.round(stuAtt.filter(function(a) { return a.status === 'present'; }).length / stuAtt.length * 100);
+        if (pct < 75) defaulterList.push(Object.assign({}, student, { pct: pct, subjectName: assignment.subjectName }));
+      });
+    });
+
+    document.getElementById('defcnt').textContent = defaulterList.length;
+    const containerEl = document.getElementById('defmini');
+
+    if (!defaulterList.length) {
+      containerEl.innerHTML = '<div class="est"><span class="ei">&#127881;</span><p style="font-size:12px;">No defaulters!</p></div>';
+      return;
+    }
+
+    containerEl.innerHTML = defaulterList.slice(0, 5).map(function(d) {
+      return '<div class="defrow">'
+        + '<div class="defav">' + d.name[0] + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:11.5px;font-weight:700;color:var(--td);">' + d.name + '</div>'
+        + '<div style="font-size:10px;color:var(--tdi);">' + d.regNo + ' · ' + d.subjectName + '</div>'
+        + '</div>'
+        + '<div style="font-size:13px;font-weight:800;color:#dc2626;">' + d.pct + '%</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // ─── ATTENDANCE CHART ────────────────────────────────────────────────────────
+  function setRange(rangeType) {
+    // Remove active class from all range pills
+    ['rpw','rplw','rpm'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('act');
+    });
+
+    const today = new Date();
+    let fromDate, toDate = today.toISOString().split('T')[0];
+
+    if (rangeType === 'week') {
+      document.getElementById('rpw').classList.add('act');
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      fromDate = monday.toISOString().split('T')[0];
+    } else if (rangeType === 'lweek') {
+      document.getElementById('rplw').classList.add('act');
+      const lastMon = new Date(today);
+      lastMon.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 7);
+      fromDate = lastMon.toISOString().split('T')[0];
+      const lastFri = new Date(lastMon);
+      lastFri.setDate(lastMon.getDate() + 4);
+      toDate   = lastFri.toISOString().split('T')[0];
+    } else {
+      // 'month'
+      document.getElementById('rpm').classList.add('act');
+      fromDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+
+    document.getElementById('ff').value = fromDate;
+    document.getElementById('ft').value = toDate;
+    renderAttendanceChart();
+  }
+
+  function renderAttendanceChart() {
+    const classFilter   = document.getElementById('fc')  ? document.getElementById('fc').value  : '';
+    const subjectFilter = document.getElementById('fs')  ? document.getElementById('fs').value  : '';
+    const fromDate      = document.getElementById('ff')  ? document.getElementById('ff').value  : '';
+    const toDate        = document.getElementById('ft')  ? document.getElementById('ft').value  : '';
+
+    let attendance = DB.get('attendance').filter(function(a) { return a.teacherId === currentUser._id; });
+    if (classFilter)   attendance = attendance.filter(function(a) { return a.classId   === classFilter; });
+    if (subjectFilter) attendance = attendance.filter(function(a) { return a.subjectId === subjectFilter; });
+    if (fromDate)      attendance = attendance.filter(function(a) { return a.date >= fromDate; });
+    if (toDate)        attendance = attendance.filter(function(a) { return a.date <= toDate; });
+
+    // Group by date
+    const byDate = {};
+    attendance.forEach(function(a) {
+      if (!byDate[a.date]) byDate[a.date] = { present: 0, absent: 0 };
+      byDate[a.date][a.status === 'present' ? 'present' : 'absent']++;
+    });
+
+    const sortedDates = Object.keys(byDate).sort().slice(-14);
+    const chartEl     = document.getElementById('bchart');
+
+    if (!sortedDates.length) {
+      chartEl.innerHTML = '<div style="text-align:center;width:100%;color:var(--tdi);font-size:12px;align-self:center;">No data for selected filters.</div>';
+      ['csv-p','csv-a'].forEach(function(id) { document.getElementById(id).textContent = '—'; });
+      document.getElementById('csv-pct').textContent = '—%';
+      return;
+    }
+
+    let totalPresent = 0, totalAbsent = 0;
+
+    chartEl.innerHTML = sortedDates.map(function(date) {
+      const counts  = byDate[date];
+      const total   = counts.present + counts.absent;
+      const pct     = total ? Math.round(counts.present / total * 100) : 0;
+      totalPresent += counts.present;
+      totalAbsent  += counts.absent;
+
+      const barClass = pct >= 75 ? 'hi' : pct >= 50 ? 'mi' : 'lo';
+      const dayLabel = new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 2);
+      const isToday  = date === todayISO();
+
+      return '<div class="bcol">'
+        + '<div class="bout"><span class="bpct">' + pct + '%</span>'
+        + '<div class="bpill ' + barClass + '" style="height:' + Math.max(6, pct) + '%;min-height:6px;" title="' + date + ': ' + counts.present + 'P/' + counts.absent + 'A"></div>'
+        + '</div>'
+        + '<div class="bday ' + (isToday ? 'td' : '') + '">' + dayLabel + '</div>'
+        + '</div>';
+    }).join('');
+
+    const grandTotal = totalPresent + totalAbsent;
+    document.getElementById('csv-p').textContent   = totalPresent;
+    document.getElementById('csv-a').textContent   = totalAbsent;
+    document.getElementById('csv-pct').textContent = (grandTotal ? Math.round(totalPresent / grandTotal * 100) : 0) + '%';
+  }
+  var renderChart = renderAttendanceChart;
+
+  // ─── CALENDAR ────────────────────────────────────────────────────────────────
+  let calendarYear  = new Date().getFullYear();
+  let calendarMonth = new Date().getMonth();
+  let selectedCalDate = todayISO();
+
+  function initCalendar() {
+    calendarYear  = new Date().getFullYear();
+    calendarMonth = new Date().getMonth();
+    renderCalendar();
+  }
+  var initCal = initCalendar;
+
+  function calendarNavigate(direction) {
+    calendarMonth += direction;
+    if (calendarMonth > 11) { calendarMonth = 0;  calendarYear++; }
+    else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+    renderCalendar();
+  }
+  var calNav = calendarNavigate;
+
+  function renderCalendar() {
+    const monthNames = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'];
+    document.getElementById('calmth').textContent = monthNames[calendarMonth] + ' ' + calendarYear;
+
+    const myTimetable = DB.get('timetable').filter(function(t) { return t.teacherId === currentUser._id; });
+    const firstDayOfMonth  = new Date(calendarYear, calendarMonth, 1).getDay();
+    const daysInMonth      = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+    const todayDateISO     = todayISO();
+
+    // Build header row
+    let calHTML = ['Mo','Tu','We','Th','Fr','Sa','Su'].map(function(d) {
+      return '<div class="caldow">' + d + '</div>';
+    }).join('');
+
+    // Empty cells before first day
+    for (let i = 0; i < (firstDayOfMonth + 6) % 7; i++) {
+      calHTML += '<div class="cday emp"></div>';
+    }
+
+    // Day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isoDate  = calendarYear + '-' + String(calendarMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      const dayOfWk  = new Date(isoDate + 'T00:00:00').getDay();
+      const isWeekend = dayOfWk === 0 || dayOfWk === 6;
+      const hasClass  = !isWeekend && myTimetable.some(function(t) { return t.day === DAY_NAMES[dayOfWk]; });
+      const isToday   = isoDate === todayDateISO;
+      const isSelected = isoDate === selectedCalDate && !isToday;
+
+      const classes = ['cday',
+        isToday    ? 'today'   : '',
+        isSelected ? 'sel'     : '',
+        hasClass   ? 'hc'      : '',
+        isWeekend  ? 'wknd'    : ''
+      ].filter(Boolean).join(' ');
+
+      calHTML += '<div class="' + classes + '" onclick="selectCalendarDate(\'' + isoDate + '\')">' + day + '</div>';
+    }
+
+    document.getElementById('calgrid').innerHTML = calHTML;
+  }
+  var renderCal = renderCalendar;
+
+  function selectCalendarDate(isoDate) {
+    selectedCalDate = isoDate;
+    renderCalendar();
+    renderTodaySchedule(isoDate);
+  }
+  var selCal = selectCalendarDate;
+
+  // ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+  function renderNotifications() {
+    // Merge teacher-notifications (general) + admin-sent alerts targeted at this teacher
+    const allNotifs    = DB.get('teacher-notifications').filter(function(n) {
+      return !n.toTeacherId || n.toTeacherId === currentUser._id;
+    });
+    const unreadCount  = allNotifs.filter(function(n) { return !n.read; }).length;
+    document.getElementById('nbadge').textContent = unreadCount;
+
+    const listEl = document.getElementById('ndlist');
+    if (!allNotifs.length) {
+      listEl.innerHTML = '<div style="padding:28px;text-align:center;color:var(--tdi);font-size:12px;">No notifications.</div>';
+      return;
+    }
+
+    listEl.innerHTML = allNotifs.slice().reverse().map(function(n) {
+      const isAlert    = n.type === 'attendance-alert' || n.type === 'alert';
+      const isAdminMsg = n.from === 'Administrator';
+      const iconCode   = isAlert ? '&#9888;' : (isAdminMsg ? '&#128276;' : '&#8505;');
+      const iconBg     = isAlert ? 'background:rgba(245,158,11,.12);color:#92400e;'
+                       : isAdminMsg ? 'background:rgba(59,130,246,.1);color:#1d4ed8;'
+                       : 'background:var(--gLt);color:var(--gD);';
+      const priorityBadge = n.priority && n.priority !== 'Normal'
+        ? '<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:5px;">' + n.priority + '</span>'
+        : '';
+      return '<div class="ndi ' + (n.read ? '' : 'unread') + '" onclick="markNotificationRead(\'' + n._id + '\')">'
+        + '<div class="ndic" style="' + iconBg + '">' + iconCode + '</div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:12px;font-weight:700;color:var(--td);display:flex;align-items:center;">' + n.from + priorityBadge + '</div>'
+        + '<div style="font-size:11px;color:var(--tmu);margin-top:2px;line-height:1.4;">' + n.message + '</div>'
+        + '<div style="font-size:10px;color:var(--tdi);margin-top:3px;">' + timeAgo(n.time) + '</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function markNotificationRead(id) {
+    DB.update('teacher-notifications', id, { read: true });
+    renderNotifications();
+  }
+  var markNR = markNotificationRead;
+
+  function clearAllNotifications(event) {
+    if (event) event.stopPropagation();
+    DB.get('teacher-notifications').forEach(function(n) {
+      DB.update('teacher-notifications', n._id, { read: true });
+    });
+    renderNotifications();
+  }
+  var clearNotifs = clearAllNotifications;
+
+  function toggleNotificationDropdown() {
+    document.getElementById('ndrop').classList.toggle('open');
+  }
+  var togNotif = toggleNotificationDropdown;
+
+  // Close dropdown on outside click
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#ndrop') && !e.target.closest('.tbic')) {
+      document.getElementById('ndrop').classList.remove('open');
+    }
   });
-  document.getElementById('schedbyday').innerHTML=html;
-}
-function openAddSlot(){document.getElementById('schedeid').value='';document.getElementById('mschedtit').textContent='&#10133; Add Schedule Slot';document.getElementById('schedday').value='Mon';document.getElementById('schedst').value='08:00';document.getElementById('schedet').value='09:00';document.getElementById('schedcls').innerHTML=copts(false);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>';openModal('msched');}
-function openAddSlotDay(day){openAddSlot();document.getElementById('schedday').value=day;}
-function openEditSlot(id){const s=DB.get('timetable').find(t=>t._id===id);if(!s)return;document.getElementById('schedeid').value=id;document.getElementById('mschedtit').textContent='&#9999; Edit Schedule Slot';document.getElementById('schedday').value=s.day;document.getElementById('schedst').value=s.start;document.getElementById('schedet').value=s.end;document.getElementById('schedcls').innerHTML=copts(false);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>';openModal('msched');setTimeout(()=>{document.getElementById('schedcls').value=s.classId;populateSchedSubs();setTimeout(()=>{document.getElementById('schedsub').value=s.subjectId;},100);},50);}
-function populateSchedSubs(){const cid=document.getElementById('schedcls').value;const a=myAsgns().filter(a=>a.classId===cid);document.getElementById('schedsub').innerHTML='<option value="">— Select —</option>'+a.map(a=>`<option value="${a.subjectId}">${a.subjectName}</option>`).join('');}
-function saveSlot(){const cid=document.getElementById('schedcls').value,sid=document.getElementById('schedsub').value,day=document.getElementById('schedday').value,st=document.getElementById('schedst').value,en=document.getElementById('schedet').value,eid=document.getElementById('schedeid').value;if(!cid||!sid||!day||!st||!en){showT('Please fill all fields','warn');return;}if(st>=en){showT('End time must be after start time','warn');return;}const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);if(!a){showT('Assignment not found','warn');return;}const data={classId:cid,className:a.className,subjectId:sid,subjectName:a.subjectName,teacherId:CU._id,teacherName:CU.name,day,start:st,end:en};if(eid){DB.update('timetable',eid,data);showT('&#9989; Slot updated!');}else{DB.insert('timetable',data);showT('&#9989; Slot added!');}closeModal('msched');renderSchedPage();}
-function delSlot(id){if(!confirm('Delete this slot?'))return;DB.delete('timetable',id);showT('Slot deleted','warn');renderSchedPage();}
 
-// TAKE ATTENDANCE
-let attStus=[];
-function initAttPage(){document.getElementById('attcls').innerHTML=copts(false);document.getElementById('attsub').innerHTML='<option value="">— Select —</option>';document.getElementById('attsheet').style.display='none';if(!document.getElementById('attdate').value)document.getElementById('attdate').value=toISO();}
-function attLoadSubs(){const cid=document.getElementById('attcls').value;const a=myAsgns().filter(a=>a.classId===cid);document.getElementById('attsub').innerHTML='<option value="">— Select —</option>'+a.map(a=>`<option value="${a.subjectId}">${a.subjectName}</option>`).join('');}
-function loadAttSheet(){const cid=document.getElementById('attcls').value,sid=document.getElementById('attsub').value,date=document.getElementById('attdate').value;if(!cid||!sid||!date){showT('Select class, subject and date','warn');return;}const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);if(!a){showT('Not assigned','warn');return;}const students=DB.get('students').filter(s=>s.classId===cid);if(!students.length){showT('No students in class','warn');return;}const ex=DB.get('attendance').filter(a=>a.classId===cid&&a.subjectId===sid&&a.date===date&&a.teacherId===CU._id);attStus=students.map(s=>{const e=ex.find(a=>a.studentId===s._id);return{...s,status:e?e.status:'present',eid:e?e._id:null};});document.getElementById('ainfc').textContent=a.className;document.getElementById('ainfs').textContent=a.subjectName;document.getElementById('ainfd').textContent=fmtD(date);document.getElementById('ainft').textContent=students.length;document.getElementById('attsheet').style.display='block';renderAttSheet();}
-function renderAttSheet(){document.getElementById('atttbody').innerHTML=attStus.map((s,i)=>`<tr class="${s.status==='present'?'pr':'ab'}" id="sr${i}"><td style="font-weight:700;color:var(--tdi);">${i+1}</td><td style="font-weight:600;color:var(--tmu);">${s.regNo}</td><td style="font-weight:600;">${s.name}</td><td><div class="attog"><button class="abp ${s.status==='present'?'act':''}" onclick="setS(${i},'present')">P</button><button class="aba ${s.status==='absent'?'act':''}" onclick="setS(${i},'absent')">A</button></div></td></tr>`).join('');updSum();}
-function setS(i,st){attStus[i].status=st;const tr=document.getElementById('sr'+i);tr.className=st==='present'?'pr':'ab';tr.querySelectorAll('.abp,.aba').forEach(b=>b.classList.remove('act'));tr.querySelector(st==='present'?'.abp':'.aba')?.classList.add('act');updSum();}
-function markAll(st){attStus.forEach((_,i)=>attStus[i].status=st);renderAttSheet();}
-function updSum(){const p=attStus.filter(s=>s.status==='present').length;document.getElementById('stotal').textContent=attStus.length;document.getElementById('spres').textContent=p;document.getElementById('sabs').textContent=attStus.length-p;}
-function submitAtt(){if(!attStus.length){showT('No students loaded','warn');return;}const cid=document.getElementById('attcls').value,sid=document.getElementById('attsub').value,date=document.getElementById('attdate').value;const a=myAsgns().find(a=>a.classId===cid&&a.subjectId===sid);attStus.forEach(s=>{if(s.eid)DB.update('attendance',s.eid,{status:s.status});else DB.insert('attendance',{studentId:s._id,studentName:s.name,classId:cid,className:a.className,subjectId:sid,subjectName:a.subjectName,teacherId:CU._id,teacherName:CU.name,date,status:s.status,deptName:a.deptName});});const fresh=DB.get('attendance').filter(a=>a.classId===cid&&a.subjectId===sid&&a.date===date&&a.teacherId===CU._id);attStus=attStus.map(s=>({...s,eid:fresh.find(a=>a.studentId===s._id)?._id||s.eid}));showT('&#9989; Attendance saved!');renderAttSheet();}
+  // ─── MY SCHEDULE PAGE ────────────────────────────────────────────────────────
+  let scheduleWeekOffset = 0;
+  let dayOffset = 0;
+  let currentSchedTab = 'week';
 
-// REPORTS
-function renderAttRec(){const ci=document.getElementById('rfc')?.value||'',si=document.getElementById('rfs')?.value||'',fr=document.getElementById('rff')?.value||'',to=document.getElementById('rft')?.value||'';let att=DB.get('attendance').filter(a=>a.teacherId===CU._id);if(ci)att=att.filter(a=>a.classId===ci);if(si)att=att.filter(a=>a.subjectId===si);if(fr)att=att.filter(a=>a.date>=fr);if(to)att=att.filter(a=>a.date<=to);const bk={};att.forEach(a=>{const k=`${a.studentId}|${a.subjectId}`;if(!bk[k])bk[k]={studentName:a.studentName,regNo:'',className:a.className,subjectName:a.subjectName,present:0,total:0,studentId:a.studentId};bk[k].total++;if(a.status==='present')bk[k].present++;});const stus=DB.get('students');Object.values(bk).forEach(r=>{const s=stus.find(x=>x._id===r.studentId);if(s)r.regNo=s.regNo||'';});const rows=Object.values(bk).sort((a,b)=>a.studentName.localeCompare(b.studentName));const tbody=document.getElementById('attrec');if(!rows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No records found.</td></tr>';return;}tbody.innerHTML=rows.map((r,i)=>{const pct=r.total?Math.round(r.present/r.total*100):0;const cls=pct>=75?'ph':pct>=50?'pm':'pl';return`<tr><td>${i+1}</td><td style="font-weight:600;">${r.studentName}</td><td style="color:var(--tmu);">${r.regNo||'—'}</td><td>${r.className}</td><td>${r.subjectName}</td><td>${r.total}</td><td style="color:var(--gK);font-weight:600;">${r.present}</td><td><span class="pb ${cls}">${pct}%</span></td></tr>`;}).join('');}
-function exportAttCSV(){const t=document.getElementById('attrec');const rows=[['#','Student Name','Reg No','Class','Subject','Total Hours','Present Hours','Attendance %']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Attendance_Record');showT('&#8659; Downloaded!');}
+  // Fix 9: Tab switching for Week / Day / My Timetable
+  function switchSchedTab(tab) {
+    currentSchedTab = tab;
+    ['week','day','tt'].forEach(function(t) {
+      document.getElementById('stab-' + t).classList.toggle('act', t === tab);
+      document.getElementById('sched-' + t + '-view').style.display = t === tab ? '' : 'none';
+    });
+    // Week nav (prev/next week) only shown on week tab
+    var navCtrl = document.getElementById('sched-nav-controls');
+    if (navCtrl) navCtrl.style.display = tab === 'week' ? 'flex' : 'none';
+    if (tab === 'week')     renderSchedulePage();
+    else if (tab === 'day') renderDayView();
+    else                    renderTimetableGrid();
+  }
 
-function renderDefs(){const ci=document.getElementById('dfc')?.value||'',si=document.getElementById('dfs')?.value||'',thresh=parseInt(document.getElementById('dfth')?.value||'75');const att=DB.get('attendance').filter(a=>a.teacherId===CU._id&&(!ci||a.classId===ci)&&(!si||a.subjectId===si));const rows=[];myAsgns().filter(a=>(!ci||a.classId===ci)&&(!si||a.subjectId===si)).forEach(a=>{DB.get('students').filter(s=>s.classId===a.classId).forEach(s=>{const sa=att.filter(x=>x.studentId===s._id&&x.subjectId===a.subjectId);if(!sa.length)return;const pct=Math.round(sa.filter(x=>x.status==='present').length/sa.length*100);if(pct<thresh)rows.push({...s,pct,present:sa.filter(x=>x.status==='present').length,total:sa.length,subjectName:a.subjectName,className:a.className});});});rows.sort((a,b)=>a.pct-b.pct);const tbody=document.getElementById('deftbody');if(!rows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No defaulters &#127881;</td></tr>';return;}tbody.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:600;">${r.name}</td><td>${r.regNo}</td><td>${r.className}</td><td>${r.subjectName}</td><td style="color:var(--gK);font-weight:600;">${r.present}</td><td>${r.total}</td><td><span class="pb ${r.pct<50?'pl':'pm'}">${r.pct}%</span></td></tr>`).join('');}
-function exportDefCSV(){const t=document.getElementById('deftbody');const rows=[['#','Name','Reg No','Class','Subject','Present','Total','%']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Defaulters_List');showT('&#8659; Downloaded!');}
+  function scheduleNavigate(direction) {
+    scheduleWeekOffset += direction * 7;
+    renderSchedulePage();
+  }
+  var schedNav = scheduleNavigate;
 
-function renderStuList(){const ci=document.getElementById('slc')?.value||'',q=(document.getElementById('slq')?.value||'').toLowerCase();const cids=ci?[ci]:myClasses().map(c=>c.id);let students=DB.get('students').filter(s=>cids.includes(s.classId));if(q)students=students.filter(s=>s.name.toLowerCase().includes(q)||s.regNo.toLowerCase().includes(q));const tbody=document.getElementById('stutbody');if(!students.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--tdi);">No students found.</td></tr>';return;}tbody.innerHTML=students.map((s,i)=>`<tr><td>${i+1}</td><td style="font-weight:600;">${s.name}</td><td>${s.regNo}</td><td>${s.className||'—'}</td><td>${s.section||'A'}</td><td style="color:var(--tmu);">${s.deptName||'—'}</td></tr>`).join('');}
-function exportStuCSV(){const t=document.getElementById('stutbody');const rows=[['#','Name','Reg No','Class','Section','Department']];t.querySelectorAll('tr').forEach(tr=>{const c=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());if(c.length)rows.push(c);});dlCSV(rows,'Student_List');showT('&#8659; Downloaded!');}
+  // Fix 9: Day View navigation
+  function dayNavStep(dir) {
+    dayOffset += dir;
+    renderDayView();
+  }
 
-// GRIEVANCE
-function renderGrievs(){const gs=DB.get('teacher-grievances').filter(g=>g.teacherId===CU._id);const c=document.getElementById('grievlist');if(!gs.length){c.innerHTML='<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div>';return;}c.innerHTML=[...gs].reverse().map(g=>`<div class="gcard"><div class="gic ${g.status==='Resolved'?'res':'pend'}">${g.status==='Resolved'?'&#9989;':'&#128225;'}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><div style="font-size:13px;font-weight:700;color:var(--td);">${g.subject}</div><span class="spill ${g.status==='Resolved'?'sres':'spend'}">${g.status}</span><span class="bge">${g.category}</span></div><div style="font-size:11.5px;color:var(--tmu);line-height:1.5;">${g.detail}</div><div style="font-size:10px;color:var(--tdi);margin-top:5px;">${fmtD(g.createdAt.split('T')[0])} · Sent to Admin</div></div></div>`).join('');}
-function submitGriev(){const subj=(document.getElementById('gsubj')?.value||'').trim(),cat=document.getElementById('gcat')?.value||'Other',detail=(document.getElementById('gdetail')?.value||'').trim();if(!subj||!detail){showT('Please fill all fields','warn');return;}const grievId=DB.insert('teacher-grievances',{teacherId:CU._id,teacherName:CU.name,subject:subj,category:cat,detail,status:'Pending',createdAt:new Date().toISOString()})._id;DB.insert('notifications',{type:'request',from:CU.name,fromRole:'Teacher',message:`[Grievance] ${subj} — ${detail.slice(0,100)}${detail.length>100?'…':''}`,time:new Date().toISOString(),read:false,priority:'Normal',category:cat,grievanceId:grievId});document.getElementById('gsubj').value='';document.getElementById('gdetail').value='';closeModal('mgriev');showT('&#128225; Grievance submitted to admin!');renderGrievs();}
+  // Fix 9: Render single-day schedule
+  function renderDayView() {
+    var today    = new Date();
+    var target   = new Date(today);
+    target.setDate(today.getDate() + dayOffset);
+    var dateISO  = target.toISOString().split('T')[0];
+    var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var dayShort = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var dayName  = dayShort[target.getDay()];
+    var isToday  = dateISO === todayISO();
 
-// PROFILE
-function initProfile(){const av=CU.name[0];document.getElementById('profav').textContent=av;document.getElementById('profname').textContent=CU.name;document.getElementById('pdrdesig').textContent=CU.desig||'Assistant Professor';document.getElementById('pdremp').textContent=CU.empId||'—';document.getElementById('pdrdept').textContent=CU.dept||'—';document.getElementById('pdrusr').textContent=CU.username||'—';const cls=[...new Set(myAsgns().map(a=>a.className))];document.getElementById('pdrcls').textContent=cls.length?cls.join(', '):'None assigned';['pwcur','pwnew','pwconf'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwerr').style.display='none';}
-function changePw(){const cur=document.getElementById('pwcur').value.trim(),nw=document.getElementById('pwnew').value.trim(),conf=document.getElementById('pwconf').value.trim();const e=document.getElementById('pwerr');e.style.display='none';if(!cur||!nw||!conf){e.textContent='Please fill all password fields.';e.style.display='block';return;}if(cur!==CU.password){e.textContent='Current password is incorrect.';e.style.display='block';return;}if(nw.length<6){e.textContent='New password must be at least 6 characters.';e.style.display='block';return;}if(nw!==conf){e.textContent='Passwords do not match.';e.style.display='block';return;}DB.update('users',CU._id,{password:nw});CU={...CU,password:nw};['pwcur','pwnew','pwconf'].forEach(id=>document.getElementById(id).value='');showT('&#128274; Password updated successfully!');}
+    document.getElementById('daylbl').textContent =
+      dayNames[target.getDay()] + ', ' + target.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'});
 
-// UTILS
-function openModal(id){document.getElementById(id)?.classList.add('open');}
-function closeModal(id){document.getElementById(id)?.classList.remove('open');}
-document.querySelectorAll('.mbg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
-function showT(msg,type='success'){const t=document.getElementById('toast');t.textContent='';t.innerHTML=msg;t.style.borderLeftColor=type==='warn'?'#ef4444':type==='info'?'#3b82f6':'var(--gM)';t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
-function dlCSV(rows,name){const csv=rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'_'+toISO()+'.csv';a.click();}
+    var myTimetable  = DB.get('timetable').filter(function(t) { return t.teacherId === currentUser._id && t.day === dayName; });
+    var allAttendance = DB.get('attendance');
+    var cont = document.getElementById('dayschedcont');
 
-// BOOT
-ensureDB();
-(function(){
-  const stored=sessionStorage.getItem('eams_user');
-  if(!stored){window.location.href='index.html';return;}
-  try{CU=JSON.parse(stored);}catch{window.location.href='index.html';return;}
-  if(!CU||CU.role!=='teacher'){window.location.href='index.html';return;}
-  bootApp();
-})();
+    if (target.getDay() === 0 || target.getDay() === 6) {
+      cont.innerHTML = '<div class="day-empty">&#127774; Weekend — no classes scheduled.</div>';
+      return;
+    }
+    if (!myTimetable.length) {
+      cont.innerHTML = '<div class="day-empty">&#128197; No classes scheduled for this day.'
+        + (isToday ? '<br><br><button class="btnp bsm" onclick="openAddSlotForDay(\'' + dayName + '\')">+ Add Slot</button>' : '')
+        + '</div>';
+      return;
+    }
+
+    var sorted = myTimetable.slice().sort(function(a,b){ return a.start.localeCompare(b.start); });
+    cont.innerHTML = sorted.map(function(slot) {
+      var marked = allAttendance.some(function(a) {
+        return a.classId === slot.classId && a.subjectId === slot.subjectId && a.date === dateISO && a.teacherId === currentUser._id;
+      });
+      var attBtn = isToday && !marked
+        ? '<button class="attbtn" style="margin-left:auto;" onclick="navigateToAttendance(\'' + slot.classId + '\',\'' + slot.subjectId + '\')">&#9989; Take Attendance</button>'
+        : marked ? '<span class="donetag" style="margin-left:auto;">&#9989; Marked</span>' : '';
+
+      return '<div class="day-slot-card' + (isToday ? ' today-slot' : '') + '">'
+        + '<div class="day-time-col">' + slot.start + '<br><span style="color:var(--tdi);font-weight:400;">to</span><br>' + slot.end + '</div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:14px;font-weight:700;color:var(--td);margin-bottom:3px;">' + slot.subjectName + '</div>'
+        + '<div style="font-size:12px;color:var(--tmu);">&#127979; ' + slot.className + '</div>'
+        + '</div>'
+        + attBtn
+        + '<div style="display:flex;flex-direction:column;gap:5px;margin-left:8px;">'
+        + '<button class="btno bsm" onclick="openEditSlot(\'' + slot._id + '\')">&#9999;</button>'
+        + '<button class="btno bsm" style="color:#dc2626;" onclick="deleteSlot(\'' + slot._id + '\')">&#128465;</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Fix 9: My Timetable — editable weekly grid stored in DB
+  function renderTimetableGrid() {
+    var days      = ['Mon','Tue','Wed','Thu','Fri'];
+    var dayFull   = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    var timetable = DB.get('timetable').filter(function(t) { return t.teacherId === currentUser._id; });
+
+    if (!timetable.length) {
+      document.getElementById('tt-grid').innerHTML =
+        '<div class="day-empty">&#128203; No timetable slots yet.<br><br>'
+        + '<button class="btnp bsm" onclick="openAddSlot()">+ Add Your First Slot</button></div>';
+      return;
+    }
+
+    // Build table
+    var rows = '';
+    days.forEach(function(day, i) {
+      var slots = timetable.filter(function(t){ return t.day === day; })
+                           .sort(function(a,b){ return a.start.localeCompare(b.start); });
+      var pillsHtml = slots.length
+        ? slots.map(function(s) {
+            return '<span class="tt-slot-pill" title="' + s.start + '–' + s.end + '">'
+              + s.start + ' ' + s.subjectName + ' <span style="opacity:.6;">(' + s.className + ')</span>'
+              + '</span>';
+          }).join('')
+        : '<span style="color:var(--tdi);font-size:11px;">—</span>';
+
+      rows += '<tr>'
+        + '<td style="font-weight:700;color:var(--td);white-space:nowrap;">' + dayFull[i] + '</td>'
+        + '<td>' + pillsHtml + '</td>'
+        + '<td style="white-space:nowrap;">'
+        + '<button class="btno bsm" style="font-size:10px;" onclick="openAddSlotForDay(\'' + day + '\')">+ Add</button>'
+        + '</td>'
+        + '</tr>';
+    });
+
+    document.getElementById('tt-grid').innerHTML =
+      '<table class="tt-table">'
+      + '<thead><tr><th style="width:110px;">Day</th><th>Classes</th><th style="width:70px;">Edit</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '</table>'
+      + '<div style="margin-top:12px;font-size:11px;color:var(--tdi);">&#128161; Click + Add on any day to add or edit slots. Changes are saved automatically.</div>';
+  }
+
+  function renderSchedulePage() {
+    const weekDayNames  = ['Mon','Tue','Wed','Thu','Fri'];
+    const weekDayFull   = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const myTimetable   = DB.get('timetable').filter(function(t) { return t.teacherId === currentUser._id; });
+    const allAttendance = DB.get('attendance');
+
+    // Calculate the Mon–Fri dates for this week (with offset)
+    const baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + scheduleWeekOffset);
+    const monday = new Date(baseDate);
+    monday.setDate(baseDate.getDate() - ((baseDate.getDay() + 6) % 7));
+
+    const weekDates = weekDayNames.map(function(_, i) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
+
+    document.getElementById('weeklbl').textContent = formatDateShort(weekDates[0]) + ' – ' + formatDateShort(weekDates[4]);
+
+    let html = '';
+
+    weekDayNames.forEach(function(day, dayIndex) {
+      const dateISO = weekDates[dayIndex];
+      const isToday = dateISO === todayISO();
+      const slots   = myTimetable.filter(function(t) { return t.day === day; })
+                        .sort(function(a, b) { return a.start.localeCompare(b.start); });
+
+      html += '<div class="wdblk' + (isToday ? ' today-col' : '') + '">';
+      html += '<div class="wdhd" style="padding:10px 12px;flex-wrap:wrap;gap:4px;">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;">';
+      html += '<span class="wdnm" style="font-size:12.5px;">' + weekDayFull[dayIndex] + '</span>';
+      if (isToday) html += '<span class="wdtd">TODAY</span>';
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:2px;">';
+      html += '<span class="wddt">' + formatDateShort(dateISO) + '</span>';
+      html += '<button class="btno bsm" style="font-size:10px;padding:2px 8px!important;border-radius:8px!important;" onclick="openAddSlotForDay(\'' + day + '\')">+ Add</button>';
+      html += '</div></div>';
+
+      html += '<div class="wdslots" style="padding:8px 10px;gap:6px;">';
+      if (!slots.length) {
+        html += '<div style="text-align:center;padding:14px 0;color:var(--tdi);font-size:11px;cursor:pointer;" onclick="openAddSlotForDay(\'' + day + '\')">No classes</div>';
+      } else {
+        slots.forEach(function(slot) {
+          const alreadyMarked = allAttendance.some(function(a) {
+            return a.classId === slot.classId && a.subjectId === slot.subjectId && a.date === dateISO && a.teacherId === currentUser._id;
+          });
+
+          html += '<div class="slotc" style="flex-direction:column;align-items:stretch;gap:5px;padding:9px 10px;">';
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+          html += '<span class="slott" style="min-width:unset;font-size:10px;padding:2px 7px;">' + slot.start + '–' + slot.end + '</span>';
+
+          if (alreadyMarked) {
+            html += '<span class="donetag" style="font-size:9px;padding:2px 6px;">&#9989;</span>';
+          } else if (isToday) {
+            html += '<button class="attbtn" style="font-size:9.5px;padding:2px 8px;" onclick="navigateToAttendance(\'' + slot.classId + '\',\'' + slot.subjectId + '\')">Att.</button>';
+          }
+          html += '</div>';
+
+          html += '<div><div class="slotcl" style="font-size:11.5px;">' + slot.className + '</div>';
+          html += '<div class="slotsb" style="font-size:10.5px;">' + slot.subjectName + '</div></div>';
+          html += '<div style="display:flex;gap:4px;">';
+          html += '<button class="btno bsm" style="font-size:10px;padding:2px 6px!important;flex:1;" onclick="openEditSlot(\'' + slot._id + '\')">&#9999; Edit</button>';
+          html += '<button class="btno bsm" style="font-size:10px;padding:2px 6px!important;color:#dc2626;border-color:rgba(239,68,68,.3);" onclick="deleteSlot(\'' + slot._id + '\')">&#128465;</button>';
+          html += '</div></div>';
+        });
+      }
+      html += '</div></div>';
+    });
+
+    document.getElementById('schedbyday').innerHTML = html;
+  }
+
+  function openAddSlot() {
+    document.getElementById('schedeid').value  = '';
+    document.getElementById('mschedtit').innerHTML = '&#10133; Add Schedule Slot';
+    document.getElementById('schedday').value  = 'Mon';
+    document.getElementById('schedst').value   = '08:00';
+    document.getElementById('schedet').value   = '09:00';
+    document.getElementById('schedcls').innerHTML = buildClassOptions(false);
+    document.getElementById('schedsub').innerHTML = '<option value="">— Select —</option>';
+    openModal('msched');
+  }
+
+  function openAddSlotForDay(day) {
+    openAddSlot();
+    document.getElementById('schedday').value = day;
+  }
+  var openAddSlotDay = openAddSlotForDay;
+
+  function openEditSlot(slotId) {
+    const slot = DB.get('timetable').find(function(t) { return t._id === slotId; });
+    if (!slot) return;
+    document.getElementById('schedeid').value  = slotId;
+    document.getElementById('mschedtit').innerHTML = '&#9999; Edit Schedule Slot';
+    document.getElementById('schedday').value  = slot.day;
+    document.getElementById('schedst').value   = slot.start;
+    document.getElementById('schedet').value   = slot.end;
+    document.getElementById('schedcls').innerHTML = buildClassOptions(false);
+    document.getElementById('schedsub').innerHTML = '<option value="">— Select —</option>';
+    openModal('msched');
+    setTimeout(function() {
+      document.getElementById('schedcls').value = slot.classId;
+      populateScheduleSubjects();
+      setTimeout(function() { document.getElementById('schedsub').value = slot.subjectId; }, 100);
+    }, 50);
+  }
+
+  function populateScheduleSubjects() {
+    const classId = document.getElementById('schedcls').value;
+    const relatedAssignments = getMyAssignments().filter(function(a) { return a.classId === classId; });
+    document.getElementById('schedsub').innerHTML = '<option value="">— Select —</option>'
+      + relatedAssignments.map(function(a) {
+          return '<option value="' + a.subjectId + '">' + a.subjectName + '</option>';
+        }).join('');
+  }
+  var populateSchedSubs = populateScheduleSubjects;
+
+  function saveScheduleSlot() {
+    const classId   = document.getElementById('schedcls').value;
+    const subjectId = document.getElementById('schedsub').value;
+    const day       = document.getElementById('schedday').value;
+    const startTime = document.getElementById('schedst').value;
+    const endTime   = document.getElementById('schedet').value;
+    const editId    = document.getElementById('schedeid').value;
+
+    if (!classId || !subjectId || !day || !startTime || !endTime) {
+      showToast('Please fill all fields', 'warn'); return;
+    }
+    if (startTime >= endTime) {
+      showToast('End time must be after start time', 'warn'); return;
+    }
+
+    const assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+    if (!assignment) { showToast('Assignment not found', 'warn'); return; }
+
+    const slotData = {
+      classId: classId, className: assignment.className,
+      subjectId: subjectId, subjectName: assignment.subjectName,
+      teacherId: currentUser._id, teacherName: currentUser.name,
+      day: day, start: startTime, end: endTime
+    };
+
+    if (editId) {
+      DB.update('timetable', editId, slotData);
+      showToast('&#9989; Slot updated!');
+    } else {
+      DB.insert('timetable', slotData);
+      showToast('&#9989; Slot added!');
+    }
+    closeModal('msched');
+    renderSchedulePage();
+  }
+  var saveSlot = saveScheduleSlot;
+
+  function deleteSlot(slotId) {
+    if (!confirm('Delete this slot?')) return;
+    DB.delete('timetable', slotId);
+    showToast('Slot deleted', 'warn');
+    renderSchedulePage();
+  }
+  var delSlot = deleteSlot;
+
+  // ─── TAKE ATTENDANCE ────────────────────────────────────────────────────────
+  let attendanceStudents = [];
+
+  function initAttendancePage() {
+    document.getElementById('attcls').innerHTML  = buildClassOptions(false);
+    document.getElementById('attsub').innerHTML  = '<option value="">— Select —</option>';
+    document.getElementById('attsheet').style.display = 'none';
+    if (!document.getElementById('attdate').value) {
+      document.getElementById('attdate').value = todayISO();
+    }
+  }
+  var initAttPage = initAttendancePage;
+
+  function loadSubjectsForClass() {
+    const classId = document.getElementById('attcls').value;
+    const relatedAssignments = getMyAssignments().filter(function(a) { return a.classId === classId; });
+    document.getElementById('attsub').innerHTML = '<option value="">— Select —</option>'
+      + relatedAssignments.map(function(a) {
+          return '<option value="' + a.subjectId + '">' + a.subjectName + '</option>';
+        }).join('');
+  }
+  var attLoadSubs = loadSubjectsForClass;
+
+  function loadAttendanceSheet() {
+    const classId   = document.getElementById('attcls').value;
+    const subjectId = document.getElementById('attsub').value;
+    const date      = document.getElementById('attdate').value;
+
+    if (!classId || !subjectId || !date) { showToast('Select class, subject and date', 'warn'); return; }
+
+    const assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+    if (!assignment) { showToast('Not assigned', 'warn'); return; }
+
+    const classStudents = DB.get('students').filter(function(s) { return s.classId === classId; });
+    if (!classStudents.length) { showToast('No students in class', 'warn'); return; }
+
+    // Load any existing attendance records for this session
+    const existingRecords = DB.get('attendance').filter(function(a) {
+      return a.classId === classId && a.subjectId === subjectId && a.date === date && a.teacherId === currentUser._id;
+    });
+
+    attendanceStudents = classStudents.map(function(student) {
+      const existing = existingRecords.find(function(a) { return a.studentId === student._id; });
+      return Object.assign({}, student, {
+        status: existing ? existing.status : 'present',
+        existingId: existing ? existing._id : null
+      });
+    });
+
+    // Populate info bar
+    document.getElementById('ainfc').textContent = assignment.className;
+    document.getElementById('ainfs').textContent = assignment.subjectName;
+    document.getElementById('ainfd').textContent = formatDateLong(date);
+    document.getElementById('ainft').textContent = classStudents.length;
+
+    document.getElementById('attsheet').style.display = 'block';
+    renderAttendanceSheet();
+  }
+  var loadAttSheet = loadAttendanceSheet;
+
+  function renderAttendanceSheet() {
+    document.getElementById('atttbody').innerHTML = attendanceStudents.map(function(student, index) {
+      const isPresent = student.status === 'present';
+      return '<tr class="' + (isPresent ? 'pr' : 'ab') + '" id="student-row-' + index + '">'
+        + '<td style="font-weight:700;color:var(--tdi);">' + (index + 1) + '</td>'
+        + '<td style="font-weight:600;color:var(--tmu);">' + student.regNo + '</td>'
+        + '<td style="font-weight:600;">' + student.name + '</td>'
+        + '<td><div class="attog">'
+        + '<button class="abp ' + (isPresent ? 'act' : '') + '" onclick="setAttendanceStatus(' + index + ',\'present\')">P</button>'
+        + '<button class="aba ' + (!isPresent ? 'act' : '') + '" onclick="setAttendanceStatus(' + index + ',\'absent\')">A</button>'
+        + '</div></td>'
+        + '</tr>';
+    }).join('');
+    updateAttendanceSummary();
+  }
+
+  function setAttendanceStatus(index, status) {
+    attendanceStudents[index].status = status;
+    const row = document.getElementById('student-row-' + index);
+    row.className = status === 'present' ? 'pr' : 'ab';
+    row.querySelectorAll('.abp,.aba').forEach(function(btn) { btn.classList.remove('act'); });
+    const targetBtn = row.querySelector(status === 'present' ? '.abp' : '.aba');
+    if (targetBtn) targetBtn.classList.add('act');
+    updateAttendanceSummary();
+  }
+  var setS = setAttendanceStatus;
+
+  function markAllStudents(status) {
+    attendanceStudents.forEach(function(_, index) { attendanceStudents[index].status = status; });
+    renderAttendanceSheet();
+  }
+  var markAll = markAllStudents;
+
+  function updateAttendanceSummary() {
+    const presentCount = attendanceStudents.filter(function(s) { return s.status === 'present'; }).length;
+    document.getElementById('stotal').textContent = attendanceStudents.length;
+    document.getElementById('spres').textContent  = presentCount;
+    document.getElementById('sabs').textContent   = attendanceStudents.length - presentCount;
+  }
+  var updSum = updateAttendanceSummary;
+
+  function submitAttendance() {
+    if (!attendanceStudents.length) { showToast('No students loaded', 'warn'); return; }
+
+    const classId   = document.getElementById('attcls').value;
+    const subjectId = document.getElementById('attsub').value;
+    const date      = document.getElementById('attdate').value;
+    const assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+
+    attendanceStudents.forEach(function(student) {
+      if (student.existingId) {
+        DB.update('attendance', student.existingId, { status: student.status });
+      } else {
+        DB.insert('attendance', {
+          studentId: student._id, studentName: student.name,
+          classId: classId, className: assignment.className,
+          subjectId: subjectId, subjectName: assignment.subjectName,
+          teacherId: currentUser._id, teacherName: currentUser.name,
+          date: date, status: student.status, deptName: assignment.deptName
+        });
+      }
+    });
+
+    // Refresh existing IDs after save
+    const freshRecords = DB.get('attendance').filter(function(a) {
+      return a.classId === classId && a.subjectId === subjectId && a.date === date && a.teacherId === currentUser._id;
+    });
+    attendanceStudents = attendanceStudents.map(function(student) {
+      const fresh = freshRecords.find(function(a) { return a.studentId === student._id; });
+      return Object.assign({}, student, { existingId: fresh ? fresh._id : student.existingId });
+    });
+
+    showToast('&#9989; Attendance saved!');
+    renderAttendanceSheet();
+  }
+  var submitAtt = submitAttendance;
+
+  // ─── REPORTS ────────────────────────────────────────────────────────────────
+  function renderAttendanceRecord() {
+    const classFilter   = document.getElementById('rfc') ? document.getElementById('rfc').value : '';
+    const subjectFilter = document.getElementById('rfs') ? document.getElementById('rfs').value : '';
+    const fromDate      = document.getElementById('rff') ? document.getElementById('rff').value : '';
+    const toDate        = document.getElementById('rft') ? document.getElementById('rft').value : '';
+
+    let attendance = DB.get('attendance').filter(function(a) { return a.teacherId === currentUser._id; });
+    if (classFilter)   attendance = attendance.filter(function(a) { return a.classId   === classFilter; });
+    if (subjectFilter) attendance = attendance.filter(function(a) { return a.subjectId === subjectFilter; });
+    if (fromDate)      attendance = attendance.filter(function(a) { return a.date >= fromDate; });
+    if (toDate)        attendance = attendance.filter(function(a) { return a.date <= toDate; });
+
+    // Aggregate per student + subject
+    const grouped = {};
+    attendance.forEach(function(a) {
+      const key = a.studentId + '|' + a.subjectId;
+      if (!grouped[key]) grouped[key] = {
+        studentName: a.studentName, regNo: '',
+        className: a.className, subjectName: a.subjectName,
+        present: 0, total: 0, studentId: a.studentId
+      };
+      grouped[key].total++;
+      if (a.status === 'present') grouped[key].present++;
+    });
+
+    // Add reg numbers
+    const allStudents = DB.get('students');
+    Object.values(grouped).forEach(function(record) {
+      const student = allStudents.find(function(s) { return s._id === record.studentId; });
+      if (student) record.regNo = student.regNo || '';
+    });
+
+    const rows  = Object.values(grouped).sort(function(a, b) { return a.studentName.localeCompare(b.studentName); });
+    const tbody = document.getElementById('attrec');
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No records found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(function(record, index) {
+      const pct      = record.total ? Math.round(record.present / record.total * 100) : 0;
+      const pctClass = pct >= 75 ? 'ph' : pct >= 50 ? 'pm' : 'pl';
+      return '<tr>'
+        + '<td>' + (index + 1) + '</td>'
+        + '<td style="font-weight:600;">' + record.studentName + '</td>'
+        + '<td style="color:var(--tmu);">' + (record.regNo || '—') + '</td>'
+        + '<td>' + record.className + '</td>'
+        + '<td>' + record.subjectName + '</td>'
+        + '<td>' + record.total + '</td>'
+        + '<td style="color:var(--gK);font-weight:600;">' + record.present + '</td>'
+        + '<td><span class="pb ' + pctClass + '">' + pct + '%</span></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function exportAttendanceCSV() {
+    const tableEl = document.getElementById('attrec');
+    const rows    = [['#','Student Name','Reg No','Class','Subject','Total Hours','Present Hours','Attendance %']];
+    tableEl.querySelectorAll('tr').forEach(function(tr) {
+      const cells = Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent.trim(); });
+      if (cells.length) rows.push(cells);
+    });
+    downloadCSV(rows, 'Attendance_Record');
+    showToast('&#8659; Downloaded!');
+  }
+  var exportAttCSV = exportAttendanceCSV;
+
+  function renderDefaultersList() {
+    const classFilter   = document.getElementById('dfc') ? document.getElementById('dfc').value : '';
+    const subjectFilter = document.getElementById('dfs') ? document.getElementById('dfs').value : '';
+    const threshold     = parseInt(document.getElementById('dfth') ? document.getElementById('dfth').value : '75');
+
+    const allAttendance = DB.get('attendance').filter(function(a) {
+      return a.teacherId === currentUser._id
+          && (!classFilter   || a.classId   === classFilter)
+          && (!subjectFilter || a.subjectId === subjectFilter);
+    });
+
+    const defaulterRows = [];
+    getMyAssignments()
+      .filter(function(a) {
+        return (!classFilter   || a.classId   === classFilter)
+            && (!subjectFilter || a.subjectId === subjectFilter);
+      })
+      .forEach(function(assignment) {
+        DB.get('students').filter(function(s) { return s.classId === assignment.classId; }).forEach(function(student) {
+          const stuAtt = allAttendance.filter(function(a) { return a.studentId === student._id && a.subjectId === assignment.subjectId; });
+          if (!stuAtt.length) return;
+          const pct = Math.round(stuAtt.filter(function(a) { return a.status === 'present'; }).length / stuAtt.length * 100);
+          if (pct < threshold) {
+            defaulterRows.push(Object.assign({}, student, {
+              pct: pct,
+              present: stuAtt.filter(function(a) { return a.status === 'present'; }).length,
+              total: stuAtt.length,
+              subjectName: assignment.subjectName,
+              className: assignment.className
+            }));
+          }
+        });
+      });
+
+    defaulterRows.sort(function(a, b) { return a.pct - b.pct; });
+    const tbody = document.getElementById('deftbody');
+
+    if (!defaulterRows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No defaulters &#127881;</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = defaulterRows.map(function(row, index) {
+      return '<tr>'
+        + '<td>' + (index + 1) + '</td>'
+        + '<td style="font-weight:600;">' + row.name + '</td>'
+        + '<td>' + row.regNo + '</td>'
+        + '<td>' + row.className + '</td>'
+        + '<td>' + row.subjectName + '</td>'
+        + '<td style="color:var(--gK);font-weight:600;">' + row.present + '</td>'
+        + '<td>' + row.total + '</td>'
+        + '<td><span class="pb ' + (row.pct < 50 ? 'pl' : 'pm') + '">' + row.pct + '%</span></td>'
+        + '</tr>';
+    }).join('');
+  }
+  var renderDefs = renderDefaultersList;
+
+  function exportDefaultersCSV() {
+    const tableEl = document.getElementById('deftbody');
+    const rows    = [['#','Name','Reg No','Class','Subject','Present','Total','%']];
+    tableEl.querySelectorAll('tr').forEach(function(tr) {
+      const cells = Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent.trim(); });
+      if (cells.length) rows.push(cells);
+    });
+    downloadCSV(rows, 'Defaulters_List');
+    showToast('&#8659; Downloaded!');
+  }
+  var exportDefCSV = exportDefaultersCSV;
+
+  function renderStudentList() {
+    const classFilter  = document.getElementById('slc') ? document.getElementById('slc').value : '';
+    const searchQuery  = (document.getElementById('slq') ? document.getElementById('slq').value : '').toLowerCase();
+
+    const myClassIds  = classFilter ? [classFilter] : getMyClasses().map(function(c) { return c.id; });
+    let students = DB.get('students').filter(function(s) { return myClassIds.includes(s.classId); });
+    if (searchQuery) students = students.filter(function(s) {
+      return s.name.toLowerCase().includes(searchQuery) || s.regNo.toLowerCase().includes(searchQuery);
+    });
+
+    const tbody = document.getElementById('stutbody');
+    if (!students.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--tdi);">No students found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = students.map(function(student, index) {
+      return '<tr>'
+        + '<td>' + (index + 1) + '</td>'
+        + '<td style="font-weight:600;">' + student.name + '</td>'
+        + '<td>' + student.regNo + '</td>'
+        + '<td>' + (student.className || '—') + '</td>'
+        + '<td>' + (student.section || 'A') + '</td>'
+        + '<td style="color:var(--tmu);">' + (student.deptName || '—') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function exportStudentCSV() {
+    const tableEl = document.getElementById('stutbody');
+    const rows    = [['#','Name','Reg No','Class','Section','Department']];
+    tableEl.querySelectorAll('tr').forEach(function(tr) {
+      const cells = Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent.trim(); });
+      if (cells.length) rows.push(cells);
+    });
+    downloadCSV(rows, 'Student_List');
+    showToast('&#8659; Downloaded!');
+  }
+  var exportStuCSV = exportStudentCSV;
+
+  // ─── GRIEVANCES ──────────────────────────────────────────────────────────────
+  function renderGrievances() {
+    const myGrievances = DB.get('teacher-grievances').filter(function(g) { return g.teacherId === currentUser._id; });
+    const containerEl  = document.getElementById('grievlist');
+
+    if (!myGrievances.length) {
+      containerEl.innerHTML = '<div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div>';
+      return;
+    }
+
+    containerEl.innerHTML = myGrievances.slice().reverse().map(function(grievance) {
+      const isResolved  = grievance.status === 'Resolved';
+      const isCancelled = grievance.status === 'Cancelled';
+      const isPending   = !isResolved && !isCancelled;
+      const iconCode    = isResolved ? '&#9989;' : isCancelled ? '&#10060;' : '&#128225;';
+      const icClass     = isResolved ? 'res' : 'pend';
+      const pillClass   = isResolved ? 'sres' : 'spend';
+      const pillStyle   = isCancelled ? 'style="background:#fef2f2;color:#dc2626;border-color:rgba(239,68,68,.3);"' : '';
+
+      let statusNote = '';
+      if (isResolved) {
+        statusNote = '<div style="margin-top:6px;font-size:10.5px;color:var(--gD);background:var(--gLt);padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;">'
+          + '&#9989; Resolved by Admin'
+          + (grievance.resolvedAt ? ' &nbsp;·&nbsp; ' + new Date(grievance.resolvedAt).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '')
+          + '</div>';
+      } else if (isCancelled) {
+        statusNote = '<div style="margin-top:6px;font-size:10.5px;color:#dc2626;background:#fef2f2;padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;">'
+          + '&#10060; Declined by Admin'
+          + '</div>';
+      } else {
+        statusNote = '<div style="margin-top:6px;font-size:10.5px;color:#92400e;background:#fef3c7;padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;">'
+          + '&#8987; Awaiting admin response'
+          + '</div>';
+      }
+
+      return '<div class="gcard">'
+        + '<div class="gic ' + icClass + '">' + iconCode + '</div>'
+        + '<div style="flex:1;">'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--td);">' + grievance.subject + '</div>'
+        + '<span class="spill ' + pillClass + '" ' + pillStyle + '>' + grievance.status + '</span>'
+        + '<span class="bge">' + grievance.category + '</span>'
+        + '</div>'
+        + '<div style="font-size:11.5px;color:var(--tmu);line-height:1.5;">' + grievance.detail + '</div>'
+        + '<div style="font-size:10px;color:var(--tdi);margin-top:5px;">' + formatDateLong(grievance.createdAt.split('T')[0]) + ' · Sent to Admin</div>'
+        + statusNote
+        + '</div></div>';
+    }).join('');
+  }
+  var renderGrievs = renderGrievances;
+
+  function submitGrievance() {
+    const subject    = (document.getElementById('gsubj')   ? document.getElementById('gsubj').value   : '').trim();
+    const category   = document.getElementById('gcat')     ? document.getElementById('gcat').value    : 'Other';
+    const detail     = (document.getElementById('gdetail') ? document.getElementById('gdetail').value : '').trim();
+
+    if (!subject || !detail) { showToast('Please fill all fields', 'warn'); return; }
+
+    const newGrievance = DB.insert('teacher-grievances', {
+      teacherId: currentUser._id, teacherName: currentUser.name,
+      subject: subject, category: category, detail: detail,
+      status: 'Pending', createdAt: new Date().toISOString()
+    });
+
+    // Notify admin
+    DB.insert('notifications', {
+      type: 'request', from: currentUser.name, fromRole: 'Teacher',
+      message: '[Grievance] ' + subject + ' — ' + detail.slice(0, 100) + (detail.length > 100 ? '…' : ''),
+      time: new Date().toISOString(), read: false, priority: 'Normal',
+      category: category, grievanceId: newGrievance._id
+    });
+
+    document.getElementById('gsubj').value   = '';
+    document.getElementById('gdetail').value = '';
+    closeModal('mgriev');
+    showToast('&#128225; Grievance submitted to admin!');
+    renderGrievances();
+  }
+  var submitGriev = submitGrievance;
+
+  // ─── PROFILE PAGE ────────────────────────────────────────────────────────────
+  function initProfilePage() {
+    document.getElementById('profav').textContent    = currentUser.name[0];
+    document.getElementById('profname').textContent  = currentUser.name;
+    document.getElementById('pdrdesig').textContent  = currentUser.desig  || 'Assistant Professor';
+    document.getElementById('pdremp').textContent    = currentUser.empId  || '—';
+    document.getElementById('pdrdept').textContent   = currentUser.dept   || '—';
+    document.getElementById('pdrusr').textContent    = currentUser.username || '—';
+
+    const assignedClasses = Array.from(new Set(getMyAssignments().map(function(a) { return a.className; })));
+    document.getElementById('pdrcls').textContent = assignedClasses.length ? assignedClasses.join(', ') : 'None assigned';
+
+    ['pwcur','pwnew','pwconf'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('pwerr').style.display = 'none';
+  }
+  var initProfile = initProfilePage;
+
+  function changePassword() {
+    const currentPw  = document.getElementById('pwcur').value.trim();
+    const newPw      = document.getElementById('pwnew').value.trim();
+    const confirmPw  = document.getElementById('pwconf').value.trim();
+    const errorEl    = document.getElementById('pwerr');
+
+    errorEl.style.display = 'none';
+
+    if (!currentPw || !newPw || !confirmPw) {
+      errorEl.textContent = 'Please fill all password fields.';
+      errorEl.style.display = 'block'; return;
+    }
+    if (currentPw !== currentUser.password) {
+      errorEl.textContent = 'Current password is incorrect.';
+      errorEl.style.display = 'block'; return;
+    }
+    if (newPw.length < 6) {
+      errorEl.textContent = 'New password must be at least 6 characters.';
+      errorEl.style.display = 'block'; return;
+    }
+    if (newPw !== confirmPw) {
+      errorEl.textContent = 'Passwords do not match.';
+      errorEl.style.display = 'block'; return;
+    }
+
+    DB.update('users', currentUser._id, { password: newPw });
+    currentUser = Object.assign({}, currentUser, { password: newPw });
+    ['pwcur','pwnew','pwconf'].forEach(function(id) { document.getElementById(id).value = ''; });
+    showToast('&#128274; Password updated successfully!');
+  }
+  var changePw = changePassword;
+
+  // ─── MODAL HELPERS ───────────────────────────────────────────────────────────
+  function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('open');
+  }
+
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  }
+
+  // Close modal on backdrop click
+  document.querySelectorAll('.mbg').forEach(function(bg) {
+    bg.addEventListener('click', function(e) {
+      if (e.target === bg) bg.classList.remove('open');
+    });
+  });
+
+  // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
+  function showToast(message, type) {
+    const toast      = document.getElementById('toast');
+    toast.innerHTML  = message;
+    const colorMap   = { warn: '#ef4444', info: '#3b82f6' };
+    toast.style.borderLeftColor = colorMap[type] || 'var(--gM)';
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function() { toast.classList.remove('show'); }, 3200);
+  }
+  var showT = showToast;
+
+  function downloadCSV(rows, filename) {
+    const csvContent = rows.map(function(row) {
+      return row.map(function(cell) {
+        return '"' + String(cell || '').replace(/"/g, '""') + '"';
+      }).join(',');
+    }).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = filename + '_' + todayISO() + '.csv';
+    link.click();
+  }
+  var dlCSV = downloadCSV;
+
+  // ─── BOOT ────────────────────────────────────────────────────────────────────
+  ensureDB();
+
+  (function checkAuthAndBoot() {
+    const storedUser = sessionStorage.getItem('eams_user');
+    if (!storedUser) { window.location.href = 'index.html'; return; }
+    try {
+      currentUser = JSON.parse(storedUser);
+    } catch (e) {
+      window.location.href = 'index.html'; return;
+    }
+    if (!currentUser || currentUser.role !== 'teacher') {
+      window.location.href = 'index.html'; return;
+    }
+    bootApp();
+  })();
 </script>
 </body>
 </html>
