@@ -11,6 +11,7 @@ const jwt        = require('jsonwebtoken');
 const cors       = require('cors');
 const multer     = require('multer');
 const XLSX       = require('xlsx');
+const path       = require('path');
 const cfg        = require('./config');
 const M          = require('./models');
 
@@ -18,9 +19,9 @@ const app    = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
-app.use(cors({ origin: cfg.CORS_ORIGIN, credentials: true }));
+app.use(cors({ origin: process.env.NODE_ENV === 'production' ? true : cfg.CORS_ORIGIN, credentials: true }));
 app.use(express.json());
-app.use(express.static('../'));   // serve index.html, admin.html, teacher.html
+app.use(express.static(path.join(__dirname, '.')));   // serve index.html, admin.html, teacher.html
 
 // ── MongoDB Connection ────────────────────────────────
 mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
@@ -565,7 +566,8 @@ app.delete('/api/depts/:id', authMiddleware, adminOnly, async (req, res) => {
 });
 
 // ── Start Server ──────────────────────────────────────
-app.listen(cfg.PORT, () => {
-  console.log(`🚀 EAMS API running → http://localhost:${cfg.PORT}`);
+const PORT = process.env.PORT || cfg.PORT;
+app.listen(PORT, () => {
+  console.log(`🚀 EAMS API running → http://localhost:${PORT}`);
   console.log(`   Environment: ${cfg.NODE_ENV}`);
 });
