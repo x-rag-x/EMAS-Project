@@ -41,25 +41,25 @@ async function seedDefaults() {
   if (!adminExists) {
     const hash = await bcrypt.hash('admin123', cfg.BCRYPT_ROUNDS);
     await M.User.create({ name: 'Administrator', username: 'admin', password: hash, role: 'admin', mustChangePassword: true });
-    console.log('🌱 Default admin seeded (admin / admin123)');
+
   }
   const teacherExists = await M.User.findOne({ role: 'teacher' });
   if (!teacherExists) {
     const plainPw = 'teacher123';
     const hash = await bcrypt.hash(plainPw, cfg.BCRYPT_ROUNDS);
     await M.User.create({ name: 'Default Teacher', username: 'teacher', password: hash, role: 'teacher', empId: 'EMP001', dept: 'Computer Science Engineering', desig: 'Assistant Professor', mustChangePassword: true });
-    console.log('🌱 Default teacher seeded');
-    console.log('   ┌─ Username : teacher');
-    console.log('   └─ Password : ' + plainPw);
+
+
+
   } else {
     // Verify existing teacher's hash is valid
     const testMatch = await bcrypt.compare('teacher123', teacherExists.password);
-    console.log('ℹ️  Teacher exists: ' + teacherExists.username + ' | active=' + teacherExists.active + ' | hash_check(teacher123)=' + (testMatch ? '✅' : '❌ WRONG'));
+
     if (!testMatch) {
       // Auto-reset teacher password if hash is broken
       const newHash = await bcrypt.hash('teacher123', cfg.BCRYPT_ROUNDS);
       await M.User.findByIdAndUpdate(teacherExists._id, { password: newHash, active: true, failedLogins: 0, lockedUntil: null });
-      console.log('   🔧 Auto-reset teacher password to: teacher123');
+
     }
   }
   // Seed default settings
@@ -74,12 +74,31 @@ async function seedDefaults() {
     const exists = await M.Settings.findOne({ key: d.key });
     if (!exists) await M.Settings.create(d);
   }
+
+  // Log current credentials to DB (visible in Logs menu, not terminal)
+  const adminUser2   = await M.User.findOne({ role: 'admin' });
+  const teacherUser2 = await M.User.findOne({ role: 'teacher' });
+  const adminPwSetting   = await M.Settings.findOne({ key: 'default_admin_pw' });
+  const teacherPwSetting = await M.Settings.findOne({ key: 'default_teacher_pw' });
+  const adminPw   = adminPwSetting?.value   || 'admin123';
+  const teacherPw = teacherPwSetting?.value || 'teacher123';
+  await M.Log.create({
+    userId: adminUser2?._id, userName: 'SYSTEM', role: 'system',
+    action: 'Server Started',
+    details: `Admin: ${adminUser2?.username} | pwd: ${adminPw} || Teacher: ${teacherUser2?.username} | pwd: ${teacherPw}`,
+    category: 'system', severity: 'info', ip: 'localhost',
+    time: new Date()
+  });
 }
 
 // ── Helper: log action to DB ──────────────────────────
 async function logAction(userId, userName, role, action, details, category = 'general', severity = 'info', ip = '', sessionId = '') {
   try {
-    await M.Log.create({ userId, userName, role, action, details, category, severity, ip, sessionId });
+    await M.Log.create({
+      userId, userName, role, action, details, category, severity,
+      ip: ip || '', sessionId: sessionId || '',
+      time: new Date()
+    });
   } catch(e) {}
 }
 
@@ -123,7 +142,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!username || !password || !role)
       return res.status(400).json({ error: 'username, password and role required' });
 
-    console.log(`🔐 Login attempt: username=${username} role=${role}`);
+
     const user = await M.User.findOne({ username: username.toLowerCase(), role, active: true });
     if (!user) {
       await logAction(null, username, role, 'Login Failed', 'User not found', 'security', 'warning', req.ip);
@@ -136,10 +155,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(429).json({ error: `Account locked. Try again in ${mins} minute(s).` });
     }
 
-    console.log(`🔑 Login attempt: username=${username} role=${role} password_provided=${password ? 'yes('+password.length+'chars)' : 'no'}`);
+
     const match = await bcrypt.compare(password, user.password);
-    console.log(`   Found user: ${user.username} (${user.role}) | active:${user.active} | passwordMatch:${match}`);
-    console.log(`   Match result: ${match ? '✅ CORRECT' : '❌ WRONG PASSWORD'}`);
+
+
     if (!match) {
       const security = await M.Settings.findOne({ key: 'security' });
       const maxAttempts = security?.value?.maxLoginAttempts || 5;
@@ -168,7 +187,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Reset failed logins
-    console.log(`   ✅ Login SUCCESS: ${user.username} (${user.role})`);
+
     await M.User.findByIdAndUpdate(user._id, { failedLogins: 0, lockedUntil: null, lastLogin: new Date(), $inc: { loginCount: 1 } });
 
     const token = jwt.sign(
@@ -431,10 +450,10 @@ app.post('/api/teachers', authMiddleware, adminOnly, async (req, res) => {
     const { name, empId, dept, desig, username, password, email, isHOD, isClassAdvisor, advisorClassId, advisorClassName, isWarden, isExamCoordinator, isPlacementCoord, qualifications, experience, joiningDate } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: 'name, username, password required' });
     const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-    console.log(`🔑 Teacher created: username="${username.toLowerCase()}" password="${password}"`);
+
     const teacher = await M.User.create({ name, empId, dept, desig, username: username.toLowerCase(), password: hash, role: 'teacher', email, mustChangePassword: true, isHOD: !!isHOD, isClassAdvisor: !!isClassAdvisor, advisorClassId: advisorClassId || '', advisorClassName: advisorClassName || '', isWarden: !!isWarden, isExamCoordinator: !!isExamCoordinator, isPlacementCoord: !!isPlacementCoord, qualifications: qualifications || '', experience: experience || '', joiningDate: joiningDate || '' });
     const { password: _, ...teacherData } = teacher.toObject();
-    await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Added', `${name} (${username}) pwd:${password}`, 'data', 'info', req.ip);
+    await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Added', `${name} (${username}) — initial password set`, 'data', 'info', req.ip);
     res.status(201).json({ ...teacherData, _plainPassword: password }); // plaintext for admin UI display
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -587,6 +606,22 @@ app.delete('/api/logs', authMiddleware, adminOnly, async (req, res) => {
   res.json({ deleted: true });
 });
 
+// GET /api/logs/users — list distinct users who have logs
+app.get('/api/logs/users', authMiddleware, adminOnly, async (req, res) => {
+  const users = await M.Log.aggregate([
+    { $group: { _id: '$userName', role: { $first: '$role' }, count: { $sum: 1 }, lastTime: { $max: '$time' } } },
+    { $sort: { lastTime: -1 } }
+  ]);
+  res.json(users);
+});
+
+// GET /api/logs/by-user/:userName — all logs for a specific user
+app.get('/api/logs/by-user/:userName', authMiddleware, adminOnly, async (req, res) => {
+  const logs = await M.Log.find({ userName: req.params.userName })
+    .sort({ time: -1 }).limit(500);
+  res.json(logs);
+});
+
 // ════════════════════════════════════════════════════════
 //  DASHBOARD SUMMARY
 // ════════════════════════════════════════════════════════
@@ -695,5 +730,5 @@ app.get('/api/system/dbstats', authMiddleware, adminOnly, async (req, res) => {
 const PORT = process.env.PORT || cfg.PORT;
 app.listen(PORT, () => {
   console.log(`🚀 EAMS API running → http://localhost:${PORT}`);
-  console.log(`   Environment: ${cfg.NODE_ENV}`);
+
 });

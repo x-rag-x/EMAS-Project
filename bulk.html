@@ -491,6 +491,47 @@ var DB = (function() {
   };
 })();
 
+// ── Bulk log accumulator — collected during upload, sent to DB at end ──────
+var _bulkLog = [];       // { type, name, action } — 'added'|'skipped'|'replaced'|'error'
+var _bulkType = '';      // current upload type label
+var _bulkStartTime = null;
+
+function bulkLogStart(type) {
+  _bulkLog = [];
+  _bulkType = type;
+  _bulkStartTime = new Date();
+}
+
+function bulkLogAdd(action, name, detail) {
+  _bulkLog.push({ action: action, name: name, detail: detail || '' });
+}
+
+function bulkLogFlush(added, skipped) {
+  // Build a detailed log summary and send to server
+  var win = window.parent !== window ? window.parent : window;
+  var tok = win.sessionStorage ? win.sessionStorage.getItem('eams_token') : null;
+  if (!tok) return;
+  var duration = _bulkStartTime ? ((new Date() - _bulkStartTime) / 1000).toFixed(1) + 's' : '';
+  var addedItems  = _bulkLog.filter(function(l){ return l.action === 'added'; }).map(function(l){ return l.name; });
+  var skipItems   = _bulkLog.filter(function(l){ return l.action === 'skipped'; }).map(function(l){ return l.name; });
+  var replaceItems= _bulkLog.filter(function(l){ return l.action === 'replaced'; }).map(function(l){ return l.name; });
+  var details = 'Bulk ' + _bulkType + ' upload — ' + added + ' added, ' + skipped + ' skipped (' + duration + ')';
+  if (addedItems.length)   details += ' | Added: ' + addedItems.slice(0,10).join(', ') + (addedItems.length > 10 ? '…+' + (addedItems.length-10) : '');
+  if (replaceItems.length) details += ' | Replaced: ' + replaceItems.slice(0,5).join(', ');
+  if (skipItems.length)    details += ' | Skipped: ' + skipItems.slice(0,5).join(', ');
+
+  fetch('/api/logs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({
+      action: 'Bulk Upload — ' + _bulkType,
+      details: details,
+      category: 'data',
+      severity: skipped > added ? 'warning' : 'info'
+    })
+  }).catch(function(){});
+}
+
 // ── Conflict system ────────────────────────────────────────────────────────
 var _conflictCb     = null;
 var _conflictChoice = null; // null | 'skip' | 'replace'
@@ -684,6 +725,7 @@ function showReport(id, added, skipped, errors) {
 // ── DEPARTMENTS ────────────────────────────────────────────────────────────
 function parseDepts(rows) {
   var added = 0, skipped = 0, pending = rows.slice(), errors = [];
+  bulkLogStart('Departments');
   showProgress('dept', 5, 'Starting…');
   function next(i) {
     if (i >= pending.length) {
@@ -691,6 +733,7 @@ function parseDepts(rows) {
       setTimeout(function(){ hideProgress('dept'); }, 800);
       showReport('dept', added, skipped, errors);
       bToast('Departments: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('dept', Math.round((i/pending.length)*90)+5, 'Processing row ' + (i+1) + '/' + pending.length + '…');
@@ -704,13 +747,13 @@ function parseDepts(rows) {
     });
     if (existing) {
       checkConflict(existing, {name:name, code:code.toUpperCase(), icon:icon}, name, function(choice) {
-        if (choice === 'replace') { DB.update('depts', existing._id, {name:name,code:code.toUpperCase(),icon:icon}); added++; }
-        else skipped++;
+        if (choice === 'replace') { DB.update('depts', existing._id, {name:name,code:code.toUpperCase(),icon:icon}); bulkLogAdd('replaced',name); added++; }
+        else { bulkLogAdd('skipped',name,'duplicate'); skipped++; }
         next(i+1);
       });
     } else {
       DB.insert('depts', {name:name, code:code.toUpperCase(), icon:icon});
-      added++; next(i+1);
+      bulkLogAdd('added', name); added++; next(i+1);
     }
   }
   next(0);
@@ -719,6 +762,7 @@ function parseDepts(rows) {
 // ── CLASSES ────────────────────────────────────────────────────────────────
 function parseClasses(rows) {
   var added = 0, skipped = 0, errors = [], pending = rows.slice();
+  bulkLogStart('Classes');
   showProgress('class', 5, 'Starting…');
   function next(i) {
     if (i >= pending.length) {
@@ -726,6 +770,7 @@ function parseClasses(rows) {
       setTimeout(function(){ hideProgress('class'); }, 800);
       showReport('class', added, skipped, errors);
       bToast('Classes: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('class', Math.round((i/pending.length)*90)+5, 'Processing row ' + (i+1) + '/' + pending.length + '…');
@@ -759,7 +804,7 @@ function parseClasses(rows) {
       });
     } else {
       DB.insert('classes', {deptId:dept._id,deptName:dept.name,deptCode:dept.code,year:year,sem:sem,section:section,hallNo:hallNo,name:className});
-      added++; next(i+1);
+      bulkLogAdd('added', className); added++; next(i+1);
     }
   }
   next(0);
@@ -768,6 +813,7 @@ function parseClasses(rows) {
 // ── SUBJECTS ───────────────────────────────────────────────────────────────
 function parseSubjects(rows) {
   var added = 0, skipped = 0, errors = [], pending = rows.slice();
+  bulkLogStart('Subjects');
   showProgress('subject', 5, 'Starting…');
   function next(i) {
     if (i >= pending.length) {
@@ -775,6 +821,7 @@ function parseSubjects(rows) {
       setTimeout(function(){ hideProgress('subject'); }, 800);
       showReport('subject', added, skipped, errors);
       bToast('Subjects: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('subject', Math.round((i/pending.length)*90)+5, 'Row ' + (i+1) + '/' + pending.length);
@@ -818,6 +865,7 @@ function parseSubjects(rows) {
 // ── TEACHERS ───────────────────────────────────────────────────────────────
 function parseTeachers(rows) {
   var added = 0, skipped = 0, errors = [], pending = rows.slice();
+  bulkLogStart('Teachers');
   showProgress('teacher', 5, 'Starting…');
   function next(i) {
     if (i >= pending.length) {
@@ -825,6 +873,7 @@ function parseTeachers(rows) {
       setTimeout(function(){ hideProgress('teacher'); }, 800);
       showReport('teacher', added, skipped, errors);
       bToast('Teachers: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('teacher', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
@@ -845,7 +894,7 @@ function parseTeachers(rows) {
       });
     } else {
       DB.insert('users', {name:name,empId:empId,dept:dept,desig:desig,username:username.toLowerCase(),password:password,role:'teacher',mustChangePassword:true});
-      added++; next(i+1);
+      bulkLogAdd('added', name, username); added++; next(i+1);
     }
   }
   next(0);
@@ -855,6 +904,7 @@ function parseTeachers(rows) {
 function parseStudents(rows) {
   var added = 0, skipped = 0, errors = [], pending = rows.slice();
   var VALID = ['UG','PG','M.E','M.TECH','MBA','MCA','B.E','B.TECH','BE','BTECH'];
+  bulkLogStart('Students');
   showProgress('student', 5, 'Starting…');
   function next(i) {
     if (i >= pending.length) {
@@ -862,6 +912,7 @@ function parseStudents(rows) {
       setTimeout(function(){ hideProgress('student'); }, 800);
       showReport('student', added, skipped, errors);
       bToast('Students: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('student', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
@@ -896,7 +947,7 @@ function parseStudents(rows) {
       var cls  = DB.get('classes').find(function(c){ return c.name===clsName||(c.deptName.toLowerCase()===dname.toLowerCase()&&c.section===section); });
       DB.insert('students', {name:name,regNo:regNo,academicYear:acadYear,courseType:ctype,branch:branch,deptId:dept?dept._id:'',deptName:dept?dept.name:dname,classId:cls?cls._id:'',className:cls?cls.name:clsName,year:yearStr,section:section,email:email});
       if (username) DB.insert('users', {name:name,username:username.toLowerCase(),password:password,role:'student',regNo:regNo,deptName:dept?dept.name:dname,email:email});
-      added++; next(i+1);
+      bulkLogAdd('added', name, regNo); added++; next(i+1);
     }
   }
   next(0);
@@ -912,6 +963,7 @@ function parseAdmins(rows) {
       setTimeout(function(){ hideProgress('admin'); }, 800);
       showReport('admin', added, skipped, errors);
       bToast('Admins: ' + added + ' added, ' + skipped + ' skipped');
+      bulkLogFlush(added, skipped);
       return;
     }
     showProgress('admin', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
