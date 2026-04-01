@@ -5,77 +5,6 @@
 
 ---
 
-## Project Files — What Each File Does
-
-### ✅ Required Files (Keep These)
-
-| File | Role | Required |
-|------|------|----------|
-| `server.js` | Main Node.js/Express API server — handles all routes, auth, DB operations | ✅ Yes |
-| `models.js` | MongoDB Mongoose schemas for all 13 collections | ✅ Yes |
-| `config.js` | Reads environment variables, exports DB/auth/server config | ✅ Yes |
-| `package.json` | Node.js dependencies and start scripts | ✅ Yes |
-| `.env` | Secret environment variables (MongoDB URI, JWT secret) | ✅ Yes (never commit) |
-| `.gitignore` | Prevents `.env` from being pushed to GitHub | ✅ Yes |
-| `index.html` | Login page — Admin and Teacher sign-in with role selector | ✅ Yes |
-| `admin.html` | Full admin dashboard — departments, classes, students, teachers, logs | ✅ Yes |
-| `teacher.html` | Teacher portal — attendance marking, timetable, grievances | ✅ Yes |
-| `bulk.html` | Bulk upload drawer (iframe inside admin) — dept/class/subject/student upload | ✅ Yes |
-| `control.html` | System Control Panel — settings, maintenance mode, DB stats, data management | ✅ Yes |
-| `asserts/logo.png` | Institution logo shown on login page | ✅ Yes |
-| `railway.json` | Deployment config for Railway.app hosting | ✅ Yes (if deploying) |
-
-### ⚠️ Development/Utility Files (Optional)
-
-| File | Role | Required |
-|------|------|----------|
-| `testdb.js` | One-time utility to test MongoDB connection | ❌ Dev only |
-| `reset-teacher.js` | Resets teacher password to `teacher123` if login is broken | ❌ Dev only |
-| `package-lock.json` | Auto-generated npm lock file | ✅ Keep (ensures consistent installs) |
-
-### ❌ Not Needed / Can Delete
-
-| File | Reason |
-|------|--------|
-| Any `*.zip` backup files | Use Git instead |
-| Any `test-*.js` scripts | Dev utilities only |
-
----
-
-## Architecture Overview
-
-```
-EAMS/
-├── index.html          ← Login page (served by Express)
-├── admin.html          ← Admin dashboard
-├── teacher.html        ← Teacher portal
-├── bulk.html           ← Bulk upload drawer (loaded as iframe in admin)
-├── control.html        ← System control panel
-├── asserts/
-│   └── logo.png        ← Institution logo
-├── server.js           ← Express API + MongoDB logic
-├── models.js           ← Mongoose schemas (13 collections)
-├── config.js           ← Environment config reader
-├── package.json        ← Node.js project definition
-├── .env                ← Secrets (NOT committed to git)
-├── .gitignore          ← Ignores .env
-└── railway.json        ← Railway deployment config
-```
-
-**Data Flow:**
-```
-Browser (HTML) ──fetch()──→ Express API (server.js)
-                                    │
-                              JWT Auth Check
-                              Session Verify (MongoDB)
-                                    │
-                              MongoDB Atlas (mongoose)
-                                    │
-                     ←── JSON response ──
-```
-
----
-
 ## Prerequisites
 
 Before setting up, make sure you have:
@@ -157,17 +86,6 @@ PORT=3000
 
 ---
 
-### Step 5 — Fix DNS (if on college/office network)
-
-If you're connecting from a restricted network (college WiFi), add this to your `server.js` top (already included):
-
-```js
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-```
-
-Also, in Windows — change your network DNS to `8.8.8.8` (Google DNS) if MongoDB connection fails.
 
 ---
 
@@ -194,12 +112,10 @@ On first run, the terminal will show:
 │  ADMIN                                   │
 │  Username : admin                        │
 │  Password : admin123                     │
-│  Status   : Must change password         │
 ├──────────────────────────────────────────┤
 │  TEACHER                                 │
 │  Username : teacher                      │
 │  Password : teacher123                   │
-│  Status   : Must change password         │
 └──────────────────────────────────────────┘
 
 🚀 EAMS API running → http://localhost:3000
@@ -218,67 +134,6 @@ http://localhost:3000
 ```
 
 You will see the EAMS login page. Sign in with the credentials shown in the terminal.
-
----
-
-## Default Credentials
-
-| Role | Username | Password | Note |
-|------|----------|----------|------|
-| Admin | `admin` | `admin123` | Must change on first login |
-| Teacher | `teacher` | `teacher123` | Must change on first login |
-
-> Credentials are displayed in the terminal every time the server starts.
-
----
-
-## Troubleshooting
-
-### MongoDB connection fails
-```
-❌ MongoDB error: querySrv ECONNREFUSED
-```
-**Fix:** Change your DNS to `8.8.8.8`. In Windows PowerShell (run as admin):
-```powershell
-Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses ("8.8.8.8","8.8.4.4")
-```
-Then test:
-```bash
-nslookup cluster0.xxxxx.mongodb.net
-```
-
-### Teacher login fails / Invalid credentials
-The existing teacher account may have a broken password hash. Run:
-```bash
-node reset-teacher.js
-```
-This resets the teacher password to `teacher123` and lists all users in the DB.
-
-### Server syntax error
-```
-SyntaxError: Unexpected end of input
-```
-**Fix:** Download a fresh `server.js` from the repository. The file may have been accidentally edited.
-
-### MongoDB authentication failed
-```
-bad auth: authentication failed
-```
-**Fix:** Your MongoDB password changed. Go to Atlas → Database Access → Edit user → Reset password → update `.env` with the new connection string.
-
-### Port already in use
-```
-Error: listen EADDRINUSE :::3000
-```
-**Fix:** Kill the existing process:
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <pid> /F
-
-# Mac/Linux
-kill -9 $(lsof -ti:3000)
-```
 
 ---
 
@@ -358,74 +213,6 @@ All uploads accept `.xlsx`, `.xls`, or `.csv`.
 
 ---
 
-## API Reference
-
-### Authentication
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| POST | `/api/auth/login` | Public | Login, returns JWT token + sessionId |
-| POST | `/api/auth/logout` | Any | Invalidates session in DB |
-| POST | `/api/auth/change-password` | Any | Change own password |
-| GET | `/api/auth/verify-session` | Any | Check if session is valid |
-
-### Departments
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| GET | `/api/departments` | Any |
-| POST | `/api/departments` | Admin |
-| PUT | `/api/departments/:id` | Admin |
-| DELETE | `/api/departments/:id` | Admin |
-
-> Alias routes: `/api/depts` (same as above)
-
-### Classes, Subjects, Assignments, Timetable, Attendance
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| GET/POST | `/api/classes` | Any/Admin |
-| GET/POST | `/api/subjects` | Any/Admin |
-| GET/POST | `/api/assignments` | Any/Admin |
-| GET/POST | `/api/timetable` | Any |
-| GET/POST | `/api/attendance` | Any |
-| GET | `/api/attendance/unmarked-teachers` | Admin |
-
-### Students & Teachers
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| GET/POST | `/api/students` | Any/Admin |
-| GET | `/api/students/count` | Any |
-| POST | `/api/students/bulk-upload` | Admin |
-| PUT/DELETE | `/api/students/:id` | Admin |
-| GET/POST | `/api/teachers` | Admin |
-| PUT/DELETE | `/api/teachers/:id` | Admin |
-
-### Notifications & Grievances
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| GET/POST | `/api/notifications` | Any |
-| PUT | `/api/notifications/:id` | Any |
-| GET/POST | `/api/grievances` | Any |
-
-### Settings & System
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| GET | `/api/settings` | Admin |
-| PUT | `/api/settings/:key` | Admin |
-| POST | `/api/settings/verify-delete-password` | Admin |
-| GET | `/api/logs` | Admin |
-| DELETE | `/api/logs` | Admin |
-| GET | `/api/dashboard/summary` | Admin |
-| GET | `/api/system/dbstats` | Admin |
-| GET | `/api/users` | Admin |
-| PUT/DELETE | `/api/users/:id` | Admin |
-
-### Authentication Header
-All protected routes require:
-```
-Authorization: Bearer <jwt_token>
-```
-
----
-
 ## Security Features
 
 | Feature | Details |
@@ -444,25 +231,6 @@ Authorization: Bearer <jwt_token>
 
 ---
 
-## MongoDB Collections
-
-| Collection | Purpose |
-|------------|---------|
-| `users` | Admin, teacher, and student login accounts |
-| `sessions` | Active login sessions (auto-expire 24h) |
-| `settings` | System configuration key-value store |
-| `departments` | Academic departments |
-| `classes` | Class sections (dept + semester + section) |
-| `students` | Student records |
-| `subjects` | Subject definitions |
-| `assignments` | Teacher ↔ Class ↔ Subject links |
-| `timetables` | Teacher schedule slots |
-| `attendances` | Daily attendance records |
-| `notifications` | Admin-teacher notification system |
-| `grievances` | Teacher grievance submissions |
-| `logs` | All system activity logs (login, data changes, security events) |
-
----
 
 ## Deployment — Railway.app
 
@@ -494,48 +262,6 @@ Authorization: Bearer <jwt_token>
 | `PORT` | — | `3000` | HTTP server port |
 | `NODE_ENV` | — | `development` | Environment mode |
 | `CORS_ORIGIN` | — | `http://localhost:5500` | Allowed CORS origin |
-
----
-
-## Special Passwords
-
-| Purpose | Password |
-|---------|----------|
-| Admin login | Set on first login change |
-| Teacher login | Set on first login change |
-| Control Panel data management | `987543210` (or your admin login password) |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | HTML5, CSS3, Vanilla JavaScript |
-| Backend | Node.js v18+, Express.js v4 |
-| Database | MongoDB Atlas (Mongoose ODM) |
-| Auth | JWT (jsonwebtoken) + bcrypt |
-| File Upload | multer + xlsx |
-| Hosting | Railway.app (or any Node.js host) |
-| Fonts | Google Fonts (Poppins, Playfair Display) |
-| Excel parsing | SheetJS (xlsx) via CDN |
-
----
-
-## Contributing / Development
-
-```bash
-# Install dev dependencies (includes nodemon)
-npm install
-
-# Start with auto-restart
-npm run dev
-
-# Test DB connection only
-node testdb.js
-```
-
-For code style: all JS uses `var`/`function` declarations (no ES6 modules in frontend for broad browser compatibility). Backend uses `const`/`async await`.
 
 ---
 
