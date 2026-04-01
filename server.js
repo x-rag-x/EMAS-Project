@@ -30,10 +30,10 @@ app.use(express.static(path.join(__dirname, '.')));
 // ── MongoDB Connection ────────────────────────────────
 mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
   .then(() => {
-    console.log(`✅ MongoDB connected → ${cfg.DB_NAME}`);
+    console.log(`3/3 : ✅ MongoDB connected → ${cfg.DB_NAME}`);
     seedDefaults();
   })
-  .catch(err => { console.error('❌ MongoDB error:', err.message); process.exit(1); });
+  .catch(err => { console.error('3/3 :  ❌ MongoDB error:', err.message); process.exit(1); });
 
 // ── Seed Defaults ─────────────────────────────────────
 async function seedDefaults() {
@@ -729,6 +729,6 @@ app.get('/api/system/dbstats', authMiddleware, adminOnly, async (req, res) => {
 // ── Start Server ──────────────────────────────────────
 const PORT = process.env.PORT || cfg.PORT;
 app.listen(PORT, () => {
-  console.log(`🚀 EAMS API running → http://localhost:${PORT}`);
-
+  console.log(`1/3 : 🚀 EAMS API running → http://localhost:${PORT}`);
+  console.log(`2/3 :    Environment: ${cfg.NODE_ENV}`);
 });
