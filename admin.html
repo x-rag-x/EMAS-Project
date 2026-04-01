@@ -404,6 +404,39 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   .page-wrap { padding: 16px; }
   .stats-row { grid-template-columns: 1fr 1fr !important; }
 }
+
+.pw-wrap{position:relative;display:flex;align-items:center;}
+.pw-wrap .fc2{flex:1;padding-right:34px !important;}
+.pw-eye{position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:15px;color:#8aab8a;padding:0;line-height:1;transition:color .2s;flex-shrink:0;}
+.pw-eye:hover{color:var(--gD);}
+
+.bulk-panel{animation:pi .25s ease;}
+.bulk-tab.act{background:var(--gD)!important;color:#fff!important;border-color:var(--gD)!important;}
+
+/* ── BULK DRAWER ── */
+#bulk-drw-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;backdrop-filter:blur(2px);}
+#bulk-drw-overlay.open{display:block;}
+#bulk-drw-frame{position:fixed;right:-720px;top:0;bottom:0;width:700px;max-width:100vw;z-index:501;border:none;transition:right .32s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(0,0,0,.15);}
+#bulk-drw-frame.open{right:0;}
+body{-webkit-user-select:none;user-select:none;}
+
+/* ── DB UPDATE TOAST ── */
+#db-toast{
+  position:fixed;bottom:22px;right:22px;z-index:9999;
+  background:#1a2e1a;color:#fff;border-radius:14px;
+  padding:12px 18px;font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,.25);
+  transform:translateY(120px);opacity:0;
+  transition:all .35s cubic-bezier(.34,1.56,.64,1);
+  max-width:340px;min-width:220px;font-family:'Poppins',sans-serif;
+}
+#db-toast.show{transform:translateY(0);opacity:1;}
+#db-toast.success{background:#166534;}
+#db-toast.error{background:#991b1b;}
+#db-toast.saving{background:#1e3a5f;}
+.db-spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:dbspin .7s linear infinite;flex-shrink:0;}
+@keyframes dbspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -426,15 +459,19 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <button class="sb-item act" onclick="nav('dash')"><span class="sbi-ic">📊</span>Dashboard</button>
 
     <div class="sb-section-label">Management</div>
-    <button class="sb-item" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments</button>
-    <button class="sb-item" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes & Subjects</button>
+    <button class="sb-item" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments<span class="sb-badge" id="sb-dept-badge">0</span></button>
+    <button class="sb-item" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes &amp; Subjects</button>
     <button class="sb-item" onclick="nav('students')"><span class="sbi-ic">👨‍🎓</span>Students<span class="sb-badge" id="sb-stu-badge">0</span></button>
-    <button class="sb-item" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers</button>
+    <button class="sb-item" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span class="sb-badge" id="sb-teach-badge">0</span></button>
 
     <div class="sb-section-label">Reports & Logs</div>
     <button class="sb-item" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
     <button class="sb-item" onclick="nav('bulk')"><span class="sbi-ic">📤</span>Bulk Upload</button>
     <button class="sb-item" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity Logs</button>
+  
+
+    <div class="sb-section-label">System</div>
+    <button class="sb-item" onclick="window.location.href='control.html'" style="color:#dc2626;"><span class="sbi-ic">&#9881;&#65039;</span>Control Panel</button>
   </div>
 
   <div class="sb-bottom">
@@ -491,7 +528,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         </div>
         <div class="page-actions">
           <button class="btn-pri" onclick="openAddModal('student')">+ Enroll Student</button>
-          <button class="btn-out" onclick="openModal('bulk')">📤 Upload Data</button>
+          <button class="btn-out" onclick="openBulkDrw()">📤 Upload Data</button>
         </div>
       </div>
 
@@ -792,50 +829,194 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 
   <!-- ── BULK UPLOAD PAGE ── -->
   <div class="pg" id="pg-bulk">
-    <div class="shd"><div class="stl"><span class="sdo"></span>Bulk Upload</div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div class="card"><div class="card-body-p">
-        <div class="card-title" style="margin-bottom:14px;">👨‍🎓 Upload Students</div>
-        <div class="uz" onclick="document.getElementById('uf-t').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'students')">
-          <input type="file" id="uf-t" accept=".xlsx,.xls,.csv" onchange="hu(this,'students')">
-          <span style="font-size:32px;display:block;margin-bottom:7px;">📊</span>
-          <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
-          <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
-        </div>
-        <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
-          <strong style="color:var(--gK);display:block;margin-bottom:5px;">Required Columns:</strong>
-          <div style="display:flex;flex-wrap:wrap;gap:3px;">
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">FullName</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">RegisterNo</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">AcademicYear</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">CourseType</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Branch</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Department</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Year</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Class</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Section</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Email</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Username</span>
-            <span style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:4px;padding:1px 6px;">Password</span>
-          </div>
-          <div style="margin-top:5px;color:var(--tdi);font-size:10px;">CourseType: UG or PG &nbsp;·&nbsp; Branch: B.E / B.Tech / M.E etc.</div>
-        </div>
-        <div id="tup" style="margin-top:10px;"></div>
-      </div></div>
-      <div class="card"><div class="card-body-p">
-        <div class="card-title" style="margin-bottom:14px;">👩‍🏫 Upload Teachers</div>
-        <div class="uz" onclick="document.getElementById('uf-tc').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'teachers')">
-          <input type="file" id="uf-tc" accept=".xlsx,.xls,.csv" onchange="hu(this,'teachers')">
-          <span style="font-size:32px;display:block;margin-bottom:7px;">👩‍🏫</span>
-          <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
-          <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
-        </div>
-        <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
-          <strong>Columns:</strong> Name | Employee ID | Department | Designation | Username | Password
-        </div>
-        <div id="tcup" style="margin-top:10px;"></div>
-      </div></div>
+    <div class="shd">
+      <div class="stl"><span class="sdo"></span>Bulk Upload</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn bout bsm" onclick="bulkSetupCheck()">🚀 Setup Wizard</button>
+      </div>
     </div>
+
+    <!-- Setup Wizard Banner -->
+    <div id="bulk-setup-banner" style="display:none;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🚀 First Time Setup</div>
+      <div style="font-size:12.5px;opacity:.88;margin-bottom:14px;">No departments found. Upload your data in order: Departments → Teachers → Classes → Subjects → Students → Admins</div>
+      <div id="setup-steps" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- Conflict Dialog -->
+    <div id="bulk-conflict-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:28px;width:460px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">⚠️ Conflict Found</div>
+        <div id="conflict-msg" style="font-size:13px;color:#5a7a5a;margin-bottom:14px;line-height:1.6;"></div>
+        <div style="background:#f8fafc;border-radius:10px;padding:12px;font-size:12px;margin-bottom:14px;">
+          <div style="font-weight:600;margin-bottom:6px;">Apply this choice to all remaining conflicts:</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px;">
+            <input type="checkbox" id="conflict-apply-all"> Apply to all remaining conflicts
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="resolveConflict('skip')" style="flex:1;padding:10px;background:#f1f5f9;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Skip</button>
+          <button onclick="resolveConflict('replace')" style="flex:1;padding:10px;background:#1b5e20;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Replace</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+      <button class="btn bpri bsm bulk-tab act" onclick="bulkTab(this,'dept')">🏛️ Departments</button>
+      <button class="btn bout bsm bulk-tab" onclick="bulkTab(this,'teacher')">👩‍🏫 Teachers</button>
+      <button class="btn bout bsm bulk-tab" onclick="bulkTab(this,'class')">🏫 Classes</button>
+      <button class="btn bout bsm bulk-tab" onclick="bulkTab(this,'subject')">📚 Subjects</button>
+      <button class="btn bout bsm bulk-tab" onclick="bulkTab(this,'student')">👨‍🎓 Students</button>
+      <button class="btn bout bsm bulk-tab" onclick="bulkTab(this,'admin')">👤 Admins</button>
+    </div>
+
+    <!-- DEPT TAB -->
+    <div id="bulk-dept" class="bulk-panel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">🏛️ Upload Departments</div>
+          <div class="uz" onclick="document.getElementById('uf-dept').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'dept')">
+            <input type="file" id="uf-dept" accept=".xlsx,.xls,.csv" onchange="hu(this,'dept')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">🏛️</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> DeptName | Code | Icon (optional)
+          </div>
+          <div id="dept-up" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('dept')" style="width:100%;margin-bottom:8px;">⬇ Dept Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('depts')" style="width:100%;">⬇ Download Uploaded Depts</button>
+          <div style="margin-top:12px;font-size:11px;color:var(--tdi);">Uploaded data is saved and can be re-downloaded for editing.</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- TEACHER TAB -->
+    <div id="bulk-teacher" class="bulk-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">👩‍🏫 Upload Teachers</div>
+          <div class="uz" onclick="document.getElementById('uf-tc').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'teachers')">
+            <input type="file" id="uf-tc" accept=".xlsx,.xls,.csv" onchange="hu(this,'teachers')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">👩‍🏫</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> Name | EmployeeID | Department | Designation | Username | Password
+          </div>
+          <div id="tcup" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('teacher')" style="width:100%;margin-bottom:8px;">⬇ Teacher Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('users','teacher')" style="width:100%;">⬇ Download Uploaded Teachers</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- CLASS TAB -->
+    <div id="bulk-class" class="bulk-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">🏫 Upload Classes</div>
+          <div class="uz" onclick="document.getElementById('uf-cls').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'struct')">
+            <input type="file" id="uf-cls" accept=".xlsx,.xls,.csv" onchange="hu(this,'struct')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">🏫</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> Department | HallNo | Year | Semester | Section<br>
+            <span style="color:var(--tdi);font-size:10px;">ClassName is auto-generated as DEPTCODE-SEM-SECTION</span>
+          </div>
+          <div id="sup" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('class')" style="width:100%;margin-bottom:8px;">⬇ Class Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('classes')" style="width:100%;">⬇ Download Uploaded Classes</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- SUBJECT TAB -->
+    <div id="bulk-subject" class="bulk-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">📚 Upload Subjects</div>
+          <div class="uz" onclick="document.getElementById('uf-subj').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'subjects')">
+            <input type="file" id="uf-subj" accept=".xlsx,.xls,.csv" onchange="hu(this,'subjects')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">📚</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> Name | Code | Department | Credits | Type | Teacher (optional)
+          </div>
+          <div id="subup" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('subject')" style="width:100%;margin-bottom:8px;">⬇ Subject Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('subjects')" style="width:100%;">⬇ Download Uploaded Subjects</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- STUDENT TAB -->
+    <div id="bulk-student" class="bulk-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">👨‍🎓 Upload Students</div>
+          <div class="uz" onclick="document.getElementById('uf-t').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'students')">
+            <input type="file" id="uf-t" accept=".xlsx,.xls,.csv" onchange="hu(this,'students')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">📊</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> FullName | RegisterNo | AcademicYear | CourseType | Branch | Department | Year | Class | Section | Email | Username | Password
+          </div>
+          <div id="tup" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('student')" style="width:100%;margin-bottom:8px;">⬇ Student Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('students')" style="width:100%;">⬇ Download Uploaded Students</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="bulk-admin" class="bulk-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:14px;">👤 Upload Admins</div>
+          <div class="uz" onclick="document.getElementById('uf-adm').click()" ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')" ondrop="hd(event,'admins')">
+            <input type="file" id="uf-adm" accept=".xlsx,.xls,.csv" onchange="hu(this,'admins')">
+            <span style="font-size:32px;display:block;margin-bottom:7px;">👤</span>
+            <div style="font-size:13px;font-weight:600;color:var(--gK);">Click or drag & drop</div>
+            <div style="font-size:11px;color:var(--tdi);">.xlsx .xls .csv</div>
+          </div>
+          <div style="margin-top:10px;background:var(--gP);border-radius:9px;padding:10px;font-size:11px;color:var(--tmu);">
+            <strong>Columns:</strong> Name | Department | Email | Username | Password
+          </div>
+          <div id="admup" style="margin-top:10px;"></div>
+        </div></div>
+        <div class="card"><div class="card-body-p">
+          <div class="card-title" style="margin-bottom:10px;">📥 Download Template</div>
+          <button class="btn bout bsm" onclick="dlTemplate('admin')" style="width:100%;margin-bottom:8px;">⬇ Admin Template</button>
+          <button class="btn bout bsm" onclick="dlUploaded('users','admin')" style="width:100%;">⬇ Download Uploaded Admins</button>
+        </div></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── LOGS PAGE ── -->
@@ -866,9 +1047,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 <div class="modal-bg" id="m-add-dept"><div class="modal modal-sm">
   <div class="modal-hd"><div class="modal-title">🏛️ Add Department</div><div class="modal-close" onclick="closeModalBg('m-add-dept')">✕</div></div>
   <div class="form-grid form-grid-2">
-    <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="dn" placeholder="Computer Science Engineering"></div>
-    <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="dc" placeholder="CSE"></div>
-    <div class="fg"><label class="fl">Icon (Emoji)</label><input type="text" class="fc2" id="di" placeholder="💻" maxlength="4"></div>
+    <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="dn" placeholder="Enter Full Dept Name"></div>
+    <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="dc" placeholder="Short Code"></div>
+    <div class="fg"><label class="fl">Icon (Optional)</label><input type="text" class="fc2" id="di" placeholder="💻" maxlength="4"></div>
   </div>
   <div class="form-actions"><button class="btn-form-ghost" onclick="closeModalBg('m-add-dept')">Cancel</button><button class="btn-form-pri" onclick="addDept()">Add Department</button></div>
 </div></div>
@@ -890,26 +1071,27 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   <div class="modal-hd"><div class="modal-title">🏫 Add Class</div><div class="modal-close" onclick="closeModalBg('m-add-class-quick')">✕</div></div>
   <div class="form-grid form-grid-2">
     <div class="fg"><label class="fl">Department</label>
-      <select class="fc2" id="nc-dept" onchange="ncdc()"><option value="">— Select —</option></select></div>
+      <select class="fc2" id="nc-dept" onchange="ncAutoName()"><option value="">— Select —</option></select></div>
     <div class="fg"><label class="fl">Year</label>
-      <select class="fc2" id="nc-yr"><option>I Year</option><option>II Year</option><option>III Year</option><option>IV Year</option></select></div>
+      <select class="fc2" id="nc-yr" onchange="ncValidate()"><option>I Year</option><option>II Year</option><option>III Year</option><option>IV Year</option></select></div>
   </div>
   <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
     <div class="fg"><label class="fl">Semester</label>
-      <select class="fc2" id="nc-sem"><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option></select></div>
-    <div class="fg"><label class="fl">Section</label><input type="text" class="fc2" id="nc-sec" placeholder="A / B"></div>
-    <div class="fg"><label class="fl">Hall Number</label><input type="text" class="fc2" id="nc-hall" placeholder="e.g. 101"></div>
+      <select class="fc2" id="nc-sem" onchange="ncAutoName()"><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option></select></div>
+    <div class="fg"><label class="fl">Section</label><input type="text" class="fc2" id="nc-sec" placeholder="A / B" oninput="ncAutoName()"></div>
+    <div class="fg"><label class="fl">Hall Number</label><input type="text" class="fc2" id="nc-hall" placeholder="e.g. LH01"></div>
   </div>
-  <div class="fg" style="margin-bottom:14px;"><label class="fl">Class Name (optional)</label><input type="text" class="fc2" id="nc-name" placeholder="Auto-generated if empty"></div>
-  <div class="form-actions"><button class="btn-form-ghost" onclick="closeModalBg('m-add-class-quick')">Cancel</button><button class="btn-form-pri" onclick="addCls()">Add Class</button></div>
+  <div class="fg" style="margin-bottom:6px;"><label class="fl">Class Name <span style="color:var(--tdi);font-size:10px;">(auto-generated)</span></label><input type="text" class="fc2" id="nc-name" readonly style="background:#f8fafc;color:var(--tmu);cursor:not-allowed;" placeholder="Select dept, sem & section"></div>
+  <div id="nc-warn" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-bottom:10px;"></div>
+  <div class="form-actions"><button class="btn-form-ghost" onclick="closeModalBg('m-add-class-quick')">Cancel</button><button class="btn-form-pri" id="nc-add-btn" onclick="addCls()" disabled style="opacity:.5;cursor:not-allowed;">Add Class</button></div>
 </div></div>
 
 <!-- Edit Class -->
 <div class="modal-bg" id="m-edit-cls"><div class="modal modal-sm">
   <div class="modal-hd"><div class="modal-title">✏️ Edit Class</div><div class="modal-close" onclick="closeModalBg('m-edit-cls')">✕</div></div>
   <div class="form-grid form-grid-2">
-    <div class="fg"><label class="fl">Class Name</label><input type="text" class="fc2" id="ec-nm" placeholder="CSE-I-A"></div>
-    <div class="fg"><label class="fl">Section</label><input type="text" class="fc2" id="ec-sec" placeholder="A"></div>
+    <div class="fg"><label class="fl">Class Name <span style="color:var(--tdi);font-size:10px;">(auto)</span></label><input type="text" class="fc2" id="ec-nm" readonly style="background:#f8fafc;color:var(--tmu);cursor:not-allowed;"></div>
+    <div class="fg"><label class="fl">Section</label><input type="text" class="fc2" id="ec-sec" placeholder="A" oninput="ecAutoName()"></div>
     <div class="fg"><label class="fl">Hall Number</label><input type="text" class="fc2" id="ec-hall" placeholder="e.g. 201"></div>
     <div class="fg"><label class="fl">Year</label><input type="text" class="fc2" id="ec-yr" placeholder="I Year"></div>
   </div>
@@ -944,7 +1126,10 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 <div class="modal-bg" id="m-subj-detail"><div class="modal modal-sm">
   <div class="modal-hd">
     <div><div class="modal-title" id="sd-ttl"></div><div class="modal-sub" id="sd-sub"></div></div>
-    <div class="modal-close" onclick="closeModalBg('m-subj-detail')">✕</div>
+    <div class="modal-actions">
+      <button class="btn bpri bsm" onclick="editSubjInline()">✏️ Edit</button>
+      <div class="modal-close" onclick="closeModalBg('m-subj-detail')">✕</div>
+    </div>
   </div>
   <div id="sd-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"></div>
   <div style="margin-bottom:10px;"><strong style="font-size:13px;color:var(--td);">📌 Class Assignments</strong></div>
@@ -952,6 +1137,18 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   <div style="display:flex;justify-content:flex-end;">
     <button class="btn bdan bsm" id="sd-del">🗑 Delete Subject</button>
   </div>
+</div></div>
+
+<!-- Edit Subject -->
+<div class="modal-bg" id="m-edit-subj"><div class="modal modal-sm">
+  <div class="modal-hd"><div class="modal-title">✏️ Edit Subject</div><div class="modal-close" onclick="closeModalBg('m-edit-subj')">✕</div></div>
+  <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2" id="es-nm"></div>
+  <div class="form-grid form-grid-2">
+    <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="es-cd"></div>
+    <div class="fg"><label class="fl">Credits</label><input type="number" class="fc2" id="es-cr" min="1" max="6"></div>
+    <div class="fg"><label class="fl">Type</label><select class="fc2" id="es-tp"><option>Theory</option><option>Lab</option><option>Elective</option></select></div>
+  </div>
+  <div class="form-actions"><button class="btn-form-ghost" onclick="closeModalBg('m-edit-subj')">Cancel</button><button class="btn-form-pri" onclick="saveEditSubj()">💾 Save</button></div>
 </div></div>
 
 <!-- Add Subject -->
@@ -1038,7 +1235,20 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div class="fg"><label class="fl">Department</label><select class="fc2" id="t-dp"><option value="">— Select —</option></select></div>
     <div class="fg"><label class="fl">Designation</label><select class="fc2" id="t-dg"><option>Assistant Professor</option><option>Associate Professor</option><option>Professor</option><option>HOD</option><option>Lecturer</option></select></div>
     <div class="fg"><label class="fl">Username</label><input type="text" class="fc2" id="t-us" placeholder="Login username"></div>
-    <div class="fg"><label class="fl">Password</label><input type="password" class="fc2" id="t-pw" value="teacher"></div>
+    <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input type="password" class="fc2" id="t-pw" value="teacher123"><button type="button" class="pw-eye" onclick="togglePwField('t-pw',this)" tabindex="-1">👁</button></div></div>
+  </div>
+  <div class="form-grid form-grid-2" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);">
+    <div class="fg"><label class="fl">Joining Date</label><input type="date" class="fc2" id="t-jd"></div>
+    <div class="fg"><label class="fl">Experience</label><input type="text" class="fc2" id="t-exp" placeholder="e.g. 5 years"></div>
+    <div class="fg"><label class="fl">Qualifications</label><input type="text" class="fc2" id="t-qual" placeholder="M.E, Ph.D..."></div>
+    <div class="fg"><label class="fl">Phone</label><input type="text" class="fc2" id="t-ph" placeholder="+91..."></div>
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--br);">
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="t-hod"> HOD</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="t-advisor"> Class Advisor</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="t-warden"> Warden</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="t-examcoord"> Exam Coordinator</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="t-placecoord"> Placement Coordinator</label>
   </div>
   <div class="form-actions"><button class="btn-form-ghost" onclick="closeModalBg('m-add-teacher')">Cancel</button><button class="btn-form-pri" onclick="addTch()">Add Teacher</button></div>
 </div></div>
@@ -1057,7 +1267,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       <div class="fg"><label class="fl">Department</label><select class="fc2" id="td-edit-dept"></select></div>
       <div class="fg"><label class="fl">Designation</label><select class="fc2" id="td-edit-dg"><option>Assistant Professor</option><option>Associate Professor</option><option>Professor</option><option>HOD</option><option>Lecturer</option></select></div>
       <div class="fg"><label class="fl">Username</label><input type="text" class="fc2" id="td-edit-us"></div>
-      <div class="fg"><label class="fl">Reset Password</label><input type="text" class="fc2" id="td-edit-pw" placeholder="Leave blank to keep"></div>
+      <div class="fg"><label class="fl">Reset Password</label><div class="pw-wrap"><input type="password" class="fc2" id="td-edit-pw" placeholder="Leave blank to keep"><button type="button" class="pw-eye" onclick="togglePwField('td-edit-pw',this)" tabindex="-1">👁</button></div></div>
     </div>
     <div style="display:flex;justify-content:flex-end;"><button class="btn-form-pri" style="font-size:12px;padding:7px 16px;" onclick="saveTchEdit()">💾 Save Details</button></div>
   </div>
@@ -1150,6 +1360,22 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;color:var(--gD);margin:0 auto 12px;" id="pr-av-big">A</div>
     <div style="font-size:18px;font-weight:700;color:var(--td);" id="pr-name-big">Administrator</div>
     <div style="margin-top:5px;"><span style="background:var(--gLt);color:var(--gK);padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">Admin</span></div>
+  </div>
+  <div style="margin-bottom:14px;">
+    <label style="font-size:11px;font-weight:600;color:var(--tmu);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px;">Display Name</label>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="pr-edit-name" style="flex:1;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13.5px;font-family:Poppins,sans-serif;outline:none;" placeholder="Your name">
+      <button onclick="saveProfileName()" style="padding:9px 14px;background:var(--gD);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Save</button>
+    </div>
+  </div>
+  <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:700;color:var(--td);margin-bottom:10px;">🔑 Change Password</div>
+    <div id="pr-pw-err" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:8px;"></div>
+    <div id="pr-pw-ok"  style="display:none;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:8px;"></div>
+    <input type="password" id="pr-pw-cur"  placeholder="Current password" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:Poppins,sans-serif;margin-bottom:7px;outline:none;box-sizing:border-box;">
+    <input type="password" id="pr-pw-new"  placeholder="New password (min 6 chars)" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:Poppins,sans-serif;margin-bottom:7px;outline:none;box-sizing:border-box;">
+    <input type="password" id="pr-pw-conf" placeholder="Confirm new password" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:Poppins,sans-serif;margin-bottom:10px;outline:none;box-sizing:border-box;">
+    <button onclick="saveProfilePassword()" style="width:100%;padding:9px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Update Password</button>
   </div>
   <div class="form-actions">
     <button class="btn-form-ghost" onclick="closeModalBg('m-profile')">Close</button>
@@ -1286,148 +1512,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 
   // ─── SEED / INITIAL DATA ────────────────────────────────────────────────────
   function initDB() {
-    // Default admin + teacher accounts
-    if (!DB.get('users').length) {
-      DB.insert('users', { name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin' });
-      DB.insert('users', {
-        name: 'Default Teacher', username: 'teacher', password: 'teacher', role: 'teacher',
-        empId: 'EMP001', deptId: '', dept: 'Computer Science Engineering', desig: 'Assistant Professor'
-      });
-    }
-
-    // Sample departments, classes, subjects
-    if (!DB.get('depts').length) {
-      var defaultDepts = [
-        { name: 'Computer Science Engineering', code: 'CSE',  icon: '💻' },
-        { name: 'Information Technology',       code: 'IT',   icon: '🖥️' },
-        { name: 'Electronics & Communication',  code: 'ECE',  icon: '📡' },
-        { name: 'Mechanical Engineering',       code: 'MECH', icon: '⚙️' }
-      ];
-      defaultDepts.forEach(function(d) { DB.insert('depts', d); });
-
-      var depts = DB.get('depts');
-      var semesterLabels  = ['I','II','III','IV','V','VI'];
-      var yearLabels      = ['I Year','I Year','II Year','II Year','III Year','III Year'];
-
-      // Create classes for first two departments
-      depts.slice(0, 2).forEach(function(dept) {
-        semesterLabels.forEach(function(sem, index) {
-          DB.insert('classes', {
-            deptId: dept._id, deptName: dept.name, deptCode: dept.code,
-            year: yearLabels[index], sem: sem, section: 'A',
-            hallNo: String(100 + index + 1),
-            name: dept.code + '-' + sem + '-A'
-          });
-        });
-      });
-
-      // Seed CSE subjects
-      var cseDept = depts[0];
-      var defaultSubjects = [
-        { name: 'Engineering Mathematics', code: 'MA101', credits: 4, type: 'Theory' },
-        { name: 'Programming Fundamentals', code: 'CS101', credits: 3, type: 'Theory' },
-        { name: 'Data Structures',          code: 'CS201', credits: 4, type: 'Theory' },
-        { name: 'Operating Systems',        code: 'CS301', credits: 3, type: 'Theory' },
-        { name: 'DBMS',                     code: 'CS302', credits: 4, type: 'Theory' }
-      ];
-      defaultSubjects.forEach(function(subj) {
-        DB.insert('subjects', Object.assign({}, subj, {
-          deptId: cseDept._id, deptName: cseDept.name, deptCode: cseDept.code
-        }));
-      });
-    }
-
-    // Sample students
-    if (!DB.get('students').length) {
-      var firstNames = ['Aarav','Priya','Karthik','Sneha','Rajesh','Divya','Arun','Meena',
-                        'Vijay','Lakshmi','Suresh','Anitha','Deepak','Kavitha','Ravi',
-                        'Nithya','Ganesh','Pooja','Santhosh','Revathi'];
-      var lastNames  = ['Kumar','Sharma','Raj','Devi','Krishnan','Nair','Murugan','Rajan'];
-      var firstClass = DB.get('classes').find(function(c) { return c.sem === 'I'; });
-
-      if (firstClass) {
-        for (var i = 0; i < 25; i++) {
-          DB.insert('students', {
-            name:         firstNames[i % firstNames.length] + ' ' + lastNames[Math.floor(i / 10) % lastNames.length],
-            regNo:        firstClass.deptCode + '25' + String(i + 1).padStart(3, '0'),
-            academicYear: '2025-26',
-            courseType:   'UG',
-            course:       'BE',
-            branch:       'Computer Science Engineering',
-            deptId:       firstClass.deptId,
-            deptName:     firstClass.deptName,
-            classId:      firstClass._id,
-            className:    firstClass.name,
-            section:      'A'
-          });
-        }
-      }
-    }
-
-    // Seed one subject–class assignment
-    if (!DB.get('assignments').length) {
-      var defaultTeacher = DB.one('users', { role: 'teacher' });
-      var firstClass2    = DB.get('classes').find(function(c) { return c.sem === 'I'; });
-      var mathSubject    = DB.get('subjects').find(function(s) { return s.code === 'MA101'; });
-      if (defaultTeacher && firstClass2 && mathSubject) {
-        DB.insert('assignments', {
-          classId: firstClass2._id, className: firstClass2.name,
-          subjectId: mathSubject._id, subjectName: mathSubject.name,
-          teacherId: defaultTeacher._id, teacherName: defaultTeacher.name,
-          deptName: firstClass2.deptName, deptCode: firstClass2.deptCode
-        });
-      }
-    }
-
-    // Seed sample notifications
-    if (!DB.get('notifications').length) {
-      DB.insert('notifications', {
-        type: 'request', from: 'Default Teacher', fromRole: 'Teacher',
-        message: 'Request to verify attendance records for CS101 class on last Friday.',
-        time: new Date(Date.now() - 1800000).toISOString(), read: false, priority: 'High'
-      });
-      DB.insert('notifications', {
-        type: 'error', from: 'System', fromRole: 'System',
-        message: 'Bulk upload failed: Invalid format in row 14 of students import sheet.',
-        time: new Date(Date.now() - 7200000).toISOString(), read: false, priority: 'High'
-      });
-    }
-
-    // Seed sample attendance records (past 4 weekdays)
-    if (!DB.get('attendance').length) {
-      var students   = DB.get('students');
-      var assignment = DB.one('assignments', {});
-      if (assignment && students.length) {
-        var weekDates = getWeekDates(0);
-        weekDates.slice(0, 4).forEach(function(date) {
-          students.forEach(function(student) {
-            var rand = Math.random();
-            DB.insert('attendance', {
-              studentId: student._id, studentName: student.name,
-              classId: assignment.classId, className: assignment.className,
-              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
-              teacherId: assignment.teacherId, teacherName: assignment.teacherName,
-              date: date, status: rand > 0.22 ? 'present' : 'absent',
-              deptName: assignment.deptName, deptCode: assignment.deptCode
-            });
-          });
-        });
-      }
-    }
-
-    // Seed activity logs
-    if (!DB.get('logs').length) {
-      [
-        { action: 'Login',       details: 'Administrator logged in' },
-        { action: 'System Init', details: 'Database initialized with default data' }
-      ].forEach(function(entry) {
-        DB.insert('logs', {
-          role: 'admin', userName: 'Administrator',
-          action: entry.action, details: entry.details,
-          type: 'update', timestamp: new Date().toISOString()
-        });
-      });
-    }
+    // No default data seeded
   }
 
   // ─── DATE UTILITIES ──────────────────────────────────────────────────────────
@@ -1464,8 +1549,12 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 
   function doLogout() {
     addLog('Logout', 'Admin logged out');
+    var tok = sessionStorage.getItem('eams_token');
+    if (tok) {
+      fetch('/api/auth/logout', { method:'POST', headers:{ 'Authorization':'Bearer '+tok } }).catch(function(){});
+    }
     currentUser = null;
-    sessionStorage.removeItem('eams_user');
+    sessionStorage.clear();
     window.location.href = 'index.html';
   }
 
@@ -1503,12 +1592,11 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
     populateAdminDropdowns();
-    // Fix 3: auto-load all dashboard data immediately on login
-    nav('dash');
-    // Pre-populate counts for sidebar badge
-    var students = DB.get('students');
-    var el = document.getElementById('sb-stu-badge');
-    if (el) el.textContent = students.length;
+    // Sync all data from MongoDB on boot
+    syncAllFromDB(function() {
+      nav('dash');
+      populateAdminDropdowns();
+    });
   }
 
   // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -1576,7 +1664,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       return;
     }
 
-    var typeIcons = { add: '🟢', update: '🟡', delete: '🔴', other: '⚪' };
+    var typeIcons  = { add:'🟢', update:'🟡', delete:'🔴', other:'⚪' };
+    var catIcons   = { login:'🔑', data:'📊', settings:'⚙️', security:'🛡️', attendance:'✅', general:'📝' };
+    var sevColors  = { info:'var(--gD)', warning:'#d97706', critical:'#dc2626' };
 
     // Group logs by user name
     var groupedByUser = {};
@@ -1608,7 +1698,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         var dotColor = log.role === 'admin' ? 'var(--red)' : 'var(--blue)';
         html += '<div class="logr" style="padding-left:44px;">';
         html += '<div class="logd" style="background:' + dotColor + '"></div>';
-        html += '<div class="logbd"><div class="loga">' + (typeIcons[log.type] || '⚪') + ' ' + log.action + '</div>';
+        var catLabel = log.category ? (catIcons[log.category] || '📝') + ' ' + log.category : '';
+        var sevStyle  = log.severity ? 'color:' + (sevColors[log.severity] || 'var(--gD)') + ';' : '';
+        html += '<div class="logbd"><div class="loga" style="' + sevStyle + '">' + (typeIcons[log.type] || '⚪') + ' ' + log.action + (catLabel ? ' <span style="font-size:10px;opacity:.7;">(' + catLabel + ')</span>' : '') + '</div>';
         if (log.details) html += '<div class="logm"><span style="color:var(--tdi)">— ' + log.details + '</span></div>';
         html += '</div><div class="logtm">' + timeString + '</div></div>';
       });
@@ -1663,13 +1755,33 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     var teachers  = DB.get('users').filter(function(u) { return u.role === 'teacher'; });
     var classes   = DB.get('classes');
     var unmarked  = getUnmarked();
-
-    document.getElementById('c-students').textContent  = students.length;
-    document.getElementById('c-depts').textContent     = depts.length;
-    document.getElementById('c-teachers').textContent  = teachers.length;
-    document.getElementById('c-classes').textContent   = classes.length;
-    document.getElementById('sb-stu-badge').textContent = students.length;
-    document.getElementById('c-unmarked-mini').textContent = unmarked.length + ' unmarked';
+    var el;
+    el = document.getElementById('c-students');  if(el) el.textContent = students.length;
+    el = document.getElementById('c-depts');     if(el) el.textContent = depts.length;
+    el = document.getElementById('c-teachers');  if(el) el.textContent = teachers.length;
+    el = document.getElementById('c-classes');   if(el) el.textContent = classes.length;
+    el = document.getElementById('sb-stu-badge');   if(el) el.textContent = students.length;
+    el = document.getElementById('sb-dept-badge');  if(el) el.textContent = depts.length;
+    el = document.getElementById('sb-teach-badge'); if(el) el.textContent = teachers.length;
+    el = document.getElementById('c-unmarked-mini');if(el) el.textContent = unmarked.length + ' unmarked';
+    // Also sync to DB counts via API if token available
+    syncBadgesFromAPI();
+  }
+  function syncBadgesFromAPI() {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return;
+    var h = { 'Authorization': 'Bearer ' + tok };
+    fetch('/api/dashboard/summary', { headers: h }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) return;
+      var el;
+      el = document.getElementById('c-students');  if(el) el.textContent = d.students;
+      el = document.getElementById('c-depts');     if(el) el.textContent = d.depts;
+      el = document.getElementById('c-teachers');  if(el) el.textContent = d.teachers;
+      el = document.getElementById('c-classes');   if(el) el.textContent = d.classes;
+      el = document.getElementById('sb-stu-badge');   if(el) el.textContent = d.students;
+      el = document.getElementById('sb-dept-badge');  if(el) el.textContent = d.depts;
+      el = document.getElementById('sb-teach-badge'); if(el) el.textContent = d.teachers;
+    }).catch(function(){});
   }
 
   // ─── BAR CHART ───────────────────────────────────────────────────────────────
@@ -2071,7 +2183,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     if (type === 'profile')       openModal_('m-profile');
     else if (type === 'notif-all') { renderNotificationsAll(); openModal_('m-notif-all'); }
     else if (type === 'defaulters') { renderDefaulters(true); openModal_('m-defaulters'); }
-    else if (type === 'bulk')      openModal_('m-bulk');
+    else if (type === 'bulk')      { openBulkDrw(); }
   }
 
   // ─── UNMARKED TEACHERS ───────────────────────────────────────────────────────
@@ -2353,6 +2465,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     }).join('');
   }
   var rdepts = renderDepartments; // alias
+  // Wrap dept mutations to auto-update badges
+  var _origRenderDepts = renderDepartments;
+  renderDepartments = function() { _origRenderDepts(); updateStatCards(); };
 
   function editDept(deptId) {
     var dept = DB.get('depts').find(function(x) { return x._id === deptId; });
@@ -2382,30 +2497,34 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     var code = getFieldValue('dc');
     var icon = getFieldValue('di') || '🏛️';
     if (!name || !code) { showToast('Name and Code required', 'warn'); return; }
-    DB.insert('depts', { name: name, code: code, icon: icon });
-    closeModalBg('m-add-dept');
-    renderDepartments();
-    populateAdminDropdowns();
-    addLog('Department Added', '"' + name + '" (' + code + ')');
-    showToast('Department "' + name + '" added');
-    clearInputs(['dn', 'dc', 'di']);
+    apiAddDept(name, code, icon).then(function(d) {
+      if (!d) return;
+      closeModalBg('m-add-dept');
+      renderDepartments();
+      populateAdminDropdowns();
+      updateStatCards();
+      addLog('Department Added', '"' + name + '" (' + code + ')');
+      showToast('Department "' + name + '" added');
+      clearInputs(['dn', 'dc', 'di']);
+    });
   }
 
   function dDept(deptId) {
     var dept = DB.get('depts').find(function(x) { return x._id === deptId; });
+    requireSpecialPw(function() { dDeptConfirmed(deptId, dept); });
+  }
+  function dDeptConfirmed(deptId, dept) {
     document.getElementById('dc-confirm-id').value  = deptId;
     document.getElementById('dc-confirm-msg').textContent =
       'Delete department "' + (dept ? dept.name : '') + '"? All linked classes and subjects will be removed.';
     document.getElementById('dc-confirm-btn').onclick = function() {
-      DB.delete('depts', deptId);
-      DB.get('classes').filter(function(c) { return c.deptId === deptId; })
-        .forEach(function(c) { DB.delete('classes', c._id); });
-      DB.get('subjects').filter(function(s) { return s.deptId === deptId; })
-        .forEach(function(s) { DB.delete('subjects', s._id); });
-      addLog('Department Deleted', '"' + (dept ? dept.name : '') + '"');
-      closeModalBg('m-dc-confirm');
-      renderDepartments();
-      showToast('Deleted', 'warn');
+      apiDeleteDept(deptId, dept ? dept.name : '').then(function() {
+        addLog('Department Deleted', '"' + (dept ? dept.name : '') + '"');
+        closeModalBg('m-dc-confirm');
+        renderDepartments();
+        updateStatCards();
+        showToast('Deleted', 'warn');
+      });
     };
     openModal_('m-dc-confirm');
   }
@@ -2574,13 +2693,13 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       : '<div style="text-align:center;padding:14px;color:var(--tdi);font-size:12px;">No students enrolled.</div>';
 
     document.getElementById('cd-del').onclick = function() {
-      DB.delete('classes', classId);
-      DB.get('assignments').filter(function(a) { return a.classId === classId; })
-        .forEach(function(a) { DB.delete('assignments', a._id); });
-      addLog('Class Deleted', '"' + cls.name + '"');
-      closeModalBg('m-cls-detail');
-      renderClassSubjectView(structureContext.deptId);
-      showToast('Class deleted', 'warn');
+      if (!confirm('Delete class "' + cls.name + '"?\nThis will also remove all subject assignments. This cannot be undone.')) return;
+      apiDeleteClass(classId, cls.name).then(function() {
+        addLog('Class Deleted', '"' + cls.name + '"');
+        closeModalBg('m-cls-detail');
+        renderClassSubjectView(structureContext.deptId);
+        showToast('Class deleted', 'warn');
+      });
     };
 
     openModal_('m-cls-detail');
@@ -2590,26 +2709,41 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     if (!currentClassId) return;
     var cls = DB.get('classes').find(function(c) { return c._id === currentClassId; });
     if (!cls) return;
-    document.getElementById('ec-nm').value   = cls.name    || '';
     document.getElementById('ec-sec').value  = cls.section || 'A';
     document.getElementById('ec-hall').value = cls.hallNo  || '';
     document.getElementById('ec-yr').value   = cls.year    || '';
+    // Auto-generate name display (read-only)
+    var dept = DB.get('depts').find(function(d){ return d._id === cls.deptId; });
+    document.getElementById('ec-nm').value = cls.name || (dept ? dept.code + '-' + cls.sem + '-' + cls.section : '');
+    closeModalBg('m-cls-detail');
     openModal_('m-edit-cls');
+  }
+
+  function ecAutoName() {
+    var cls     = DB.get('classes').find(function(c) { return c._id === currentClassId; });
+    if (!cls) return;
+    var dept    = DB.get('depts').find(function(d) { return d._id === cls.deptId; });
+    var section = document.getElementById('ec-sec').value.trim() || cls.section;
+    if (dept && cls.sem && section)
+      document.getElementById('ec-nm').value = dept.code + '-' + cls.sem + '-' + section;
   }
 
   function saveEditCls() {
     if (!currentClassId) return;
-    var name    = getFieldValue('ec-nm');
+    var cls     = DB.get('classes').find(function(c) { return c._id === currentClassId; });
     var section = getFieldValue('ec-sec') || 'A';
     var hallNo  = getFieldValue('ec-hall');
     var year    = getFieldValue('ec-yr');
-    if (!name) { showToast('Class name required', 'warn'); return; }
-    DB.update('classes', currentClassId, { section: section, hallNo: hallNo, name: name, year: year });
-    addLog('Class Updated', '"' + name + '"');
-    closeModalBg('m-edit-cls');
-    openCD(currentClassId);
-    if (structureContext.deptId) renderClassSubjectView(structureContext.deptId);
-    showToast('Class updated');
+    var dept    = DB.get('depts').find(function(d) { return d && cls && d._id === cls.deptId; });
+    var name    = dept ? (dept.code + '-' + cls.sem + '-' + section) : getFieldValue('ec-nm');
+    apiUpdateClass(currentClassId, { section:section, hallNo:hallNo, name:name, year:year }).then(function(d) {
+      if (!d) return;
+      addLog('Class Updated', '"' + name + '"');
+      closeModalBg('m-edit-cls');
+      openCD(currentClassId);
+      if (structureContext.deptId) renderClassSubjectView(structureContext.deptId);
+      showToast('Class updated');
+    });
   }
 
   function oasc() {
@@ -2658,6 +2792,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   }
 
   function openSD(subjectId) {
+    currentSubjectId = subjectId;
     var subj = DB.get('subjects').find(function(s) { return s._id === subjectId; });
     if (!subj) return;
     document.getElementById('sd-ttl').textContent = subj.name;
@@ -2685,39 +2820,112 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       : '<div style="text-align:center;padding:14px;color:var(--tdi);font-size:12px;">Not assigned to any class.</div>';
 
     document.getElementById('sd-del').onclick = function() {
-      DB.delete('subjects', subjectId);
-      DB.get('assignments').filter(function(a) { return a.subjectId === subjectId; })
-        .forEach(function(a) { DB.delete('assignments', a._id); });
-      addLog('Subject Deleted', '"' + subj.name + '"');
-      closeModalBg('m-subj-detail');
-      renderClassSubjectView(structureContext.deptId);
-      showToast('Subject deleted', 'warn');
+      if (!confirm('Delete subject "' + subj.name + '"? This cannot be undone.')) return;
+      apiDeleteSubject(subjectId, subj.name).then(function() {
+        addLog('Subject Deleted', '"' + subj.name + '"');
+        closeModalBg('m-subj-detail');
+        renderClassSubjectView(structureContext.deptId);
+        showToast('Subject deleted', 'warn');
+      });
     };
     openModal_('m-subj-detail');
   }
+
+  var currentSubjectId = null;
+  function editSubjInline() {
+    if (!currentSubjectId) return;
+    var subj = DB.get('subjects').find(function(s) { return s._id === currentSubjectId; });
+    if (!subj) return;
+    document.getElementById('es-nm').value = subj.name    || '';
+    document.getElementById('es-cd').value = subj.code    || '';
+    document.getElementById('es-cr').value = subj.credits || 3;
+    document.getElementById('es-tp').value = subj.type    || 'Theory';
+    closeModalBg('m-subj-detail');
+    openModal_('m-edit-subj');
+  }
+
+  function saveEditSubj() {
+    if (!currentSubjectId) return;
+    var name    = getFieldValue('es-nm');
+    var code    = getFieldValue('es-cd');
+    var credits = parseInt(getFieldValue('es-cr')) || 3;
+    var type    = getFieldValue('es-tp') || 'Theory';
+    if (!name || !code) { showToast('Name and code required', 'warn'); return; }
+    apiUpdateSubject(currentSubjectId, { name:name, code:code, credits:credits, type:type }).then(function(d) {
+      if (!d) return;
+      addLog('Subject Updated', '"' + name + '"');
+      closeModalBg('m-edit-subj');
+      if (structureContext.deptId) renderClassSubjectView(structureContext.deptId);
+      showToast('Subject "' + name + '" updated');
+    });
+  }
+
+  function ncAutoName() {
+    var deptId  = getFieldValue('nc-dept');
+    var sem     = getFieldValue('nc-sem');
+    var section = (document.getElementById('nc-sec').value || '').trim();
+    var dept    = DB.get('depts').find(function(d) { return d._id === deptId; });
+    var nameEl  = document.getElementById('nc-name');
+    var warnEl  = document.getElementById('nc-warn');
+    var addBtn  = document.getElementById('nc-add-btn');
+    if (dept && sem && section) {
+      var autoName = dept.code + '-' + sem + '-' + section;
+      nameEl.value = autoName;
+      // Check duplicate
+      var dup = DB.get('classes').find(function(cls) {
+        return cls.deptId === deptId && cls.sem === sem && cls.section === section;
+      });
+      if (dup) {
+        warnEl.textContent = '⚠️ Class "' + autoName + '" already exists for this department/semester/section.';
+        warnEl.style.display = 'block';
+        addBtn.disabled = true;
+        addBtn.style.opacity = '.5';
+        addBtn.style.cursor = 'not-allowed';
+      } else {
+        warnEl.style.display = 'none';
+        addBtn.disabled = false;
+        addBtn.style.opacity = '1';
+        addBtn.style.cursor = 'pointer';
+      }
+    } else {
+      nameEl.value = '';
+      warnEl.style.display = 'none';
+      addBtn.disabled = true;
+      addBtn.style.opacity = '.5';
+    }
+  }
+  function ncValidate() { ncAutoName(); }
+  function ncdc() { ncAutoName(); }
 
   function addCls() {
     var deptId  = getFieldValue('nc-dept');
     var year    = getFieldValue('nc-yr');
     var sem     = getFieldValue('nc-sem');
-    var section = getFieldValue('nc-sec') || 'A';
+    var section = (document.getElementById('nc-sec').value || '').trim() || 'A';
     var hallNo  = getFieldValue('nc-hall');
-    var customName = getFieldValue('nc-name');
     if (!deptId) { showToast('Select a department', 'warn'); return; }
+    if (!section) { showToast('Enter a section', 'warn'); return; }
     var dept = DB.get('depts').find(function(d) { return d._id === deptId; });
-    var className = customName || (dept.code + '-' + sem + '-' + section);
-    DB.insert('classes', {
-      deptId: deptId, deptName: dept.name, deptCode: dept.code,
-      year: year, sem: sem, section: section, hallNo: hallNo, name: className
+    var className = dept.code + '-' + sem + '-' + section;
+    // Final duplicate check
+    if (DB.get('classes').find(function(cls) { return cls.deptId === deptId && cls.sem === sem && cls.section === section; })) {
+      showToast('Class "' + className + '" already exists!', 'warn'); return;
+    }
+    apiAddClass({ deptId:deptId, deptName:dept.name, deptCode:dept.code, year:year, sem:sem, section:section, hallNo:hallNo, name:className })
+    .then(function(d) {
+      if (!d) return;
+      closeModalBg('m-add-class-quick');
+      document.getElementById('nc-sec').value = '';
+      document.getElementById('nc-hall').value = '';
+      document.getElementById('nc-name').value = '';
+      document.getElementById('nc-warn').style.display = 'none';
+      document.getElementById('nc-add-btn').disabled = true;
+      document.getElementById('nc-add-btn').style.opacity = '.5';
+      if (structureContext.deptId === deptId) renderClassSubjectView(deptId);
+      addLog('Class Added', '"' + className + '"');
+      showToast('Class "' + className + '" added');
     });
-    closeModalBg('m-add-class-quick');
-    if (structureContext.deptId === deptId) renderClassSubjectView(deptId);
-    addLog('Class Added', '"' + className + '"');
-    showToast('Class "' + className + '" added');
-    clearInputs(['nc-sec', 'nc-hall', 'nc-name']);
   }
-
-  function ncdc() { /* department filter */ }
 
   function openAddSubj() {
     var teachers = DB.get('users').filter(function(u) { return u.role === 'teacher'; });
@@ -2737,10 +2945,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     if (!name || !code) { showToast('Name and code required', 'warn'); return; }
     if (!structureContext.deptId) { showToast('Please select a department first by exploring structure', 'warn'); return; }
     var dept = DB.get('depts').find(function(d) { return d._id === structureContext.deptId; });
-    var newSubject = DB.insert('subjects', {
-      name: name, code: code, credits: credits, type: type,
-      deptId: structureContext.deptId, deptName: dept.name, deptCode: dept.code
-    });
+    apiAddSubject({ name:name, code:code, credits:credits, type:type, deptId:structureContext.deptId, deptName:dept.name, deptCode:dept.code })
+    .then(function(newSubject) {
+      if (!newSubject || newSubject.error) return;
     if (tchId) {
       var teacher = DB.get('users').find(function(u) { return u._id === tchId; });
       DB.get('classes').filter(function(c) { return c.deptId === structureContext.deptId; })
@@ -2755,11 +2962,12 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
           }
         });
     }
-    closeModalBg('m-add-subj-ctx');
-    renderClassSubjectView(structureContext.deptId);
-    addLog('Subject Added', '"' + name + '" (' + code + ')');
-    showToast('Subject "' + name + '" added');
-    clearInputs(['ns-nm', 'ns-cd']);
+      closeModalBg('m-add-subj-ctx');
+      renderClassSubjectView(structureContext.deptId);
+      addLog('Subject Added', '"' + name + '" (' + code + ')');
+      showToast('Subject "' + name + '" added');
+      clearInputs(['ns-nm', 'ns-cd']);
+    });
   }
 
   // ─── STUDENTS PAGE ───────────────────────────────────────────────────────────
@@ -2908,17 +3116,14 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     if (matchIndex < 0) { showToast('Student not found', 'warn'); return; }
 
     var studentId = allStudents[matchIndex]._id;
-    DB.update('students', studentId, {
-      name: name, regNo: regNo, academicYear: year,
-      courseType: ct, course: course, branch: branch,
-      deptId: deptId, deptName: dept ? dept.name : '',
-      classId: classId, className: cls ? cls.name : '',
-      section: section
+    apiUpdateStudent(studentId, { name:name, regNo:regNo, academicYear:year, courseType:ct, course:course, branch:branch, deptId:deptId, deptName:dept?dept.name:'', classId:classId, className:cls?cls.name:'', section:section }, name)
+    .then(function(d) {
+      if (!d) return;
+      addLog('Student Updated', '"' + name + '"');
+      closeModalBg('m-stu-edit');
+      filterStudents();
+      showToast('Student updated');
     });
-    addLog('Student Updated', '"' + name + '"');
-    closeModalBg('m-stu-edit');
-    filterStudents();
-    showToast('Student updated');
   }
 
   function dStuFromEdit() {
@@ -2928,47 +3133,41 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     document.getElementById('dc-confirm-id').value = student._id;
     document.getElementById('dc-confirm-msg').textContent = 'Delete student "' + student.name + '"?';
     document.getElementById('dc-confirm-btn').onclick = function() {
-      DB.delete('students', student._id);
-      addLog('Student Deleted', '"' + student.name + '"');
-      closeModalBg('m-dc-confirm');
-      closeModalBg('m-stu-edit');
-      filterStudents();
-      showToast('Deleted', 'warn');
+      apiDeleteStudent(student._id, student.name).then(function() {
+        addLog('Student Deleted', '"' + student.name + '"');
+        closeModalBg('m-dc-confirm');
+        closeModalBg('m-stu-edit');
+        filterStudents();
+        updateStatCards();
+        showToast('Deleted', 'warn');
+      });
     };
     openModal_('m-dc-confirm');
   }
 
   function addStu() {
-    var name    = getFieldValue('s-nm');
-    var regNo   = getFieldValue('s-rg');
-    var year    = getFieldValue('s-ay') || '2025-26';
-    var ct      = getFieldValue('s-ct');
-    var course  = getFieldValue('s-co');
-    var branch  = getFieldValue('s-br');
-    var deptId  = document.getElementById('s-dp').value;
-    var classId = document.getElementById('s-cl').value;
-    var section = getFieldValue('s-se') || 'A';
-
-    if (!name || !regNo) { showToast('Name and Reg No. required', 'warn'); return; }
-
-    var dept = DB.get('depts').find(function(d) { return d._id === deptId; });
-    var cls  = DB.get('classes').find(function(c) { return c._id === classId; });
-
-    DB.insert('students', {
-      name: name, regNo: regNo, academicYear: year,
-      courseType: ct, course: course,
-      branch: branch || (dept ? dept.name : ''),
-      deptId: deptId, deptName: dept ? dept.name : '',
-      classId: classId, className: cls ? cls.name : '',
-      section: section
+    var name     = getFieldValue('s-nm');
+    var regNo    = getFieldValue('s-rn');
+    var year     = getFieldValue('s-ay') || '2025-26';
+    var course   = document.getElementById('s-ct') ? document.getElementById('s-ct').value : 'UG';
+    var branch   = getFieldValue('s-br');
+    var deptId   = document.getElementById('s-dp') ? document.getElementById('s-dp').value : '';
+    var classId  = document.getElementById('s-cl') ? document.getElementById('s-cl').value : '';
+    var section  = getFieldValue('s-se') || 'A';
+    var email    = getFieldValue('s-em');
+    var dept     = DB.get('depts').find(function(d){ return d._id === deptId; });
+    var cls      = DB.get('classes').find(function(c){ return c._id === classId; });
+    if (!name || !regNo) { showToast('Name and Register No required', 'warn'); return; }
+    apiAddStudent({ name:name, regNo:regNo, academicYear:year, courseType:course, branch:branch, deptId:deptId, deptName:dept?dept.name:'', classId:classId, className:cls?cls.name:'', year:cls?cls.year:'', section:section, email:email })
+    .then(function(d) {
+      if (!d) return;
+      addLog('Student Added', '"' + name + '" (' + regNo + ')');
+      closeModalBg('m-add-student');
+      renderStudents();
+      updateStatCards();
+      showToast('Student "' + name + '" added');
+      clearInputs(['s-nm','s-rn','s-br','s-em']);
     });
-
-    addLog('Student Added', '"' + name + '" (' + regNo + ')');
-    closeModalBg('m-add-student');
-    filterStudents();
-    updateStatCards();
-    showToast('Student "' + name + '" enrolled');
-    clearInputs(['s-nm', 's-rg']);
   }
 
   function octc() {
@@ -3103,15 +3302,27 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     var dept   = document.getElementById('t-dp').value;
     var desig  = getFieldValue('t-dg');
     var uname  = getFieldValue('t-us');
-    var passwd = getFieldValue('t-pw') || 'teacher';
+    var passwd = getFieldValue('t-pw') || 'teacher123';
+    var jd     = getFieldValue('t-jd');
+    var exp    = getFieldValue('t-exp');
+    var qual   = getFieldValue('t-qual');
+    var phone  = getFieldValue('t-ph');
+    var isHOD  = document.getElementById('t-hod') ? document.getElementById('t-hod').checked : false;
+    var isAdv  = document.getElementById('t-advisor') ? document.getElementById('t-advisor').checked : false;
+    var isWar  = document.getElementById('t-warden') ? document.getElementById('t-warden').checked : false;
+    var isExam = document.getElementById('t-examcoord') ? document.getElementById('t-examcoord').checked : false;
+    var isPl   = document.getElementById('t-placecoord') ? document.getElementById('t-placecoord').checked : false;
     if (!name || !uname) { showToast('Name and username required', 'warn'); return; }
-    DB.insert('users', { name: name, empId: empId, dept: dept, desig: desig, username: uname, password: passwd, role: 'teacher' });
-    addLog('Teacher Added', '"' + name + '" (' + dept + ')');
-    closeModalBg('m-add-teacher');
-    renderTeachers();
-    updateStatCards();
-    showToast('Teacher "' + name + '" added');
-    clearInputs(['t-nm', 't-ei', 't-us']);
+    apiAddTeacher({ name:name, empId:empId, dept:dept, desig:desig, username:uname, password:passwd, joiningDate:jd, experience:exp, qualifications:qual, phone:phone, isHOD:isHOD, isClassAdvisor:isAdv, isWarden:isWar, isExamCoordinator:isExam, isPlacementCoord:isPl })
+    .then(function(d) {
+      if (!d) return;
+      addLog('Teacher Added', '"' + name + '" (' + dept + ')');
+      closeModalBg('m-add-teacher');
+      renderTeachers();
+      updateStatCards();
+      showToast('Teacher "' + name + '" added — Password: ' + passwd);
+      clearInputs(['t-nm','t-ei','t-us']);
+    });
   }
 
   function oaat() {
@@ -3154,6 +3365,104 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   }
 
   // ─── BULK SHEET UPLOAD ───────────────────────────────────────────────────────
+  // ─── BULK TAB SWITCHER ────────────────────────────────────────────────────────
+  function bulkTab(btn, tab) {
+    document.querySelectorAll('.bulk-tab').forEach(function(b) { b.classList.remove('act','bpri'); b.classList.add('bout'); });
+    btn.classList.add('act','bpri'); btn.classList.remove('bout');
+    document.querySelectorAll('.bulk-panel').forEach(function(p) { p.style.display = 'none'; });
+    var panel = document.getElementById('bulk-' + tab);
+    if (panel) panel.style.display = '';
+  }
+
+  function bulkSetupCheck() {
+    var hasDepts = DB.get('depts').length > 0;
+    var banner = document.getElementById('bulk-setup-banner');
+    if (!hasDepts && banner) {
+      banner.style.display = 'block';
+      var steps = [
+        { label:'1. Departments', tab:'dept', done: DB.get('depts').length > 0 },
+        { label:'2. Teachers',    tab:'teacher', done: DB.get('users').filter(function(u){return u.role==='teacher';}).length > 0 },
+        { label:'3. Classes',     tab:'class', done: DB.get('classes').length > 0 },
+        { label:'4. Subjects',    tab:'subject', done: DB.get('subjects').length > 0 },
+        { label:'5. Students',    tab:'student', done: DB.get('students').length > 0 },
+        { label:'6. Admins',      tab:'admin', done: false },
+      ];
+      document.getElementById('setup-steps').innerHTML = steps.map(function(s) {
+        return '<button onclick="bulkTabByName(\'' + s.tab + '\')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:Poppins,sans-serif;background:' + (s.done ? 'rgba(255,255,255,.25)' : '#fff') + ';color:' + (s.done ? 'rgba(255,255,255,.7)' : '#1b5e20') + ';">' + (s.done ? '✅ ' : '') + s.label + '</button>';
+      }).join('');
+    } else if (banner) { banner.style.display = 'none'; }
+  }
+
+  function bulkTabByName(tab) {
+    var btn = document.querySelector('.bulk-tab[onclick*="' + tab + '"]');
+    if (btn) bulkTab(btn, tab);
+  }
+
+  // ─── CONFLICT RESOLUTION SYSTEM ───────────────────────────────────────────────
+  var _conflictQueue  = [];
+  var _conflictCb     = null;
+  var _conflictChoice = null; // 'skip'|'replace'|null
+
+  function showConflictDialog(msg, cb) {
+    document.getElementById('conflict-msg').innerHTML = msg;
+    document.getElementById('conflict-apply-all').checked = false;
+    document.getElementById('bulk-conflict-overlay').style.display = 'flex';
+    _conflictCb = cb;
+  }
+
+  function resolveConflict(choice) {
+    var applyAll = document.getElementById('conflict-apply-all').checked;
+    if (applyAll) _conflictChoice = choice;
+    document.getElementById('bulk-conflict-overlay').style.display = 'none';
+    if (_conflictCb) _conflictCb(choice);
+    _conflictCb = null;
+  }
+
+  function checkConflict(existing, incoming, keyLabel, onDecide) {
+    // Exact match — skip silently
+    var existKeys = Object.keys(incoming);
+    var isSame = existKeys.every(function(k) { return k === '_id' || k === 'createdAt' || existing[k] === incoming[k]; });
+    if (isSame) { onDecide('skip'); return; }
+    // Use global choice if set
+    if (_conflictChoice) { onDecide(_conflictChoice); return; }
+    var diffs = existKeys.filter(function(k) { return k !== '_id' && existing[k] !== incoming[k] && incoming[k]; })
+      .map(function(k) { return '<b>' + k + '</b>: "' + existing[k] + '" → "' + incoming[k] + '"'; }).join('<br>');
+    showConflictDialog(
+      '<b>' + keyLabel + '</b> already exists with differences:<br><div style="margin:8px 0;padding:8px;background:#f8fafc;border-radius:6px;font-size:11.5px;">' + diffs + '</div>Skip (keep existing) or Replace (overwrite)?',
+      onDecide
+    );
+  }
+
+  // ─── DOWNLOAD TEMPLATE ────────────────────────────────────────────────────────
+  function dlTemplate(type) {
+    var templates = {
+      dept:    [['DeptName','Code','Icon'],['Computer Science Engineering','CSE','💻']],
+      teacher: [['Name','EmployeeID','Department','Designation','Username','Password'],['John Doe','EMP001','CSE','Assistant Professor','johndoe','teacher123']],
+      class:   [['Department','HallNo','Year','Semester','Section'],['CSE','LH01','I Year','I','A']],
+      subject: [['Name','Code','Department','Credits','Type','Teacher'],['Data Structures','CS201','CSE','4','Theory','']],
+      student: [['FullName','RegisterNo','AcademicYear','CourseType','Branch','Department','Year','Class','Section','Email','Username','Password'],['Arun Kumar','CSE25001','2025-26','UG','B.E','Computer Science Engineering','I Year','CSE-I-A','A','arun@eams.edu','arun25','Student@123']],
+      admin:   [['Name','Department','Email','Username','Password'],['Admin User','Admin','admin@eams.edu','admin2','Admin@123']],
+    };
+    var data = templates[type] || [['No template']];
+    var ws   = XLSX.utils.aoa_to_sheet(data);
+    var wb   = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, type);
+    XLSX.writeFile(wb, 'EAMS_' + type + '_template.xlsx');
+  }
+
+  function dlUploaded(collection, roleFilter) {
+    var data = DB.get(collection);
+    if (roleFilter) data = data.filter(function(r) { return r.role === roleFilter; });
+    if (!data.length) { showToast('No data to download', 'warn'); return; }
+    // Remove sensitive fields
+    var clean = data.map(function(r) { var c = Object.assign({}, r); delete c.password; delete c._id; return c; });
+    var ws = XLSX.utils.json_to_sheet(clean);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, collection);
+    XLSX.writeFile(wb, 'EAMS_' + collection + '_export.xlsx');
+  }
+
+  // ─── FILE HANDLERS ─────────────────────────────────────────────────────────────
   function hd(event, type) {
     event.preventDefault();
     event.currentTarget.classList.remove('dg');
@@ -3163,27 +3472,61 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 
   function hu(input, type) {
     var file = input.files[0];
-    if (file) processFile(file, type);
+    if (file) { nav('bulk'); processFile(file, type); }
   }
 
   function processFile(file, type) {
+    _conflictChoice = null; // reset global choice per upload
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
-        var workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        var workbook  = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         var worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(worksheet);
-        if      (type === 'struct')   parseStructureRows(rows);
+        var rows      = XLSX.utils.sheet_to_json(worksheet);
+        if      (type === 'dept')     parseDeptRows(rows);
+        else if (type === 'struct')   parseStructureRows(rows);
         else if (type === 'subjects') parseSubjectRows(rows);
         else if (type === 'students') parseStudentRows(rows);
         else if (type === 'teachers') parseTeacherRows(rows);
+        else if (type === 'admins')   parseAdminRows(rows);
       } catch (err) {
-        showToast('Error reading file', 'warn');
+        showToast('Error reading file: ' + err.message, 'warn');
       }
     };
     reader.readAsArrayBuffer(file);
   }
   var pfile = processFile;
+
+  // ─── PARSE DEPARTMENTS ─────────────────────────────────────────────────────────
+  function parseDeptRows(rows) {
+    var added = 0, skipped = 0, pending = rows.slice();
+    function processNext() {
+      if (!pending.length) {
+        showUploadPreview('dept-up', added, skipped);
+        renderDepartments && renderDepartments();
+        showToast('Depts: ' + added + ' added, ' + skipped + ' skipped');
+        bulkSetupCheck();
+        return;
+      }
+      var row      = pending.shift();
+      var name     = getCellValue(row, ['deptname','name','dept']);
+      var code     = getCellValue(row, ['code','deptcode']);
+      var icon     = getCellValue(row, ['icon']) || '🏛️';
+      if (!name || !code) { skipped++; processNext(); return; }
+      var existing = DB.get('depts').find(function(d) { return d.code.toUpperCase() === code.toUpperCase() || d.name.toLowerCase() === name.toLowerCase(); });
+      if (existing) {
+        checkConflict(existing, { name: name, code: code.toUpperCase(), icon: icon }, 'Dept: ' + name, function(choice) {
+          if (choice === 'replace') { DB.update('depts', existing._id, { name: name, code: code.toUpperCase(), icon: icon }); added++; }
+          else skipped++;
+          processNext();
+        });
+      } else {
+        DB.insert('depts', { name: name, code: code.toUpperCase(), icon: icon });
+        added++; processNext();
+      }
+    }
+    processNext();
+  }
 
   // Normalize column key for fuzzy matching
   function normalizeKey(key) { return key.toString().toLowerCase().replace(/[^a-z]/g, ''); }
@@ -3368,6 +3711,23 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     showToast('Import done: ' + added + ' teachers added');
   }
   var pTchs = parseTeacherRows;
+
+  function parseAdminRows(rows) {
+    var added = 0, skipped = 0;
+    rows.forEach(function(row) {
+      var name     = getCellValue(row, ['name']);
+      var dept     = getCellValue(row, ['dept','department']);
+      var email    = getCellValue(row, ['email']);
+      var username = getCellValue(row, ['username','user']);
+      var password = getCellValue(row, ['password','pass']) || 'Admin@123';
+      if (!name || !username) { skipped++; return; }
+      if (DB.one('users', { username: username })) { skipped++; return; }
+      DB.insert('users', { name: name, dept: dept, email: email, username: username, password: password, role: 'admin' });
+      added++;
+    });
+    showUploadPreview('admup', added, skipped);
+    showToast('Admins: ' + added + ' added');
+  }
 
   // ─── REPORTS PAGE ────────────────────────────────────────────────────────────
   var currentReportType = 'dept';
@@ -3666,7 +4026,424 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     }
     addLog('Login', 'Admin logged into dashboard');
     bootApp();
+    setTimeout(updateAllSidebarBadges, 800);
   })();
+
+  // --- PROFILE: Save Name ---
+  function saveProfileName() {
+    var inp = document.getElementById('pr-edit-name');
+    var newName = inp ? inp.value.trim() : '';
+    if (!newName) { showToast('Please enter a name'); return; }
+    var token = sessionStorage.getItem('eams_token');
+    fetch('/api/users/' + currentUser._id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ name: newName })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) { showToast('Error: ' + d.error); return; }
+      currentUser.name = newName;
+      sessionStorage.setItem('eams_user', JSON.stringify(currentUser));
+      var avatarLetter = newName[0].toUpperCase();
+      document.getElementById('pr-av-big').textContent   = avatarLetter;
+      document.getElementById('pr-name-big').textContent = newName;
+      document.getElementById('sb-name').textContent     = newName;
+      document.getElementById('topbar-av').textContent   = avatarLetter;
+      document.getElementById('topbar-name').textContent = newName;
+      document.getElementById('sb-av').textContent       = avatarLetter;
+      showToast('Name updated successfully');
+    }).catch(function(){ showToast('Server error'); });
+  }
+
+  function saveProfilePassword() {
+    var cur  = document.getElementById('pr-pw-cur').value.trim();
+    var nw   = document.getElementById('pr-pw-new').value.trim();
+    var conf = document.getElementById('pr-pw-conf').value.trim();
+    var err  = document.getElementById('pr-pw-err');
+    var ok   = document.getElementById('pr-pw-ok');
+    err.style.display = 'none'; ok.style.display = 'none';
+    if (!cur || !nw || !conf) { err.textContent='Please fill all fields.'; err.style.display='block'; return; }
+    if (nw.length < 6)        { err.textContent='New password must be at least 6 characters.'; err.style.display='block'; return; }
+    if (nw !== conf)           { err.textContent='Passwords do not match.'; err.style.display='block'; return; }
+    var token = sessionStorage.getItem('eams_token');
+    fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ currentPassword: cur, newPassword: nw })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) { err.textContent = d.error; err.style.display='block'; return; }
+      ok.textContent = 'Password updated successfully!';
+      ok.style.display = 'block';
+      ['pr-pw-cur','pr-pw-new','pr-pw-conf'].forEach(function(id){ document.getElementById(id).value=''; });
+    }).catch(function(){ err.textContent='Server error.'; err.style.display='block'; });
+  }
+
+  // --- SIDEBAR BADGE UPDATES ---
+  function updateAllSidebarBadges() {
+    var stuCount  = DB.get('students').length;
+    var tchCount  = DB.get('users').filter(function(u){ return u.role==='teacher' && u.active!==false; }).length;
+    var deptCount = DB.get('depts').length;
+    var el;
+    el = document.getElementById('sb-stu-badge');   if(el) el.textContent = stuCount;
+    el = document.getElementById('sb-teach-badge'); if(el) el.textContent = tchCount;
+    el = document.getElementById('sb-dept-badge');  if(el) el.textContent = deptCount;
+    syncBadgesFromAPI();
+  }
+
+
+  function togglePwField(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    if (!inp) return;
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? '\xf0\x9f\x99\x88' : '\xf0\x9f\x91\x81';
+  }
+
+  // ─── BULK DRAWER ────────────────────────────────────────────────────────────
+  function openBulkDrw() {
+    document.getElementById('bulk-drw-overlay').classList.add('open');
+    document.getElementById('bulk-drw-frame').classList.add('open');
+    // Tell iframe to refresh setup
+    try {
+      var iwin = document.getElementById('bulk-drw-frame').contentWindow;
+      if (iwin && iwin.openBulkDrawer) iwin.openBulkDrawer();
+      else if (iwin && iwin.refreshSetup) iwin.refreshSetup();
+    } catch(e) {}
+  }
+  function closeBulkDrw() {
+    document.getElementById('bulk-drw-overlay').classList.remove('open');
+    document.getElementById('bulk-drw-frame').classList.remove('open');
+    // Refresh admin data after upload
+    try { updateStatCards(); } catch(e) {}
+    try { updateAllSidebarBadges(); } catch(e) {}
+  }
+
+  // Security
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
+  });
+
+  // ═══════════════════════════════════════════════════════
+  //  DB SYNC LAYER — All data fetched from MongoDB
+  // ═══════════════════════════════════════════════════════
+
+  // DB Update Toast
+  var _dbToastTimer = null;
+  function dbToast(msg, state, changes) {
+    // state: 'saving' | 'success' | 'error'
+    var el = document.getElementById('db-toast');
+    if (!el) return;
+    clearTimeout(_dbToastTimer);
+    el.className = 'show ' + (state || 'saving');
+    var icon = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
+    var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
+    var changesHtml = changes ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>' : '';
+    el.innerHTML = spinHtml + '<div><div>' + icon + ' ' + msg + '</div>' + changesHtml + '</div>';
+    if (state !== 'saving') {
+      _dbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
+    }
+  }
+
+  // API helper
+  function apiCall(method, path, body) {
+    var tok = sessionStorage.getItem('eams_token');
+    return fetch('/api' + path, {
+      method: method,
+      headers: { 'Content-Type':'application/json', 'Authorization': tok ? 'Bearer '+tok : '' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function(r){ return r.json(); });
+  }
+
+  // Sync a collection from API to localStorage
+  function syncFromAPI(collection, apiPath) {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve([]);
+    return fetch('/api' + apiPath, { headers: {'Authorization':'Bearer '+tok} })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) {
+          localStorage.setItem('ss3_' + collection, JSON.stringify(data));
+          return data;
+        }
+        return [];
+      }).catch(function(){ return []; });
+  }
+
+  // Sync all collections
+  function syncAllFromDB(cb) {
+    dbToast('Fetching from MongoDB…', 'saving');
+    Promise.all([
+      syncFromAPI('depts',    '/depts'),
+      syncFromAPI('classes',  '/classes'),
+      syncFromAPI('subjects', '/subjects'),
+      syncFromAPI('students', '/students'),
+      syncFromAPI('users',    '/users'),
+      syncFromAPI('assignments','/assignments'),
+    ]).then(function(results) {
+      dbToast('Synced from MongoDB', 'success', results.map(function(r,i){
+        var names = ['depts','classes','subjects','students','users','assignments'];
+        return r.length + ' ' + names[i];
+      }).join(' · '));
+      updateStatCards();
+      if (cb) cb();
+    }).catch(function(){
+      dbToast('Sync failed', 'error');
+    });
+  }
+
+  // ── DEPT OPERATIONS ──────────────────────────────────
+  function apiAddDept(name, code, icon) {
+    dbToast('Adding department…', 'saving', '"' + name + '"');
+    return apiCall('POST', '/depts', { name:name, code:code, icon:icon||'🏛️' })
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        // Sync depts to localStorage
+        return syncFromAPI('depts', '/depts').then(function() {
+          dbToast('Department added', 'success', '"' + name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiUpdateDept(id, name, code, icon) {
+    dbToast('Updating department…', 'saving', '"' + name + '"');
+    return apiCall('PUT', '/depts/' + id, { name:name, code:code, icon:icon })
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('depts', '/depts').then(function() {
+          dbToast('Department updated', 'success', '"' + name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiDeleteDept(id, name) {
+    dbToast('Deleting department…', 'saving', '"' + name + '"');
+    return apiCall('DELETE', '/depts/' + id)
+      .then(function() {
+        return syncFromAPI('depts', '/depts').then(function() {
+          dbToast('Department deleted', 'success', '"' + name + '" removed from MongoDB');
+        });
+      });
+  }
+
+  // ── CLASS OPERATIONS ─────────────────────────────────
+  function apiAddClass(data) {
+    dbToast('Adding class…', 'saving', data.name);
+    return apiCall('POST', '/classes', data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('classes', '/classes').then(function() {
+          dbToast('Class added', 'success', '"' + data.name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiDeleteClass(id, name) {
+    dbToast('Deleting class…', 'saving', '"' + name + '"');
+    return apiCall('DELETE', '/classes/' + id)
+      .then(function() {
+        return syncFromAPI('classes', '/classes').then(function() {
+          dbToast('Class deleted', 'success', '"' + name + '" removed');
+        });
+      });
+  }
+
+  function apiUpdateClass(id, data) {
+    dbToast('Updating class…', 'saving', data.name);
+    return apiCall('PUT', '/classes/' + id, data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('classes', '/classes').then(function() {
+          dbToast('Class updated', 'success', '"' + data.name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  // ── SUBJECT OPERATIONS ───────────────────────────────
+  function apiAddSubject(data) {
+    dbToast('Adding subject…', 'saving', data.name);
+    return apiCall('POST', '/subjects', data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('subjects', '/subjects').then(function() {
+          dbToast('Subject added', 'success', '"' + data.name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiUpdateSubject(id, data) {
+    dbToast('Updating subject…', 'saving', data.name);
+    return apiCall('PUT', '/subjects/' + id, data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('subjects', '/subjects').then(function() {
+          dbToast('Subject updated', 'success', '"' + data.name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiDeleteSubject(id, name) {
+    dbToast('Deleting subject…', 'saving', '"' + name + '"');
+    return apiCall('DELETE', '/subjects/' + id)
+      .then(function() {
+        return syncFromAPI('subjects', '/subjects').then(function() {
+          dbToast('Subject deleted', 'success', '"' + name + '" removed');
+        });
+      });
+  }
+
+  // ── TEACHER OPERATIONS ──────────────────────────────
+  function apiAddTeacher(data) {
+    dbToast('Adding teacher…', 'saving', data.name);
+    return apiCall('POST', '/teachers', data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('users', '/users').then(function() {
+          dbToast('Teacher added', 'success', '"' + data.name + '" ('+data.username+') → MongoDB\nPassword: ' + data.password);
+          return d;
+        });
+      });
+  }
+
+  function apiUpdateTeacher(id, data, name) {
+    dbToast('Updating teacher…', 'saving', name);
+    return apiCall('PUT', '/teachers/' + id, data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('users', '/users').then(function() {
+          dbToast('Teacher updated', 'success', '"' + name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  // ── STUDENT OPERATIONS ──────────────────────────────
+  function apiAddStudent(data) {
+    dbToast('Adding student…', 'saving', data.name);
+    return apiCall('POST', '/students', data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('students', '/students').then(function() {
+          dbToast('Student added', 'success', '"' + data.name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  function apiDeleteStudent(id, name) {
+    dbToast('Deleting student…', 'saving', '"' + name + '"');
+    return apiCall('DELETE', '/students/' + id)
+      .then(function() {
+        return syncFromAPI('students', '/students').then(function() {
+          dbToast('Student deleted', 'success', '"' + name + '" removed');
+        });
+      });
+  }
+
+  function apiUpdateStudent(id, data, name) {
+    dbToast('Updating student…', 'saving', name);
+    return apiCall('PUT', '/students/' + id, data)
+      .then(function(d) {
+        if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        return syncFromAPI('students', '/students').then(function() {
+          dbToast('Student updated', 'success', '"' + name + '" → MongoDB');
+          return d;
+        });
+      });
+  }
+
+  // ── SETTINGS OPERATIONS ─────────────────────────────
+  function apiGetSettings() {
+    return apiCall('GET', '/settings').then(function(d) {
+      if (!d.error) localStorage.setItem('eams_settings', JSON.stringify(d));
+      return d;
+    });
+  }
+
+  function apiSaveSetting(key, value, label) {
+    dbToast('Saving ' + (label||key) + '…', 'saving');
+    return apiCall('PUT', '/settings/' + key, { value: value })
+      .then(function(d) {
+        if (d && d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
+        localStorage.setItem('eams_setting_' + key, JSON.stringify(value));
+        dbToast((label||key) + ' saved', 'success', 'Updated in MongoDB');
+        return d;
+      });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  SPECIAL DELETE PASSWORD
+  // ═══════════════════════════════════════════════════════
+
+  var _specialPwCallback = null;
+
+  function requireSpecialPw(cb) {
+    _specialPwCallback = cb;
+    document.getElementById('sppw-input').value = '';
+    document.getElementById('sppw-err').style.display = 'none';
+    openModal_('m-special-pw');
+  }
+
+  function verifySpecialPw() {
+    var pw = document.getElementById('sppw-input').value.trim();
+    var errEl = document.getElementById('sppw-err');
+    errEl.style.display = 'none';
+    if (!pw) { errEl.textContent = 'Enter password.'; errEl.style.display='block'; return; }
+    dbToast('Verifying password…', 'saving');
+    apiCall('POST', '/settings/verify-delete-password', { password: pw })
+    .then(function(d) {
+      if (d.valid) {
+        dbToast('Verified', 'success');
+        closeModalBg('m-special-pw');
+        if (_specialPwCallback) { _specialPwCallback(); _specialPwCallback = null; }
+      } else {
+        errEl.textContent = d.error || 'Incorrect password.';
+        errEl.style.display = 'block';
+        dbToast('Wrong password', 'error');
+      }
+    }).catch(function() {
+      errEl.textContent = 'Server error.';
+      errEl.style.display = 'block';
+    });
+  }
+
+  // Wrap confirm dialog to require special password for deletions
+  var _originalDcBtn = null;
+  function openDangerConfirm(id, msg, cb) {
+    requireSpecialPw(function() {
+      document.getElementById('dc-confirm-id').value   = id || '';
+      document.getElementById('dc-confirm-msg').textContent = msg;
+      document.getElementById('dc-confirm-btn').onclick = cb;
+      openModal_('m-dc-confirm');
+    });
+  }
 </script>
+
+<!-- Bulk Upload Drawer -->
+<div id="bulk-drw-overlay" onclick="closeBulkDrw()"></div>
+<iframe id="bulk-drw-frame" src="bulk.html" title="Bulk Upload"></iframe>
+
+<div id="db-toast"></div>
+
+<!-- Special Delete Password Modal -->
+<div class="modal-bg" id="m-special-pw"><div class="modal modal-sm" style="text-align:center;">
+  <div class="modal-hd" style="justify-content:center;"><div class="modal-title">🔐 Authentication Required</div></div>
+  <div style="font-size:14px;margin-bottom:8px;">⚠️ Data Management actions require authentication.</div>
+  <div style="font-size:12px;color:var(--tmu);margin-bottom:16px;">Enter your admin login password or the special management password.</div>
+  <div id="sppw-err" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:8px;font-size:12px;margin-bottom:12px;"></div>
+  <div class="pw-wrap" style="margin-bottom:16px;">
+    <input type="password" id="sppw-input" class="fc2" placeholder="Enter password" style="width:100%;padding:10px 36px 10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:Poppins,sans-serif;outline:none;">
+    <button type="button" class="pw-eye" onclick="togglePwField('sppw-input',this)" tabindex="-1">👁</button>
+  </div>
+  <div class="form-actions">
+    <button class="btn-form-ghost" onclick="closeModalBg('m-special-pw')">Cancel</button>
+    <button class="btn-form-pri" onclick="verifySpecialPw()">Verify →</button>
+  </div>
+</div></div>
 </body>
 </html>

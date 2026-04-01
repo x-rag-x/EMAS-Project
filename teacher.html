@@ -254,6 +254,7 @@ textarea.finp{resize:vertical;min-height:80px;}
   .pchip .pe{display:none;}
   .sched-tab{padding:5px 10px;font-size:11px;}
 }
+body{-webkit-user-select:none;user-select:none;}
 </style>
 </head>
 <body>
@@ -654,172 +655,25 @@ textarea.finp{resize:vertical;min-height:80px;}
 
   // ─── SEED / INITIAL DATA ────────────────────────────────────────────────────
   function ensureDB() {
-    // Default users
-    if (!DB.get('users').length) {
-      DB.insert('users', { name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin' });
-      DB.insert('users', {
-        name: 'Default Teacher', username: 'teacher', password: 'teacher', role: 'teacher',
-        empId: 'EMP001', dept: 'Computer Science Engineering', desig: 'Assistant Professor'
-      });
-    }
-
-    // Sample departments and classes
-    if (!DB.get('depts').length) {
-      [
-        { name: 'Computer Science Engineering', code: 'CSE' },
-        { name: 'Information Technology',       code: 'IT'  },
-        { name: 'Electronics & Communication',  code: 'ECE' }
-      ].forEach(function(d) { DB.insert('depts', d); });
-
-      const depts    = DB.get('depts');
-      const semList  = ['I','II','III','IV','V','VI'];
-      const yearList = ['I Year','I Year','II Year','II Year','III Year','III Year'];
-
-      depts.slice(0, 2).forEach(function(dept) {
-        semList.forEach(function(sem, i) {
-          DB.insert('classes', {
-            deptId: dept._id, deptName: dept.name, deptCode: dept.code,
-            year: yearList[i], sem: sem, section: 'A',
-            name: dept.code + '-' + sem + '-A'
-          });
-        });
-      });
-
-      const cseDept = depts[0];
-      [
-        { name: 'Engineering Mathematics', code: 'MA101' },
-        { name: 'Programming Fundamentals', code: 'CS101' },
-        { name: 'Data Structures',          code: 'CS201' },
-        { name: 'Operating Systems',        code: 'CS301' },
-        { name: 'DBMS',                     code: 'CS302' }
-      ].forEach(function(subj) {
-        DB.insert('subjects', Object.assign({}, subj, {
-          deptId: cseDept._id, deptName: cseDept.name, deptCode: cseDept.code
-        }));
-      });
-    }
-
-    // Sample students
-    if (!DB.get('students').length) {
-      const firstNames = ['Aarav','Priya','Karthik','Sneha','Rajesh','Divya','Arun','Meena',
-                          'Vijay','Lakshmi','Suresh','Anitha','Deepak','Kavitha','Ravi',
-                          'Nithya','Ganesh','Pooja','Santhosh','Revathi'];
-      const lastNames  = ['Kumar','Sharma','Raj','Devi','Krishnan','Nair','Murugan','Rajan'];
-      const firstClass = DB.get('classes').find(function(c) { return c.sem === 'I'; });
-      if (firstClass) {
-        for (let i = 0; i < 30; i++) {
-          DB.insert('students', {
-            name:     firstNames[i % firstNames.length] + ' ' + lastNames[Math.floor(i / 10) % lastNames.length],
-            regNo:    firstClass.deptCode + '25' + String(i + 1).padStart(3, '0'),
-            deptId:   firstClass.deptId,
-            classId:  firstClass._id,
-            className: firstClass.name,
-            section:  'A'
-          });
-        }
-      }
-    }
-
-    // Create teacher–class–subject assignments
-    if (!DB.get('assignments').length) {
-      const defaultTeacher = DB.one('users', { role: 'teacher' });
-      const allClasses     = DB.get('classes');
-      const allSubjects    = DB.get('subjects');
-      if (defaultTeacher && allClasses.length && allSubjects.length) {
-        allClasses.slice(0, 3).forEach(function(cls, index) {
-          const subject = allSubjects[index % allSubjects.length];
-          DB.insert('assignments', {
-            classId: cls._id, className: cls.name,
-            subjectId: subject._id, subjectName: subject.name,
-            teacherId: defaultTeacher._id, teacherName: defaultTeacher.name,
-            deptName: cls.deptName, deptCode: cls.deptCode
-          });
-        });
-      }
-    }
-
-    // Seed default weekly timetable
-    if (!DB.get('timetable').length) {
-      const defaultTeacher = DB.one('users', { role: 'teacher' });
-      if (defaultTeacher) {
-        const myAssignments = DB.get('assignments').filter(function(a) { return a.teacherId === defaultTeacher._id; });
-        const slotTemplates = [
-          { day: 'Mon', start: '08:00', end: '09:00' },
-          { day: 'Mon', start: '11:00', end: '12:00' },
-          { day: 'Tue', start: '09:00', end: '10:00' },
-          { day: 'Wed', start: '10:00', end: '11:00' },
-          { day: 'Thu', start: '08:00', end: '09:00' },
-          { day: 'Thu', start: '11:00', end: '12:00' },
-          { day: 'Fri', start: '09:00', end: '10:00' }
-        ];
-        myAssignments.forEach(function(assignment, index) {
-          if (slotTemplates[index * 2]) {
-            DB.insert('timetable', Object.assign({}, slotTemplates[index * 2], {
-              classId: assignment.classId, className: assignment.className,
-              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
-              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name
-            }));
-          }
-          if (slotTemplates[index * 2 + 1]) {
-            DB.insert('timetable', Object.assign({}, slotTemplates[index * 2 + 1], {
-              classId: assignment.classId, className: assignment.className,
-              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
-              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name
-            }));
-          }
-        });
-      }
-    }
-
-    // Seed past attendance records (4 weekdays back)
-    if (!DB.get('attendance').length) {
-      const defaultTeacher = DB.one('users', { role: 'teacher' });
-      const students       = DB.get('students');
-      const assignment     = DB.get('assignments').find(function(a) { return a.teacherId === (defaultTeacher ? defaultTeacher._id : ''); });
-
-      if (assignment && students.length) {
-        const today = new Date();
-        for (let daysBack = 4; daysBack >= 1; daysBack--) {
-          const dt = new Date(today);
-          dt.setDate(today.getDate() - daysBack);
-          if ([0, 6].includes(dt.getDay())) continue; // skip weekends
-          const isoDate = dt.toISOString().split('T')[0];
-          students.forEach(function(student) {
-            DB.insert('attendance', {
-              studentId: student._id, studentName: student.name,
-              classId: assignment.classId, className: assignment.className,
-              subjectId: assignment.subjectId, subjectName: assignment.subjectName,
-              teacherId: defaultTeacher._id, teacherName: defaultTeacher.name,
-              date: isoDate,
-              status: Math.random() > 0.2 ? 'present' : 'absent',
-              deptName: assignment.deptName
-            });
-          });
-        }
-      }
-    }
-
-    // Seed teacher notifications
-    if (!DB.get('teacher-notifications').length) {
-      DB.insert('teacher-notifications', {
-        type: 'info', from: 'Admin',
-        message: 'New academic year timetable finalized. Please verify your schedule.',
-        time: new Date(Date.now() - 3600000).toISOString(), read: false
-      });
-      DB.insert('teacher-notifications', {
-        type: 'alert', from: 'System',
-        message: 'Attendance for CSE-I-A has not been marked today.',
-        time: new Date(Date.now() - 7200000).toISOString(), read: false
-      });
-    }
+    // No default seeding — data comes from admin uploads
   }
 
   // ─── AUTHENTICATION ──────────────────────────────────────────────────────────
   let currentUser = null;
+  function logToServer(action, details, category) {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return;
+    fetch('/api/logs', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body: JSON.stringify({ action:action, details:details||'', category:category||'general', role:'teacher' })
+    }).catch(function(){});
+  }
 
   function doLogout() {
     currentUser = null;
-    sessionStorage.removeItem('eams_user');
+    sessionStorage.clear();
+    var tok = sessionStorage.getItem('eams_token');
+    if (tok) fetch('/api/auth/logout', { method:'POST', headers:{'Authorization':'Bearer '+tok} }).catch(function(){});
     window.location.href = 'index.html';
   }
 
@@ -2131,6 +1985,103 @@ textarea.finp{resize:vertical;min-height:80px;}
     }
     bootApp();
   })();
+</script>
+
+<!-- ═══ FORCE CHANGE PASSWORD POPUP ═══════════════════════════════════════ -->
+<div id="forcePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:2.2rem;margin-bottom:8px;">🔐</div>
+    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Your Password</h2>
+    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">You are using the default password. Please set a new password to continue.</p>
+    <div id="forcePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <input id="forcePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="forcePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="forcePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
+    <button onclick="submitForcePw()" style="width:100%;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update Password</button>
+  </div>
+</div>
+
+<!-- ═══ OPTIONAL CHANGE PASSWORD POPUP ════════════════════════════════════ -->
+<div id="changePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">🔑</div>
+    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Password</h2>
+    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">Enter your current password and choose a new one.</p>
+    <div id="changePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <div id="changePwOk"  style="display:none;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <input id="changePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="changePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="changePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeChangePwModal()" style="flex:1;padding:12px;background:#f5f5f5;color:#333;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">Cancel</button>
+      <button onclick="submitChangePw()" style="flex:1;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _pwToken = sessionStorage.getItem('eams_token');
+
+function showForcePwModal() {
+  document.getElementById('forcePwModal').style.display = 'flex';
+}
+function openChangePwModal() {
+  ['changePwCur','changePwNew','changePwConf'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('changePwErr').style.display='none';
+  document.getElementById('changePwOk').style.display='none';
+  document.getElementById('changePwModal').style.display='flex';
+}
+function closeChangePwModal() {
+  document.getElementById('changePwModal').style.display='none';
+}
+function submitForcePw() {
+  var cur=document.getElementById('forcePwCur').value.trim();
+  var nw=document.getElementById('forcePwNew').value.trim();
+  var conf=document.getElementById('forcePwConf').value.trim();
+  var err=document.getElementById('forcePwErr');
+  err.style.display='none';
+  if (!cur||!nw||!conf){err.textContent='Please fill all fields.';err.style.display='block';return;}
+  if (nw.length<6){err.textContent='New password must be at least 6 characters.';err.style.display='block';return;}
+  if (nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return;}
+  fetch('/api/auth/change-password',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_pwToken},
+    body:JSON.stringify({currentPassword:cur,newPassword:nw})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){err.textContent=d.error;err.style.display='block';return;}
+    sessionStorage.setItem('eams_mustChangePw','0');
+    document.getElementById('forcePwModal').style.display='none';
+    alert('✅ Password changed successfully! Please remember your new password.');
+  }).catch(function(){err.textContent='Server error. Try again.';err.style.display='block';});
+}
+function submitChangePw() {
+  var cur=document.getElementById('changePwCur').value.trim();
+  var nw=document.getElementById('changePwNew').value.trim();
+  var conf=document.getElementById('changePwConf').value.trim();
+  var err=document.getElementById('changePwErr');
+  var ok=document.getElementById('changePwOk');
+  err.style.display='none';ok.style.display='none';
+  if (!cur||!nw||!conf){err.textContent='Please fill all fields.';err.style.display='block';return;}
+  if (nw.length<6){err.textContent='New password must be at least 6 characters.';err.style.display='block';return;}
+  if (nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return;}
+  fetch('/api/auth/change-password',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_pwToken},
+    body:JSON.stringify({currentPassword:cur,newPassword:nw})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){err.textContent=d.error;err.style.display='block';return;}
+    ok.textContent='✅ Password updated successfully!';ok.style.display='block';
+    ['changePwCur','changePwNew','changePwConf'].forEach(function(id){document.getElementById(id).value='';});
+    setTimeout(closeChangePwModal,1500);
+  }).catch(function(){err.textContent='Server error. Try again.';err.style.display='block';});
+}
+window.addEventListener('load',function(){
+  if(sessionStorage.getItem('eams_mustChangePw')==='1'){ showForcePwModal(); }
+});
+
+  // Security
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
+  });
 </script>
 </body>
 </html>

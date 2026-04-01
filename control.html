@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – System Control Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;
+  --gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;
+  --teal:#00897b;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+  --orange:#f97316;
+  --td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;
+  --br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);
+  --sh:0 4px 24px rgba(27,94,32,0.10);--shd:0 8px 32px rgba(0,0,0,0.08);
+  --danger:#dc2626;--danger-lt:#fef2f2;--danger-br:#fecaca;
+  --warn:#d97706;--warn-lt:#fffbeb;--warn-br:#fde68a;
+  --success:#16a34a;--success-lt:#f0fdf4;--success-br:#bbf7d0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ── SIDEBAR ── */
+.sb{width:236px;flex-shrink:0;background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;overflow:hidden;}
+.sb-logo{padding:20px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brl);}
+.sb-brand{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--td);}
+.sb-sub{font-size:10px;color:var(--tmu);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+.sb-section-label{font-size:9px;text-transform:uppercase;letter-spacing:1.8px;color:var(--tdi);font-weight:600;padding:14px 18px 4px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px 9px 16px;margin:1px 8px;border-radius:10px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:500;color:var(--tmu);position:relative;border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;}
+.sb-item:hover{background:var(--gLt);color:var(--gK);}
+.sb-item.act{background:var(--gLt);color:var(--gD);font-weight:700;border-left:3px solid var(--gD);border-radius:0 10px 10px 0;padding-left:13px;}
+.sb-item .sbi-ic{width:20px;text-align:center;font-size:15px;}
+.sb-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--brl);}
+.sb-user{padding:12px 16px;background:var(--gLt);border-radius:10px;margin:8px;display:flex;align-items:center;gap:9px;border:1px solid var(--br);}
+.sb-uav{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-uname{font-size:12px;font-weight:600;color:var(--td);}
+.sb-urole{font-size:10px;color:#fff;background:var(--gM);padding:1px 6px;border-radius:10px;display:inline-block;}
+.sb-back-btn{width:100%;padding:9px;border:1.5px solid var(--br);border-radius:10px;background:#fff;color:var(--gD);font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px;}
+.sb-back-btn:hover{background:var(--gLt);}
+.sb-logout-btn{width:100%;padding:9px;border:1.5px solid rgba(239,68,68,.25);border-radius:10px;background:rgba(239,68,68,.04);color:#dc2626;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.sb-logout-btn:hover{background:rgba(239,68,68,.1);}
+
+/* ── MAIN ── */
+.mc{margin-left:236px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:15px;font-weight:700;color:var(--td);display:flex;align-items:center;gap:10px;}
+.topbar-badge{font-size:10px;background:var(--danger);color:#fff;padding:2px 10px;border-radius:20px;font-weight:700;letter-spacing:.5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.topbar-right{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--tmu);}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--gB);display:inline-block;margin-right:5px;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── PAGES ── */
+.pg{display:none;padding:28px 32px;}
+.pg.act{display:block;animation:pi .3s ease;}
+@keyframes pi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-hd{margin-bottom:28px;}
+.page-title{font-size:26px;font-weight:800;color:var(--td);letter-spacing:-.5px;}
+.page-sub{font-size:12.5px;color:var(--tmu);margin-top:4px;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:18px;border:1.5px solid var(--br);padding:24px;margin-bottom:20px;transition:box-shadow .2s;}
+.card:hover{box-shadow:var(--shd);}
+.card-hd{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.card-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.card-icon.red{background:var(--danger-lt);}
+.card-icon.amber{background:var(--warn-lt);}
+.card-icon.blue{background:#eff6ff;}
+.card-icon.green{background:var(--success-lt);}
+.card-icon.purple{background:#f5f3ff;}
+.card-icon.gray{background:#f9fafb;}
+.card-title{font-size:15px;font-weight:700;color:var(--td);}
+.card-desc{font-size:12px;color:var(--tmu);margin-top:2px;}
+
+/* ── BUTTONS ── */
+.btn{border:none;border-radius:12px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;transition:all .2s;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(220,38,38,.2);}
+.btn-danger:hover:not(:disabled){background:#b91c1c;transform:translateY(-1px);}
+.btn-warn{background:var(--warn);color:#fff;box-shadow:0 4px 14px rgba(217,119,6,.2);}
+.btn-warn:hover:not(:disabled){background:#b45309;transform:translateY(-1px);}
+.btn-pri{background:var(--gD);color:#fff;box-shadow:0 4px 14px rgba(27,94,32,.2);}
+.btn-pri:hover:not(:disabled){background:var(--gK);transform:translateY(-1px);}
+.btn-out{background:#fff;color:var(--td);border:1.5px solid #d0d7d0;}
+.btn-out:hover:not(:disabled){border-color:var(--gLr);background:var(--gLt);}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:10px;}
+
+/* ── DANGER ZONE ── */
+.danger-zone{border:1.5px solid var(--danger-br);border-radius:14px;padding:20px;background:var(--danger-lt);}
+.danger-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--danger-br);}
+.danger-row:last-child{border-bottom:none;padding-bottom:0;}
+.danger-label{font-size:13.5px;font-weight:600;color:var(--danger);}
+.danger-hint{font-size:11.5px;color:#9b1c1c;margin-top:3px;}
+
+/* ── TOGGLE SWITCH ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--br);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-label{font-size:13.5px;font-weight:600;color:var(--td);}
+.toggle-hint{font-size:11.5px;color:var(--tmu);margin-top:3px;}
+.toggle-wrap{position:relative;display:inline-flex;align-items:center;gap:10px;}
+.toggle{position:relative;width:48px;height:26px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;background:#d1d5db;border-radius:13px;transition:.3s;}
+.toggle input:checked+.toggle-track{background:var(--gD);}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle input:checked~.toggle-thumb{left:25px;}
+.toggle-state{font-size:12px;font-weight:700;min-width:32px;}
+.toggle-state.on{color:var(--success);}
+.toggle-state.off{color:var(--tmu);}
+
+/* ── SETTINGS FORM ── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:12px;font-weight:600;color:var(--tmu);text-transform:uppercase;letter-spacing:.6px;}
+.form-input{padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13.5px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--gM);box-shadow:0 0 0 3px rgba(56,142,60,.1);}
+.form-input[readonly]{background:#f8fafc;color:var(--tmu);}
+select.form-input{cursor:pointer;}
+
+/* ── MAINTENANCE BANNER ── */
+.maint-banner{background:linear-gradient(135deg,#7c2d12,#dc2626);border-radius:16px;padding:20px 24px;color:#fff;display:flex;align-items:center;gap:16px;margin-bottom:20px;}
+.maint-banner.hidden{display:none;}
+.maint-banner-ic{font-size:28px;flex-shrink:0;}
+.maint-banner-title{font-size:15px;font-weight:700;}
+.maint-banner-sub{font-size:12px;opacity:.85;margin-top:2px;}
+
+/* ── STATS STRIP ── */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-chip{background:#fff;border:1.5px solid var(--br);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px;}
+.stat-chip-ic{font-size:22px;}
+.stat-chip-val{font-size:22px;font-weight:800;color:var(--td);line-height:1;}
+.stat-chip-label{font-size:11px;color:var(--tmu);margin-top:3px;}
+
+/* ── LOG TERMINAL ── */
+.terminal{background:#0f172a;border-radius:14px;padding:18px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;max-height:220px;overflow-y:auto;margin-top:14px;}
+.terminal-line{padding:2px 0;color:#94a3b8;}
+.terminal-line.success{color:#4ade80;}
+.terminal-line.danger{color:#f87171;}
+.terminal-line.warn{color:#fbbf24;}
+.terminal-line.info{color:#60a5fa;}
+.terminal-prompt{color:#64748b;margin-right:8px;}
+
+/* ── CONFIRM MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;animation:mfade .2s ease;}
+@keyframes mfade{from{opacity:0}to{opacity:1}}
+.modal-box{background:#fff;border-radius:20px;padding:36px 32px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center;animation:mslide .25s ease;}
+@keyframes mslide{from{transform:translateY(16px)}to{transform:translateY(0)}}
+.modal-icon{font-size:3rem;margin-bottom:14px;}
+.modal-title{font-size:18px;font-weight:800;color:var(--td);margin-bottom:8px;}
+.modal-body{font-size:13px;color:var(--tmu);line-height:1.6;margin-bottom:20px;}
+.modal-confirm-input{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13.5px;font-family:'Poppins',sans-serif;margin-bottom:16px;outline:none;text-align:center;letter-spacing:.5px;}
+.modal-confirm-input:focus{border-color:var(--danger);}
+.modal-actions{display:flex;gap:10px;}
+.modal-actions .btn{flex:1;justify-content:center;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;right:28px;background:#1a2e1a;color:#fff;padding:14px 20px;border-radius:14px;font-size:13px;font-weight:600;z-index:10000;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.25);transform:translateY(100px);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--br);margin:20px 0;}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--gLt);border:1px solid var(--gLr);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--gD);display:flex;gap:10px;align-items:flex-start;margin-top:14px;}
+.warn-box{background:var(--warn-lt);border:1px solid var(--warn-br);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--warn);display:flex;gap:10px;align-items:flex-start;margin-top:14px;}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{margin-top:12px;display:none;}
+.progress-bar-bg{background:#e2e8f0;border-radius:8px;height:8px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--gD),var(--gB));border-radius:8px;width:0%;transition:width .4s ease;}
+.progress-label{font-size:11px;color:var(--tmu);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<nav class="sb">
+  <div class="sb-logo">
+    <div>
+      <div class="sb-brand">EAMS Control</div>
+      <div class="sb-sub">SYSTEM PANEL v1.0</div>
+    </div>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding:6px 0;">
+    <div class="sb-section-label">Overview</div>
+    <button class="sb-item act" onclick="nav('overview')"><span class="sbi-ic">🖥️</span>System Overview</button>
+
+    <div class="sb-section-label">Danger Zone</div>
+    <button class="sb-item" onclick="nav('data')"><span class="sbi-ic">🗑️</span>Data Management</button>
+    <button class="sb-item" onclick="nav('maintenance')"><span class="sbi-ic">🔧</span>Maintenance Mode</button>
+
+    <div class="sb-section-label">Configuration</div>
+    <button class="sb-item" onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Basic Settings</button>
+    <button class="sb-item" onclick="nav('security')"><span class="sbi-ic">🔐</span>Security</button>
+    <button class="sb-item" onclick="nav('appearance')"><span class="sbi-ic">🎨</span>Appearance</button>
+    <button class="sb-item" onclick="nav('advanced')"><span class="sbi-ic">🧪</span>Advanced</button>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-user">
+      <div class="sb-uav" id="sb-av">A</div>
+      <div>
+        <div class="sb-uname" id="sb-name">Administrator</div>
+        <div class="sb-urole">Admin</div>
+      </div>
+    </div>
+    <button class="sb-back-btn" onclick="goBack()">← Back to Dashboard</button>
+    <button class="sb-logout-btn" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div class="mc">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">
+      ⚙️ System Control Panel
+      <span class="topbar-badge">ADMIN ONLY</span>
+    </div>
+    <div class="topbar-right">
+      <span><span class="status-dot"></span>Server Online</span>
+      <span id="top-time" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;"></span>
+    </div>
+  </div>
+
+  <!-- ══ OVERVIEW PAGE ══ -->
+  <div class="pg act" id="pg-overview">
+    <div class="page-hd">
+      <div class="page-title">System Overview</div>
+      <div class="page-sub">Live stats and system health at a glance</div>
+    </div>
+
+    <div id="maint-banner" class="maint-banner hidden">
+      <div class="maint-banner-ic">🚧</div>
+      <div>
+        <div class="maint-banner-title">Maintenance Mode is ACTIVE</div>
+        <div class="maint-banner-sub">Only admin accounts can access the system. Teachers and students are locked out.</div>
+      </div>
+    </div>
+
+    <!-- DB Memory/Storage Cards -->
+    <div class="stats-strip">
+      <div class="stat-chip"><span class="stat-chip-ic">💾</span><div><div class="stat-chip-val" id="ov-data-size">—</div><div class="stat-chip-label">Data Size (MB)</div></div></div>
+      <div class="stat-chip"><span class="stat-chip-ic">🗜️</span><div><div class="stat-chip-val" id="ov-storage-size">—</div><div class="stat-chip-label">Storage Used (MB)</div></div></div>
+      <div class="stat-chip"><span class="stat-chip-ic">🗂️</span><div><div class="stat-chip-val" id="ov-index-size">—</div><div class="stat-chip-label">Index Size (MB)</div></div></div>
+      <div class="stat-chip"><span class="stat-chip-ic">📄</span><div><div class="stat-chip-val" id="ov-total-docs">—</div><div class="stat-chip-label">Total Documents</div></div></div>
+    </div>
+
+    <!-- Storage Bar -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd">
+        <div class="card-icon blue">📊</div>
+        <div><div class="card-title">Storage Usage</div><div class="card-desc" id="ov-storage-desc">Fetching storage info…</div></div>
+        <button onclick="loadOverview()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
+      </div>
+      <div style="background:#f1f5f9;border-radius:8px;height:14px;overflow:hidden;margin-bottom:8px;">
+        <div id="ov-storage-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:8px;transition:width .6s ease;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tmu);font-family:'JetBrains Mono',monospace;">
+        <span id="ov-used-label">Used: —</span>
+        <span id="ov-free-label">Free: —</span>
+        <span id="ov-total-label">Total: —</span>
+      </div>
+    </div>
+    <!-- DB Collection Breakdown -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd">
+        <div class="card-icon blue">🗄️</div>
+        <div><div class="card-title">Collection Overview</div><div class="card-desc">Document counts per collection</div></div>
+        <button onclick="loadOverview()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
+      </div>
+      <div id="collection-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon green">📋</div>
+        <div><div class="card-title">System Activity Log</div><div class="card-desc">Live control panel operations</div></div>
+      </div>
+      <div class="terminal" id="sys-log">
+        <div class="terminal-line info"><span class="terminal-prompt">›</span>Control panel initialized</div>
+        <div class="terminal-line success"><span class="terminal-prompt">›</span>MongoDB connected ✓</div>
+        <div class="terminal-line info"><span class="terminal-prompt">›</span>Awaiting commands…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DATA MANAGEMENT PAGE ══ -->
+  <div class="pg" id="pg-data">
+    <div class="page-hd">
+      <div class="page-title">🗑️ Data Management</div>
+      <div class="page-sub">Irreversible operations — proceed with caution</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon red">⚠️</div>
+        <div><div class="card-title">Danger Zone</div><div class="card-desc">All actions below are permanent and cannot be undone</div></div>
+      </div>
+
+      <div class="danger-zone">
+
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">🗑️ Delete All Teachers</div>
+            <div class="danger-hint">Removes all teacher accounts and their assignments. Admin account is preserved.</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="openConfirm('teachers')">Delete Teachers</button>
+        </div>
+
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">🗑️ Delete All Students</div>
+            <div class="danger-hint">Removes all student records and their attendance data.</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="openConfirm('students')">Delete Students</button>
+        </div>
+
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">🧹 Clear Attendance Records</div>
+            <div class="danger-hint">Deletes all attendance entries. Students and teachers are kept.</div>
+          </div>
+          <button class="btn btn-warn btn-sm" onclick="openConfirm('attendance')">Clear Attendance</button>
+        </div>
+
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">🧹 Clear Activity Logs</div>
+            <div class="danger-hint">Purges all system activity and login logs.</div>
+          </div>
+          <button class="btn btn-warn btn-sm" onclick="openConfirm('logs')">Clear Logs</button>
+        </div>
+
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">💥 Clear Entire Database</div>
+            <div class="danger-hint">Wipes ALL data: students, teachers, departments, classes, attendance, logs. Admin account is preserved.</div>
+          </div>
+          <button class="btn btn-danger btn-sm" style="background:#7f1d1d;" onclick="openConfirm('clearall')">Clear Everything</button>
+        </div>
+
+      </div>
+
+      <div class="warn-box">⚠️ These actions call the server API directly and immediately affect the MongoDB database. There is no undo.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon green">↩️</div>
+        <div><div class="card-title">Backup &amp; Undo</div><div class="card-desc">Auto-snapshots before every destructive action — restore within 7 days</div></div>
+      </div>
+      <div id="backup-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">No backups yet. Backups are created automatically before any delete operation.</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-out btn-sm" onclick="loadBackups()">↻ Refresh Backups</button>
+        <button class="btn btn-out btn-sm" onclick="clearOldBackups()">🗑 Clear Old Backups</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon blue">📤</div>
+        <div><div class="card-title">Export Data</div><div class="card-desc">Download collections as JSON for backup</div></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-out btn-sm" onclick="exportData('students')">⬇ Export Students</button>
+        <button class="btn btn-out btn-sm" onclick="exportData('teachers')">⬇ Export Teachers</button>
+        <button class="btn btn-out btn-sm" onclick="exportData('attendance')">⬇ Export Attendance</button>
+        <button class="btn btn-out btn-sm" onclick="exportData('all')">⬇ Full Backup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MAINTENANCE MODE PAGE ══ -->
+  <div class="pg" id="pg-maintenance">
+    <div class="page-hd">
+      <div class="page-title">🔧 Maintenance Mode</div>
+      <div class="page-sub">Control system access by role</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon amber">🔧</div>
+        <div><div class="card-title">Access Control</div><div class="card-desc">Toggle maintenance mode to restrict access</div></div>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Maintenance Mode</div>
+          <div class="toggle-hint">When ON — only Admin can log in. Teachers and students are blocked with a maintenance message.</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-maint" onchange="toggleMaintenance(this.checked)">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-state off" id="maint-state-label">OFF</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="margin-top:4px;">
+        <div class="form-group">
+          <label class="form-label">Maintenance Message (shown to blocked users)</label>
+          <textarea class="form-input" id="maint-msg" rows="3" style="resize:vertical;" placeholder="System is under maintenance. Please try again later.">System is under maintenance. Please try again later.</textarea>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;">
+          <button class="btn btn-pri btn-sm" onclick="saveMaintMsg()">💾 Save Message</button>
+        </div>
+      </div>
+
+      <div class="info-box">ℹ️ Maintenance mode is stored in the database. It persists across server restarts and affects all users in real time.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon gray">👥</div>
+        <div><div class="card-title">Role Access Summary</div><div class="card-desc">Current access state by role</div></div>
+      </div>
+      <div id="role-access-table" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS PAGE ══ -->
+  <div class="pg" id="pg-settings">
+    <div class="page-hd">
+      <div class="page-title">⚙️ Basic Settings</div>
+      <div class="page-sub">Configure your EAMS instance</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon blue">🏫</div>
+        <div><div class="card-title">Institution Details</div><div class="card-desc">Displayed across the application</div></div>
+      </div>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">Institution Name</label>
+          <input type="text" class="form-input" id="inst-name" placeholder="Sri Shakthi Institute of Engineering">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Short Name / Acronym</label>
+          <input type="text" class="form-input" id="inst-short" placeholder="SSIET">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Address</label>
+          <input type="text" class="form-input" id="inst-addr" placeholder="Coimbatore, Tamil Nadu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Email</label>
+          <input type="email" class="form-input" id="inst-email" placeholder="admin@ssiet.ac.in">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="text" class="form-input" id="inst-phone" placeholder="+91 XXXXXXXXXX">
+        </div>
+      </div>
+      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('institution')">💾 Save Institution Info</button></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon green">📅</div>
+        <div><div class="card-title">Academic Settings</div><div class="card-desc">Current academic year and term configuration</div></div>
+      </div>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">Current Academic Year</label>
+          <input type="text" class="form-input" id="acad-year" placeholder="2025-26">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Current Semester</label>
+          <select class="form-input" id="acad-sem">
+            <option>I</option><option>II</option><option>III</option>
+            <option>IV</option><option>V</option><option>VI</option>
+            <option>VII</option><option>VIII</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Semester Start Date</label>
+          <input type="date" class="form-input" id="acad-start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Semester End Date</label>
+          <input type="date" class="form-input" id="acad-end">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Min Attendance % Required</label>
+          <input type="number" class="form-input" id="acad-minatt" placeholder="75" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Working Days / Week</label>
+          <select class="form-input" id="acad-wdays">
+            <option value="5">5 Days (Mon–Fri)</option>
+            <option value="6">6 Days (Mon–Sat)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('academic')">💾 Save Academic Settings</button></div>
+    </div>
+  </div>
+
+  <!-- ══ SECURITY PAGE ══ -->
+  <div class="pg" id="pg-security">
+    <div class="page-hd">
+      <div class="page-title">🔐 Security Settings</div>
+      <div class="page-sub">Authentication and access policies</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon red">🔐</div>
+        <div><div class="card-title">Password Policy</div><div class="card-desc">Enforce password requirements for all users</div></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Force Password Change on First Login</div><div class="toggle-hint">New teachers/students must change their default password immediately.</div></div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="sec-forcepw" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="sec-forcepw-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Require Strong Passwords</div><div class="toggle-hint">Minimum 8 characters with uppercase, number, and symbol.</div></div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="sec-strongpw"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state off" id="sec-strongpw-label">OFF</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Session Timeout</div><div class="toggle-hint">Automatically log out inactive users.</div></div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="sec-timeout"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state off" id="sec-timeout-label">OFF</span>
+        </div>
+      </div>
+      <div class="settings-grid" style="margin-top:14px;">
+        <div class="form-group">
+          <label class="form-label">Session Timeout (minutes)</label>
+          <input type="number" class="form-input" id="sec-timeout-mins" placeholder="60" min="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Login Attempts</label>
+          <input type="number" class="form-input" id="sec-maxlogin" placeholder="5" min="1">
+        </div>
+      </div>
+      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('security')">💾 Save Security Settings</button></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon amber">🔑</div>
+        <div><div class="card-title">Reset Admin Password</div><div class="card-desc">Immediately change the admin account password</div></div>
+      </div>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">New Admin Password</label>
+          <input type="password" class="form-input" id="admin-pw-new" placeholder="New password (min 6 chars)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-input" id="admin-pw-conf" placeholder="Confirm new password">
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <button class="btn btn-warn" onclick="resetAdminPassword()">🔑 Reset Admin Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ APPEARANCE PAGE ══ -->
+  <div class="pg" id="pg-appearance">
+    <div class="page-hd">
+      <div class="page-title">🎨 Appearance</div>
+      <div class="page-sub">Customize the look and feel of EAMS</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon purple">🎨</div>
+        <div><div class="card-title">Theme & Branding</div><div class="card-desc">Colors, logo, and display preferences</div></div>
+      </div>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">Primary Color</label>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input type="color" id="theme-color" value="#1b5e20" style="width:44px;height:36px;border:none;cursor:pointer;border-radius:8px;padding:2px;">
+            <input type="text" class="form-input" id="theme-color-hex" value="#1b5e20" placeholder="#1b5e20" style="flex:1;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">App Title</label>
+          <input type="text" class="form-input" id="app-title" placeholder="EAMS – Admin Dashboard">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Login Page Welcome Message</label>
+          <input type="text" class="form-input" id="login-msg" placeholder="Welcome to EAMS">
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-top:10px;">
+        <div><div class="toggle-label">Show Logo in Sidebar</div><div class="toggle-hint">Display institution logo/icon next to app name.</div></div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="show-logo" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="show-logo-label">ON</span>
+        </div>
+      </div>
+      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('appearance')">💾 Save Appearance</button></div>
+    </div>
+  </div>
+
+  <!-- ══ ADVANCED PAGE ══ -->
+  <div class="pg" id="pg-advanced">
+    <div class="page-hd">
+      <div class="page-title">🧪 Advanced</div>
+      <div class="page-sub">Developer tools and system utilities</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon gray">🛠️</div>
+        <div><div class="card-title">System Utilities</div><div class="card-desc">Tools for diagnostics and maintenance</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Debug Mode</div><div class="toggle-hint">Enable verbose server logging to console.</div></div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="adv-debug" onchange="syncLabel(this,'adv-debug-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span class="toggle-state off" id="adv-debug-label">OFF</span>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Allow Multiple Admin Sessions</div><div class="toggle-hint">Allow the same admin to be logged in from multiple devices.</div></div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="adv-multisess" checked onchange="syncLabel(this,'adv-multisess-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span class="toggle-state on" id="adv-multisess-label">ON</span>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Auto-seed Demo Data</div><div class="toggle-hint">Automatically seed sample data if database is empty on startup.</div></div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="adv-seed" onchange="syncLabel(this,'adv-seed-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span class="toggle-state off" id="adv-seed-label">OFF</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon blue">🌐</div>
+        <div><div class="card-title">Server Info</div><div class="card-desc">Read-only system information</div></div>
+      </div>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">Server URL</label>
+          <input class="form-input" readonly id="srv-url" value="">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Node Environment</label>
+          <input class="form-input" readonly value="development">
+        </div>
+        <div class="form-group">
+          <label class="form-label">API Base Path</label>
+          <input class="form-input" readonly value="/api">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session</label>
+          <input class="form-input" readonly id="srv-session" value="">
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-out btn-sm" onclick="pingServer()">🏓 Ping Server</button>
+        <button class="btn btn-out btn-sm" onclick="checkDB()">🔌 Check DB Connection</button>
+        <button class="btn btn-out btn-sm" onclick="clearCache()">🧹 Clear Local Cache</button>
+      </div>
+      <div id="ping-result" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tmu);"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon red">⚠️</div>
+        <div><div class="card-title">Reset to Defaults</div><div class="card-desc">Restore all settings to factory defaults</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--tmu);margin-bottom:14px;">This will reset all settings (institution info, academic config, security policies) to their default values. Data is NOT affected.</p>
+      <button class="btn btn-danger btn-sm" onclick="openConfirm('resetSettings')">↩ Reset All Settings</button>
+    </div>
+  </div>
+
+</div><!-- end .mc -->
+
+<!-- ══ CONFIRM MODAL ══ -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="m-icon">⚠️</div>
+    <div class="modal-title" id="m-title">Are you sure?</div>
+    <div class="modal-body" id="m-body">This action cannot be undone.</div>
+    <input type="text" class="modal-confirm-input" id="m-input" placeholder='Type "CONFIRM" to proceed'>
+    <div id="m-progress" class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="m-progress-fill"></div></div>
+      <div class="progress-label" id="m-progress-label">Processing…</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-out" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="m-confirm-btn" onclick="executeAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+var TOKEN       = sessionStorage.getItem('eams_token') || '';
+var currentUser = null;
+var currentAction = null;
+var SETTINGS_KEY  = 'eams_control_settings';
+var MAINT_KEY     = 'eams_maintenance';
+
+// ── Guard ──────────────────────────────────────────────
+(function() {
+  var storedUser = sessionStorage.getItem('eams_user');
+  if (!storedUser) { window.location.href = 'index.html'; return; }
+  try { currentUser = JSON.parse(storedUser); } catch(e) { window.location.href = 'index.html'; return; }
+  if (!currentUser || currentUser.role !== 'admin') { window.location.href = 'index.html'; return; }
+  // Sync token (set by new login flow)
+  TOKEN = sessionStorage.getItem('eams_token') || '';
+  document.getElementById('sb-av').textContent   = (currentUser.name || 'A')[0].toUpperCase();
+  document.getElementById('sb-name').textContent = currentUser.name || 'Administrator';
+  document.getElementById('srv-url').value       = window.location.origin;
+  document.getElementById('srv-session').value   = TOKEN ? TOKEN.slice(0,20)+'...' : 'Session active (no token)';
+  // Load overview after auth confirmed
+  loadOverview();
+})();
+
+// ── Clock ──────────────────────────────────────────────
+function updateClock() {
+  var now = new Date();
+  document.getElementById('top-time').textContent = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Nav ───────────────────────────────────────────────
+var PAGE_NAMES = ['overview','data','maintenance','settings','security','appearance','advanced'];
+
+function nav(page) {
+  document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('act'); });
+  var pg = document.getElementById('pg-' + page);
+  if (pg) pg.classList.add('act');
+  document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('act'); });
+  var idx = PAGE_NAMES.indexOf(page);
+  var items = document.querySelectorAll('.sb-item');
+  if (idx >= 0 && items[idx]) items[idx].classList.add('act');
+  if (page === 'overview')    loadOverview();
+  if (page === 'data')         loadBackups();
+  if (page === 'maintenance') loadMaintenance();
+}
+
+// ── API helper ─────────────────────────────────────────
+function api(method, path, body) {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  return fetch('/api' + path, {
+    method: method,
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r) { return r.json(); });
+}
+
+// ── Overview ───────────────────────────────────────────
+function loadOverview() {
+  // Show maintenance banner
+  var maint = getSettings(MAINT_KEY);
+  var banner = document.getElementById('maint-banner');
+  if (maint && maint.active) banner.classList.remove('hidden');
+  else banner.classList.add('hidden');
+
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var h   = { 'Authorization': 'Bearer ' + tok };
+
+  // Fetch real DB stats from server
+  if (!tok) {
+    document.getElementById('ov-storage-desc').textContent = 'Not logged in via API — please log out and log back in.';
+    logLine('No auth token — log out and log in again to use API features', 'warn');
+    return;
+  }
+  fetch('/api/system/dbstats', { headers: h })
+    .then(function(r) {
+      if (r.status === 401) throw new Error('Unauthorized — token invalid or expired');
+      return r.json();
+    })
+    .then(function(d) {
+      if (d.error) { logLine('DB stats error: ' + d.error, 'danger'); document.getElementById('ov-storage-desc').textContent = 'Error: ' + d.error; return; }
+
+      // Top cards
+      document.getElementById('ov-data-size').textContent    = d.dataSize    + ' MB';
+      document.getElementById('ov-storage-size').textContent = d.storageSize + ' MB';
+      document.getElementById('ov-index-size').textContent   = d.indexSize   + ' MB';
+      document.getElementById('ov-total-docs').textContent   = d.totalDocs;
+
+      // Storage bar
+      var used  = parseFloat(d.storageSize);
+      var total = d.fsTotalSize ? parseFloat(d.fsTotalSize) : null;
+      var free  = total ? (total - parseFloat(d.fsUsedSize || used)) : null;
+      var pct   = total ? Math.min(100, (parseFloat(d.fsUsedSize || used) / total * 100)).toFixed(1) : null;
+
+      var bar  = document.getElementById('ov-storage-bar');
+      var desc = document.getElementById('ov-storage-desc');
+      var usedLbl  = document.getElementById('ov-used-label');
+      var freeLbl  = document.getElementById('ov-free-label');
+      var totalLbl = document.getElementById('ov-total-label');
+
+      if (total) {
+        bar.style.width = pct + '%';
+        bar.style.background = pct > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)'
+                              : pct > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)'
+                              : 'linear-gradient(90deg,#2e7d32,#66bb6a)';
+        desc.textContent = 'Disk: ' + pct + '% used of ' + total + ' MB total';
+        usedLbl.textContent  = 'Used: '  + parseFloat(d.fsUsedSize).toFixed(0)  + ' MB';
+        freeLbl.textContent  = 'Free: '  + free.toFixed(0)  + ' MB';
+        totalLbl.textContent = 'Total: ' + total + ' MB';
+      } else {
+        // Atlas free tier — show data size vs 512MB limit
+        var limit = 512;
+        var usedMB = parseFloat(d.storageSize);
+        var pctUsed = Math.min(100, (usedMB / limit * 100)).toFixed(1);
+        bar.style.width = pctUsed + '%';
+        bar.style.background = pctUsed > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)'
+                              : pctUsed > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)'
+                              : 'linear-gradient(90deg,#2e7d32,#66bb6a)';
+        desc.textContent     = 'Atlas Free Tier — ' + pctUsed + '% of 512 MB used';
+        usedLbl.textContent  = 'Used: '  + usedMB.toFixed(2) + ' MB';
+        freeLbl.textContent  = 'Free: '  + (limit - usedMB).toFixed(2) + ' MB';
+        totalLbl.textContent = 'Total: ' + limit + ' MB (Atlas Free Tier)';
+      }
+
+      // Collection breakdown grid
+      var grid = document.getElementById('collection-grid');
+      if (grid && d.collStats) {
+        grid.innerHTML = d.collStats.map(function(c) {
+          return '<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;">'
+            + '<div><div style="font-size:11px;color:var(--tmu);font-weight:600;text-transform:capitalize;">' + c.name + '</div>'
+            + '<div style="font-size:20px;font-weight:800;color:var(--td);">' + c.count + '</div></div></div>';
+        }).join('');
+      }
+
+      logLine('DB stats loaded — ' + d.totalDocs + ' docs, ' + d.dataSize + ' MB data', 'success');
+    })
+    .catch(function(err) {
+      logLine('Failed to load DB stats: ' + (err.message || 'network error'), 'danger');
+      document.getElementById('ov-storage-desc').textContent = 'Could not fetch storage info — check server connection';
+    });
+}
+// ── Log terminal ───────────────────────────────────────
+function logLine(msg, type) {
+  type = type || 'info';
+  var el = document.getElementById('sys-log');
+  if (!el) return;
+  var line = document.createElement('div');
+  line.className = 'terminal-line ' + type;
+  var ts = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  line.innerHTML = '<span class="terminal-prompt">['+ts+']</span> ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Settings (localStorage) ────────────────────────────
+function getSettings(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(e){ return null; }
+}
+function setSettings(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+// ── Maintenance ────────────────────────────────────────
+function loadMaintenance() {
+  var maint = getSettings(MAINT_KEY) || { active: false, message: 'System is under maintenance. Please try again later.' };
+  document.getElementById('toggle-maint').checked = !!maint.active;
+  document.getElementById('maint-msg').value       = maint.message || '';
+  updateMaintLabel(!!maint.active);
+  renderRoleTable(!!maint.active);
+}
+
+function toggleMaintenance(on) {
+  var maint = getSettings(MAINT_KEY) || {};
+  maint.active  = on;
+  maint.message = document.getElementById('maint-msg').value;
+  setSettings(MAINT_KEY, maint);
+  updateMaintLabel(on);
+  renderRoleTable(on);
+  var banner = document.getElementById('maint-banner');
+  if (on) banner.classList.remove('hidden'); else banner.classList.add('hidden');
+  logLine('Maintenance mode ' + (on ? 'ENABLED' : 'DISABLED'), on ? 'warn' : 'success');
+  showToast(on ? '🔧 Maintenance mode ON — Teachers & students blocked' : '✅ Maintenance mode OFF — All users can log in');
+}
+
+function saveMaintMsg() {
+  var maint = getSettings(MAINT_KEY) || { active: false };
+  maint.message = document.getElementById('maint-msg').value;
+  setSettings(MAINT_KEY, maint);
+  showToast('💾 Maintenance message saved');
+}
+
+function updateMaintLabel(on) {
+  var lbl = document.getElementById('maint-state-label');
+  lbl.textContent  = on ? 'ON' : 'OFF';
+  lbl.className    = 'toggle-state ' + (on ? 'on' : 'off');
+}
+
+function renderRoleTable(maintActive) {
+  var rows = [
+    { role:'Admin', icon:'👤', access: true,        note:'Always has access' },
+    { role:'Teacher', icon:'👩‍🏫', access: !maintActive, note: maintActive ? 'Blocked by maintenance' : 'Full access' },
+    { role:'Student', icon:'👨‍🎓', access: !maintActive, note: maintActive ? 'Blocked by maintenance' : 'Full access' },
+  ];
+  var html = rows.map(function(r) {
+    var color = r.access ? '#16a34a' : '#dc2626';
+    var bg    = r.access ? '#f0fdf4' : '#fef2f2';
+    var status= r.access ? '✅ Access Granted' : '🔒 Access Denied';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:'+bg+';border-radius:10px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">'+r.icon+'</span><div><div style="font-weight:600;font-size:13px;color:'+color+';">'+r.role+'</div><div style="font-size:11px;color:var(--tmu);">'+r.note+'</div></div></div>'
+      +'<span style="font-size:12px;font-weight:700;color:'+color+';">'+status+'</span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('role-access-table').innerHTML = html;
+}
+
+// ── Toggle label sync ──────────────────────────────────
+function syncLabel(checkbox, labelId) {
+  var lbl = document.getElementById(labelId);
+  lbl.textContent = checkbox.checked ? 'ON' : 'OFF';
+  lbl.className   = 'toggle-state ' + (checkbox.checked ? 'on' : 'off');
+}
+// Wire security toggles
+['sec-forcepw','sec-strongpw','sec-timeout','show-logo'].forEach(function(id) {
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('change', function() { syncLabel(this, id+'-label'); });
+});
+
+// ── Save settings ──────────────────────────────────────
+function saveSettings(section) {
+  var saved = getSettings(SETTINGS_KEY) || {};
+  if (section === 'institution') {
+    saved.institution = {
+      name:  document.getElementById('inst-name').value,
+      short: document.getElementById('inst-short').value,
+      addr:  document.getElementById('inst-addr').value,
+      email: document.getElementById('inst-email').value,
+      phone: document.getElementById('inst-phone').value,
+    };
+  } else if (section === 'academic') {
+    saved.academic = {
+      year:   document.getElementById('acad-year').value,
+      sem:    document.getElementById('acad-sem').value,
+      start:  document.getElementById('acad-start').value,
+      end:    document.getElementById('acad-end').value,
+      minAtt: document.getElementById('acad-minatt').value,
+      wdays:  document.getElementById('acad-wdays').value,
+    };
+  } else if (section === 'security') {
+    saved.security = {
+      forcePw:    document.getElementById('sec-forcepw').checked,
+      strongPw:   document.getElementById('sec-strongpw').checked,
+      timeout:    document.getElementById('sec-timeout').checked,
+      timeoutMin: document.getElementById('sec-timeout-mins').value,
+      maxLogin:   document.getElementById('sec-maxlogin').value,
+    };
+  } else if (section === 'appearance') {
+    saved.appearance = {
+      color:    document.getElementById('theme-color').value,
+      title:    document.getElementById('app-title').value,
+      loginMsg: document.getElementById('login-msg').value,
+      showLogo: document.getElementById('show-logo').checked,
+    };
+  }
+  setSettings(SETTINGS_KEY, saved);
+  logLine('Settings saved: ' + section, 'success');
+  showToast('💾 ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved');
+}
+
+// ── Load settings into form ────────────────────────────
+function loadAllSettings() {
+  var saved = getSettings(SETTINGS_KEY) || {};
+  var inst  = saved.institution || {};
+  var acad  = saved.academic    || {};
+  var sec   = saved.security    || {};
+  var app   = saved.appearance  || {};
+  if (inst.name)  document.getElementById('inst-name').value  = inst.name;
+  if (inst.short) document.getElementById('inst-short').value = inst.short;
+  if (inst.addr)  document.getElementById('inst-addr').value  = inst.addr;
+  if (inst.email) document.getElementById('inst-email').value = inst.email;
+  if (inst.phone) document.getElementById('inst-phone').value = inst.phone;
+  if (acad.year)  document.getElementById('acad-year').value  = acad.year;
+  if (acad.sem)   document.getElementById('acad-sem').value   = acad.sem;
+  if (acad.start) document.getElementById('acad-start').value = acad.start;
+  if (acad.end)   document.getElementById('acad-end').value   = acad.end;
+  if (acad.minAtt)document.getElementById('acad-minatt').value= acad.minAtt;
+  if (acad.wdays) document.getElementById('acad-wdays').value = acad.wdays;
+  if (sec.forcePw !== undefined) document.getElementById('sec-forcepw').checked = sec.forcePw;
+  if (sec.strongPw !== undefined)document.getElementById('sec-strongpw').checked= sec.strongPw;
+  if (sec.timeout !== undefined) document.getElementById('sec-timeout').checked  = sec.timeout;
+  if (sec.timeoutMin)document.getElementById('sec-timeout-mins').value = sec.timeoutMin;
+  if (sec.maxLogin)  document.getElementById('sec-maxlogin').value     = sec.maxLogin;
+  if (app.color) { document.getElementById('theme-color').value=app.color; document.getElementById('theme-color-hex').value=app.color; }
+  if (app.title)    document.getElementById('app-title').value    = app.title;
+  if (app.loginMsg) document.getElementById('login-msg').value    = app.loginMsg;
+  if (app.showLogo !== undefined) document.getElementById('show-logo').checked = app.showLogo;
+}
+loadAllSettings();
+
+// Sync color picker and hex input
+document.getElementById('theme-color').addEventListener('input', function() {
+  document.getElementById('theme-color-hex').value = this.value;
+});
+document.getElementById('theme-color-hex').addEventListener('input', function() {
+  document.getElementById('theme-color').value = this.value;
+});
+
+// ── Admin password reset ───────────────────────────────
+function resetAdminPassword() {
+  var nw   = document.getElementById('admin-pw-new').value.trim();
+  var conf = document.getElementById('admin-pw-conf').value.trim();
+  if (!nw || !conf)     { showToast('⚠️ Please fill both fields', 'warn'); return; }
+  if (nw.length < 6)    { showToast('⚠️ Password must be at least 6 characters', 'warn'); return; }
+  if (nw !== conf)      { showToast('⚠️ Passwords do not match', 'warn'); return; }
+  api('POST', '/auth/change-password', { currentPassword: prompt('Enter your current admin password:'), newPassword: nw })
+    .then(function(d) {
+      if (d.error) { showToast('❌ ' + d.error, 'danger'); return; }
+      document.getElementById('admin-pw-new').value  = '';
+      document.getElementById('admin-pw-conf').value = '';
+      logLine('Admin password reset successfully', 'success');
+      showToast('✅ Admin password updated successfully');
+    }).catch(function() { showToast('❌ Server error', 'danger'); });
+}
+
+// ── Confirm modal ──────────────────────────────────────
+var ACTIONS = {
+  teachers:      { icon:'🗑️', title:'Delete All Teachers?', body:'This will permanently delete ALL teacher accounts and their subject assignments. Admin account is NOT affected.', btn:'Delete Teachers', cls:'btn-danger' },
+  students:      { icon:'🗑️', title:'Delete All Students?', body:'This will permanently delete ALL student records, their login accounts, and attendance data.', btn:'Delete Students', cls:'btn-danger' },
+  attendance:    { icon:'🧹', title:'Clear Attendance?',    body:'This will permanently delete ALL attendance records. Students and teachers are kept.', btn:'Clear Attendance', cls:'btn-warn' },
+  logs:          { icon:'🧹', title:'Clear Activity Logs?', body:'This will permanently delete ALL system logs and login history.', btn:'Clear Logs', cls:'btn-warn' },
+  clearall:      { icon:'💥', title:'Clear Entire Database?', body:'This will wipe ALL data: students, teachers, departments, classes, subjects, attendance, notifications, and logs. Your admin account will be preserved. This is IRREVERSIBLE.', btn:'Wipe Database', cls:'btn-danger' },
+  resetSettings: { icon:'↩',  title:'Reset All Settings?',  body:'All settings will be restored to factory defaults. Data is NOT affected.', btn:'Reset Settings', cls:'btn-warn' },
+};
+
+function openConfirm(action) {
+  currentAction = action;
+  var cfg = ACTIONS[action] || {};
+  document.getElementById('m-icon').textContent  = cfg.icon  || '⚠️';
+  document.getElementById('m-title').textContent = cfg.title || 'Are you sure?';
+  document.getElementById('m-body').textContent  = cfg.body  || 'This cannot be undone.';
+  document.getElementById('m-input').value = '';
+  document.getElementById('m-progress').style.display = 'none';
+  var btn = document.getElementById('m-confirm-btn');
+  btn.textContent = cfg.btn || 'Confirm';
+  btn.className   = 'btn ' + (cfg.cls || 'btn-danger');
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  currentAction = null;
+}
+
+function executeAction() {
+  var input = document.getElementById('m-input').value.trim().toUpperCase();
+  if (input !== 'CONFIRM') { showToast('⚠️ Type CONFIRM to proceed', 'warn'); return; }
+  document.getElementById('m-confirm-btn').disabled = true;
+  showProgress('Processing…', 10);
+
+  if (currentAction === 'resetSettings') {
+    localStorage.removeItem(SETTINGS_KEY);
+    loadAllSettings();
+    closeConfirm();
+    logLine('All settings reset to defaults', 'warn');
+    showToast('↩ Settings reset to defaults');
+    return;
+  }
+
+  var steps = getDeleteSteps(currentAction);
+  runSteps(steps, 0);
+}
+
+function getDeleteSteps(action) {
+  if (action === 'teachers') {
+    return [
+      { label:'Fetching teachers…', fn: function() { return api('GET','/users?role=teacher'); } },
+      { label:'Deleting assignments…', fn: function(prev) {
+        return api('GET','/assignments').then(function(asgns) {
+          return Promise.all((asgns||[]).map(function(a){ return api('DELETE','/assignments/'+a._id); }));
+        });
+      }},
+      { label:'Deleting teacher accounts…', fn: function() {
+        return api('GET','/users?role=teacher').then(function(teachers) {
+          return Promise.all((teachers||[]).map(function(t){ return api('DELETE','/users/'+t._id); }));
+        });
+      }},
+    ];
+  }
+  if (action === 'students') {
+    return [
+      { label:'Fetching students…', fn: function() { return api('GET','/students'); } },
+      { label:'Deleting student records…', fn: function(prev) {
+        return api('GET','/students').then(function(students) {
+          return Promise.all((students||[]).map(function(s){ return api('DELETE','/students/'+s._id); }));
+        });
+      }},
+      { label:'Removing student accounts…', fn: function() {
+        return api('GET','/users?role=student').then(function(users) {
+          return Promise.all((users||[]).map(function(u){ return api('DELETE','/users/'+u._id); }));
+        });
+      }},
+    ];
+  }
+  if (action === 'attendance') {
+    return [
+      { label:'Fetching attendance records…', fn: function() { return api('GET','/attendance'); } },
+      { label:'Deleting attendance data…', fn: function() {
+        return api('GET','/attendance').then(function(records) {
+          return Promise.all((records||[]).map(function(r){ return fetch('/api/attendance/'+r._id,{ method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN}}).then(function(x){return x.json();}); }));
+        });
+      }},
+    ];
+  }
+  if (action === 'logs') {
+    return [{ label:'Clearing logs…', fn: function() { return Promise.resolve({ok:true}); }}];
+  }
+  if (action === 'clearall') {
+    return [
+      { label:'Removing all students…', fn: function() {
+        return api('GET','/students').then(function(s){ return Promise.all((s||[]).map(function(x){ return api('DELETE','/students/'+x._id);})); });
+      }},
+      { label:'Removing all teachers…', fn: function() {
+        return api('GET','/users?role=teacher').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
+      }},
+      { label:'Removing all assignments…', fn: function() {
+        return api('GET','/assignments').then(function(a){ return Promise.all((a||[]).map(function(x){ return api('DELETE','/assignments/'+x._id);})); });
+      }},
+      { label:'Removing departments…', fn: function() {
+        return api('GET','/departments').then(function(d){ return Promise.all((d||[]).map(function(x){ return api('DELETE','/departments/'+x._id);})); });
+      }},
+      { label:'Removing classes…', fn: function() {
+        return api('GET','/classes').then(function(c){ return Promise.all((c||[]).map(function(x){ return api('DELETE','/classes/'+x._id);})); });
+      }},
+      { label:'Removing subjects…', fn: function() {
+        return api('GET','/subjects').then(function(s){ return Promise.all((s||[]).map(function(x){ return api('DELETE','/subjects/'+x._id);})); });
+      }},
+    ];
+  }
+  return [];
+}
+
+function runSteps(steps, idx) {
+  // On first step, take a backup first
+  if (idx === 0 && currentAction) {
+    var token = sessionStorage.getItem('eams_token');
+    var h = { 'Authorization': 'Bearer ' + token };
+    var backupUrl = currentAction === 'students' ? '/api/students'
+                  : currentAction === 'teachers' ? '/api/users?role=teacher'
+                  : currentAction === 'attendance' ? '/api/attendance'
+                  : currentAction === 'clearall' ? '/api/students'
+                  : null;
+    if (backupUrl) {
+      fetch(backupUrl, { headers: h }).then(function(r){ return r.json(); }).then(function(d){
+        saveBackup('Before ' + currentAction + ' delete', Array.isArray(d) ? d : []);
+      }).catch(function(){});
+    }
+  }
+  if (idx >= steps.length) {
+    showProgress('Done!', 100);
+    setTimeout(function() {
+      closeConfirm();
+      logLine(currentAction + ' operation completed ✓', 'success');
+      showToast('✅ Operation completed successfully');
+      loadOverview();
+      document.getElementById('m-confirm-btn').disabled = false;
+    }, 600);
+    return;
+  }
+  var step = steps[idx];
+  var pct  = Math.round(((idx+1) / steps.length) * 90);
+  showProgress(step.label, pct);
+  logLine(step.label, 'info');
+  step.fn().then(function(result) {
+    runSteps(steps, idx+1);
+  }).catch(function(err) {
+    logLine('Error: ' + (err && err.message ? err.message : 'Unknown error'), 'danger');
+    showToast('❌ Error during operation. Check logs.', 'danger');
+    closeConfirm();
+    document.getElementById('m-confirm-btn').disabled = false;
+  });
+}
+
+function showProgress(label, pct) {
+  document.getElementById('m-progress').style.display = 'block';
+  document.getElementById('m-progress-fill').style.width  = pct + '%';
+  document.getElementById('m-progress-label').textContent = label;
+}
+
+// ── Export Data ────────────────────────────────────────
+function exportData(type) {
+  var endpoints = {
+    students:   ['/students'],
+    teachers:   ['/users?role=teacher'],
+    attendance: ['/attendance'],
+    all:        ['/students','/users?role=teacher','/departments','/classes','/subjects','/attendance'],
+  };
+  var calls = (endpoints[type] || []).map(function(ep) { return api('GET', ep.replace('/api','').replace('/api','')); });
+  Promise.all(calls).then(function(results) {
+    var blob = new Blob([JSON.stringify(type === 'all' ? {
+      students: results[0], teachers: results[1], departments: results[2],
+      classes: results[3], subjects: results[4], attendance: results[5],
+      exported: new Date().toISOString()
+    } : results[0], null, 2)], { type:'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.download = 'eams_' + type + '_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    logLine('Exported: ' + type, 'success');
+    showToast('⬇ ' + type + ' exported as JSON');
+  }).catch(function() { showToast('❌ Export failed', 'danger'); });
+}
+
+// ── Server utilities ───────────────────────────────────
+function pingServer() {
+  var start = Date.now();
+  fetch('/api/dashboard/summary', { headers:{'Authorization':'Bearer '+TOKEN} })
+    .then(function(r) {
+      var ms = Date.now() - start;
+      document.getElementById('ping-result').innerHTML = '🟢 Server responded in <strong>' + ms + 'ms</strong>';
+      logLine('Ping: ' + ms + 'ms', 'success');
+    }).catch(function() {
+      document.getElementById('ping-result').textContent = '🔴 Server not responding';
+      logLine('Ping failed — server offline?', 'danger');
+    });
+}
+
+function checkDB() {
+  api('GET', '/dashboard/summary').then(function(d) {
+    if (d.students !== undefined) {
+      document.getElementById('ping-result').textContent = '🟢 MongoDB connected — ' + d.students + ' students, ' + d.teachers + ' teachers';
+      logLine('DB check: Connected ✓', 'success');
+    } else {
+      document.getElementById('ping-result').textContent = '🔴 DB response unexpected';
+    }
+  }).catch(function() {
+    document.getElementById('ping-result').textContent = '🔴 DB connection failed';
+    logLine('DB check: Failed', 'danger');
+  });
+}
+
+function clearCache() {
+  var keys = Object.keys(localStorage).filter(function(k){ return k.startsWith('ss3_'); });
+  keys.forEach(function(k){ localStorage.removeItem(k); });
+  logLine('Cleared ' + keys.length + ' local cache entries', 'warn');
+  showToast('🧹 Local cache cleared (' + keys.length + ' entries)');
+}
+
+// ── Toast ──────────────────────────────────────────────
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+// ── Navigation utils ───────────────────────────────────
+function goBack()    { window.location.href = 'admin.html'; }
+function doLogout()  { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+// ── Boot ───────────────────────────────────────────────
+
+// ── Backup & Undo System ───────────────────────────────
+var BACKUP_KEY = 'eams_backups';
+
+function saveBackup(label, data) {
+  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+  backups.unshift({
+    id:        Date.now(),
+    label:     label,
+    timestamp: new Date().toISOString(),
+    data:      data
+  });
+  // Keep only last 20 backups
+  backups = backups.slice(0, 20);
+  localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
+  logLine('Backup saved: ' + label, 'success');
+}
+
+function loadBackups() {
+  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+  var el = document.getElementById('backup-list');
+  if (!backups.length) {
+    el.innerHTML = '<div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">No backups yet.</div>';
+    return;
+  }
+  var now = Date.now();
+  var week = 7 * 24 * 60 * 60 * 1000;
+  el.innerHTML = backups.map(function(b) {
+    var age   = now - b.id;
+    var fresh = age < week;
+    var ts    = new Date(b.timestamp).toLocaleString('en-IN');
+    var size  = JSON.stringify(b.data).length;
+    var sizeStr = size > 1024 ? (size/1024).toFixed(1)+'KB' : size+'B';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(fresh?'#f0fdf4':'#f9fafb')+';border-radius:10px;border:1px solid '+(fresh?'#bbf7d0':'#e5e7eb')+';">'
+      + '<div><div style="font-weight:600;font-size:13px;color:var(--td);">'+b.label+'</div>'
+      + '<div style="font-size:11px;color:var(--tmu);">'+ts+' &middot; '+sizeStr+'</div></div>'
+      + (fresh ? '<button onclick="restoreBackup('+b.id+')" class="btn btn-pri btn-sm">↩ Restore</button>' : '<span style="font-size:11px;color:var(--tmu);">Expired</span>')
+      + '</div>';
+  }).join('');
+}
+
+function restoreBackup(id) {
+  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+  var backup  = backups.find(function(b){ return b.id === id; });
+  if (!backup) { showToast('Backup not found'); return; }
+  if (!confirm('Restore backup "' + backup.label + '"? This will re-insert the saved data into MongoDB.')) return;
+  var data    = backup.data;
+  var token   = sessionStorage.getItem('eams_token');
+  var promises = [];
+  // Re-insert each record
+  (data || []).forEach(function(item) {
+    var endpoint = backup.label.toLowerCase().includes('student') ? '/api/students'
+                 : backup.label.toLowerCase().includes('teacher') ? '/api/teachers'
+                 : backup.label.toLowerCase().includes('dept')    ? '/api/departments'
+                 : null;
+    if (endpoint) {
+      var copy = Object.assign({}, item);
+      delete copy._id; delete copy.__v; delete copy.createdAt; delete copy.updatedAt;
+      promises.push(
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+          body: JSON.stringify(copy)
+        })
+      );
+    }
+  });
+  Promise.all(promises).then(function() {
+    logLine('Backup restored: ' + backup.label + ' (' + (data||[]).length + ' records)', 'success');
+    showToast('Backup restored — ' + (data||[]).length + ' records re-inserted');
+    loadOverview();
+  }).catch(function(e) {
+    showToast('Restore failed: ' + e.message);
+  });
+}
+
+function clearOldBackups() {
+  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+  var week    = 7 * 24 * 60 * 60 * 1000;
+  var fresh   = backups.filter(function(b){ return Date.now() - b.id < week; });
+  localStorage.setItem(BACKUP_KEY, JSON.stringify(fresh));
+  loadBackups();
+  showToast('Cleared ' + (backups.length - fresh.length) + ' old backups');
+}
+
+</script>
+</body>
+</html>

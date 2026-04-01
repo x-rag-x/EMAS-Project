@@ -1,25 +1,67 @@
 // ═══════════════════════════════════════════════════════
 //  EAMS — MongoDB Models (Mongoose)
-//  Collections: users, students, teachers,
-//               departments, classes, attendance,
-//               notifications, grievances
 // ═══════════════════════════════════════════════════════
 
 const mongoose = require('mongoose');
 
-// ── Users (Admin + Teacher login) ────────────────────
+// ── Users (Admin + Teacher + Student login) ───────────
 const UserSchema = new mongoose.Schema({
   name:       { type: String, required: true, trim: true },
   username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:   { type: String, required: true },          // bcrypt hash
+  password:   { type: String, required: true },
   role:       { type: String, enum: ['admin','teacher','student'], required: true },
   empId:      { type: String, default: '' },
   dept:       { type: String, default: '' },
   desig:      { type: String, default: 'Assistant Professor' },
   email:      { type: String, default: '', lowercase: true },
-  regNo:      { type: String, default: '' },             // students only
+  phone:      { type: String, default: '' },
+  regNo:      { type: String, default: '' },
   deptName:   { type: String, default: '' },
+  active:             { type: Boolean, default: true },
+  mustChangePassword: { type: Boolean, default: false },
+  // Teacher-specific fields
+  isHOD:            { type: Boolean, default: false },
+  isClassAdvisor:   { type: Boolean, default: false },
+  advisorClassId:   { type: String, default: '' },
+  advisorClassName: { type: String, default: '' },
+  isWarden:         { type: Boolean, default: false },
+  isExamCoordinator:{ type: Boolean, default: false },
+  isPlacementCoord: { type: Boolean, default: false },
+  qualifications:   { type: String, default: '' },
+  experience:       { type: String, default: '' },
+  joiningDate:      { type: String, default: '' },
+  // Student-specific fields
+  isClassRep:       { type: Boolean, default: false },
+  isAssiClassRep:   { type: Boolean, default: false },
+  isSportsRep:      { type: Boolean, default: false },
+  isCulturalRep:    { type: Boolean, default: false },
+  bloodGroup:       { type: String, default: '' },
+  parentContact:    { type: String, default: '' },
+  address:          { type: String, default: '' },
+  // Session tracking
+  lastLogin:        { type: Date, default: null },
+  loginCount:       { type: Number, default: 0 },
+  failedLogins:     { type: Number, default: 0 },
+  lockedUntil:      { type: Date, default: null },
+}, { timestamps: true });
+
+// ── Session Tokens ─────────────────────────────────────
+const SessionSchema = new mongoose.Schema({
+  userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  username:   { type: String, required: true },
+  role:       { type: String, required: true },
+  token:      { type: String, required: true, unique: true },
+  ip:         { type: String, default: '' },
+  userAgent:  { type: String, default: '' },
+  createdAt:  { type: Date, default: Date.now, expires: 86400 }, // auto-delete after 24h
   active:     { type: Boolean, default: true },
+});
+
+// ── Settings ───────────────────────────────────────────
+const SettingsSchema = new mongoose.Schema({
+  key:   { type: String, required: true, unique: true },
+  value: { type: mongoose.Schema.Types.Mixed },
+  updatedBy: { type: String, default: 'admin' },
 }, { timestamps: true });
 
 // ── Departments ──────────────────────────────────────
@@ -71,7 +113,7 @@ const SubjectSchema = new mongoose.Schema({
   deptCode:   { type: String, default: '' },
 }, { timestamps: true });
 
-// ── Assignments (Teacher ↔ Class ↔ Subject) ──────────
+// ── Assignments ──────────────────────────────────────
 const AssignmentSchema = new mongoose.Schema({
   teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   teacherName:  { type: String, required: true },
@@ -83,7 +125,7 @@ const AssignmentSchema = new mongoose.Schema({
   deptName:     { type: String, default: '' },
 }, { timestamps: true });
 
-// ── Timetable (Teacher schedule slots) ───────────────
+// ── Timetable ─────────────────────────────────────────
 const TimetableSchema = new mongoose.Schema({
   teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   teacherName:  { type: String, required: true },
@@ -92,11 +134,11 @@ const TimetableSchema = new mongoose.Schema({
   subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   subjectName:  { type: String, required: true },
   day:          { type: String, enum: ['Mon','Tue','Wed','Thu','Fri'], required: true },
-  start:        { type: String, required: true },   // "08:00"
-  end:          { type: String, required: true },   // "09:00"
+  start:        { type: String, required: true },
+  end:          { type: String, required: true },
 }, { timestamps: true });
 
-// ── Attendance Logs ───────────────────────────────────
+// ── Attendance ────────────────────────────────────────
 const AttendanceSchema = new mongoose.Schema({
   teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   teacherName:  { type: String, required: true },
@@ -104,7 +146,7 @@ const AttendanceSchema = new mongoose.Schema({
   className:    { type: String, required: true },
   subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   subjectName:  { type: String, required: true },
-  date:         { type: String, required: true },   // "YYYY-MM-DD"
+  date:         { type: String, required: true },
   records: [{
     studentId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     regNo:      { type: String },
@@ -153,12 +195,17 @@ const LogSchema = new mongoose.Schema({
   role:         { type: String, default: 'admin' },
   action:       { type: String, required: true },
   details:      { type: String, default: '' },
+  category:     { type: String, default: 'general' }, // login/data/settings/security/attendance
+  severity:     { type: String, default: 'info' },    // info/warning/critical
   ip:           { type: String, default: '' },
+  sessionId:    { type: String, default: '' },
   time:         { type: Date, default: Date.now },
 }, { timestamps: true });
 
 module.exports = {
   User:        mongoose.model('User',        UserSchema),
+  Session:     mongoose.model('Session',     SessionSchema),
+  Settings:    mongoose.model('Settings',    SettingsSchema),
   Department:  mongoose.model('Department',  DepartmentSchema),
   Class:       mongoose.model('Class',       ClassSchema),
   Student:     mongoose.model('Student',     StudentSchema),

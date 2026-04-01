@@ -85,6 +85,12 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
 .lbn:active{transform:scale(.98);}
 .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;flex-shrink:0;}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:36px !important;}
+.pw-eye{position:absolute;right:0;bottom:9px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--tmu);padding:0 2px;line-height:1;transition:color .2s;}
+.pw-eye:hover{color:var(--gD);}
+body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
 </style>
 </head>
 <body>
@@ -98,11 +104,11 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
 
   <!-- ROLE SELECTOR -->
   <div class="rtabs">
-    <div class="rtab sel" id="tab-teacher" onclick="pickRole('teacher')">
+    <div class="rtab" id="tab-teacher" onclick="pickRole('teacher')">
       Teacher
     </div>
 
-    <div class="rtab" id="tab-admin" onclick="pickRole('admin')">
+    <div class="rtab sel" id="tab-admin" onclick="pickRole('admin')">
       Admin
     </div>
   </div>
@@ -110,7 +116,7 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
   <div class="le" id="lerr">Invalid credentials. Please try again.</div>
 
   <div class="lf2"><label>Username</label><input type="text" id="lu" placeholder="Enter username" autocomplete="username"></div>
-  <div class="lf2"><label>Password</label><input type="password" id="lp" placeholder="Enter password" autocomplete="current-password"></div>
+  <div class="lf2"><label>Password</label><div class="pw-wrap"><input type="password" id="lp" placeholder="Enter password" autocomplete="current-password"><button type="button" class="pw-eye" onclick="togglePw('lp',this)" tabindex="-1" title="Show password">👁</button></div></div>
 
   <button class="lbn" id="lbn" onclick="doSignIn()"><span id="lbn-txt">Sign In</span></button>
 </div>
@@ -161,7 +167,7 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
   })();
 
   // ─── ROLE SELECTION ──────────────────────────────────────────────────────────
-  let selectedRole = 'teacher';
+  let selectedRole = 'admin';
 
   function pickRole(role) {
     selectedRole = role;
@@ -179,54 +185,45 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
 
   // ─── SIGN IN ─────────────────────────────────────────────────────────────────
   function doSignIn() {
-    const usernameInput = document.getElementById('lu').value.trim();
-    const passwordInput = document.getElementById('lp').value.trim();
-    const errorBox      = document.getElementById('lerr');
-    const signInButton  = document.getElementById('lbn');
-
-    // Clear any previous error
+    var usernameInput = document.getElementById('lu').value.trim();
+    var passwordInput = document.getElementById('lp').value.trim();
+    var errorBox      = document.getElementById('lerr');
+    var signInButton  = document.getElementById('lbn');
     errorBox.style.display = 'none';
-
-    // Validate that both fields are filled
     if (!usernameInput || !passwordInput) {
       errorBox.textContent = 'Please enter username and password.';
       errorBox.style.display = 'block';
       return;
     }
-
-    // Show loading spinner while we verify credentials
     signInButton.disabled = true;
     signInButton.innerHTML = '<div class="spin"></div><span>Signing in…</span>';
-
-    // Small delay to simulate server-side authentication
-    setTimeout(function() {
-      const allUsers = DB.get('users');
-      const matchedUser = allUsers.find(function(user) {
-        return user.username === usernameInput
-          && user.password === passwordInput
-          && user.role === selectedRole;
-      });
-
-      if (!matchedUser) {
-        // Credentials did not match - restore button and show error
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameInput, password: passwordInput, role: selectedRole })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
         signInButton.disabled = false;
         signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
-
-        const roleLabel = selectedRole === 'teacher' ? 'Teacher' : 'Admin';
-        errorBox.textContent = 'Invalid credentials for ' + roleLabel + ' role.';
+        errorBox.textContent = data.error;
         errorBox.style.display = 'block';
-
-        // Clear the password field so the user can re-enter it
         document.getElementById('lp').value = '';
         return;
       }
-
-      // Save the logged-in user to sessionStorage so other pages can read it
-      sessionStorage.setItem('eams_user', JSON.stringify(matchedUser));
-
-      // Redirect to the appropriate dashboard
+      sessionStorage.setItem('eams_token', data.token);
+      sessionStorage.setItem('eams_user', JSON.stringify(data.user));
+      sessionStorage.setItem('eams_sessionId', data.sessionId || '');
+      sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
       window.location.href = selectedRole === 'teacher' ? 'teacher.html' : 'admin.html';
-    }, 500);
+    })
+    .catch(function() {
+      signInButton.disabled = false;
+      signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
+      errorBox.textContent = 'Cannot reach server. Try Again ;(';
+      errorBox.style.display = 'block';
+    });
   }
 
   // ─── ALLOW PRESSING ENTER IN USERNAME/PASSWORD FIELDS ────────────────────────
@@ -237,6 +234,30 @@ body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height
       }
     });
   });
+
+  function togglePw(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+
+  var show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+
+  btn.textContent = show ? '🙈' : '👁';
+  btn.title = show ? 'Hide password' : 'Show password';
+}
+
+  // Security: disable right-click, F12, devtools
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
+  });
+  (function devDetect(){
+    var warned=false;
+    setInterval(function(){
+      var d=window.outerWidth-window.innerWidth>200||window.outerHeight-window.innerHeight>200;
+      if(d&&!warned){ warned=true; document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Poppins,sans-serif;font-size:18px;color:#dc2626;flex-direction:column;gap:12px;"><span style="font-size:48px;">&#128274;</span><b>Developer tools are not allowed on this platform.</b></div>'; }
+    },1500);
+  })();
 </script>
 </body>
 </html>
