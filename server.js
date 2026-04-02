@@ -64,7 +64,7 @@ async function seedDefaults() {
   }
   // Seed default settings
   const defaults = [
-    { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.' } },
+    { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher','student'], endTime: null, startedAt: null } },
     { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SSIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
     { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 5 } },
     { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
@@ -126,8 +126,18 @@ function adminOnly(req, res, next) {
 async function checkMaintenance(req, res, next) {
   const setting = await M.Settings.findOne({ key: 'maintenance' });
   if (setting?.value?.active && req.user?.role !== 'admin') {
-    const msg = setting.value.message || 'System is under maintenance.';
-    return res.status(503).json({ error: msg, maintenance: true });
+    const v = setting.value;
+    const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher','student'];
+    if (affected.includes(req.user?.role)) {
+      return res.status(503).json({
+        error: v.message || 'System is under maintenance.',
+        maintenance: true,
+        message: v.message || 'System is under maintenance.',
+        affectedRoles: affected,
+        endTime: v.endTime || null,
+        startedAt: v.startedAt || null,
+      });
+    }
   }
   next();
 }
@@ -182,7 +192,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (role !== 'admin') {
       const maint = await M.Settings.findOne({ key: 'maintenance' });
       if (maint?.value?.active) {
-        return res.status(503).json({ error: maint.value.message || 'System under maintenance.', maintenance: true });
+        const v = maint.value;
+        const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher','student'];
+        if (affected.includes(role)) {
+          return res.status(503).json({
+            error: v.message || 'System under maintenance.',
+            maintenance: true,
+            message: v.message || 'System under maintenance.',
+            affectedRoles: affected,
+            endTime: v.endTime || null,
+            startedAt: v.startedAt || null,
+          });
+        }
       }
     }
 
@@ -274,7 +295,18 @@ app.put('/api/settings/:key', authMiddleware, adminOnly, async (req, res) => {
     { value: req.body.value, updatedBy: req.user.name },
     { new: true, upsert: true }
   );
-  await logAction(req.user._id, req.user.name, req.user.role, 'Settings Updated', `Key: ${req.params.key}`, 'settings', 'info', req.ip);
+  // Special detailed logging for maintenance changes
+  if (req.params.key === 'maintenance') {
+    const v = req.body.value || {};
+    const prevSetting = await M.Settings.findOne({ key: 'maintenance' });
+    const action = v.active ? 'Maintenance Mode Enabled' : 'Maintenance Mode Disabled';
+    const affected = (v.affectedRoles || []).join(', ') || 'none';
+    const endInfo = v.endTime ? ` | End: ${new Date(v.endTime).toLocaleString('en-IN')}` : '';
+    const details = `Roles blocked: ${affected}${endInfo} | Msg: "${(v.message||'').slice(0,60)}"`;
+    await logAction(req.user._id, req.user.name, req.user.role, action, details, 'maintenance', v.active ? 'warning' : 'info', req.ip);
+  } else {
+    await logAction(req.user._id, req.user.name, req.user.role, 'Settings Updated', `Key: ${req.params.key}`, 'settings', 'info', req.ip);
+  }
   res.json(s.value);
 });
 
@@ -724,6 +756,47 @@ app.get('/api/system/dbstats', authMiddleware, adminOnly, async (req, res) => {
     const collStats = await Promise.all(collList.map(async c => ({ name: c.name, count: await db.collection(c.name).countDocuments() })));
     res.json({ dbName: stats.db, collections: stats.collections, totalDocs: stats.objects, dataSize: stats.dataSize.toFixed(2), storageSize: stats.storageSize.toFixed(2), indexSize: stats.indexSize ? stats.indexSize.toFixed(2) : '0.00', fsTotalSize: stats.fsTotalSize ? (stats.fsTotalSize/1024/1024).toFixed(0) : null, fsUsedSize: stats.fsUsedSize ? (stats.fsUsedSize/1024/1024).toFixed(0) : null, collStats });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// ════════════════════════════════════════════════════════
+//  MAINTENANCE LOGS (dedicated endpoint)
+// ════════════════════════════════════════════════════════
+app.get('/api/logs/maintenance', authMiddleware, adminOnly, async (req, res) => {
+  const logs = await M.Log.find({ category: 'maintenance' }).sort({ time: -1 }).limit(50);
+  res.json(logs);
+});
+
+// ════════════════════════════════════════════════════════
+//  SERVER INFO (for server logs panel in control)
+// ════════════════════════════════════════════════════════
+const _serverStartTime = new Date();
+const _serverLogs = []; // In-memory ring buffer, max 200 lines
+
+// Intercept console to capture server logs
+const _origLog   = console.log.bind(console);
+const _origError = console.error.bind(console);
+const _origWarn  = console.warn.bind(console);
+function _captureLog(level, args) {
+  const line = { time: new Date().toISOString(), level, text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') };
+  _serverLogs.push(line);
+  if (_serverLogs.length > 200) _serverLogs.shift();
+}
+console.log   = (...a) => { _captureLog('info',  a); _origLog(...a); };
+console.error = (...a) => { _captureLog('error', a); _origError(...a); };
+console.warn  = (...a) => { _captureLog('warn',  a); _origWarn(...a); };
+
+app.get('/api/system/serverlogs', authMiddleware, adminOnly, (req, res) => {
+  const since = req.query.since ? new Date(req.query.since) : null;
+  const logs = since ? _serverLogs.filter(l => new Date(l.time) > since) : _serverLogs.slice(-100);
+  res.json({
+    logs,
+    uptime: Math.floor((Date.now() - _serverStartTime) / 1000),
+    startTime: _serverStartTime.toISOString(),
+    nodeVersion: process.version,
+    env: process.env.NODE_ENV || 'development',
+    memMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
+  });
 });
 
 // ── Start Server ──────────────────────────────────────

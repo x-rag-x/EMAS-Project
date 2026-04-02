@@ -159,7 +159,7 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
       DB.insert('users', {
         name: 'Default Teacher',
         username: 'teacher',
-        password: 'teacher',
+        password: 'teacher123',
         role: 'teacher',
         empId: 'EMP001',
         dept: 'Computer Science Engineering',
@@ -199,17 +199,21 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: usernameInput, password: passwordInput, role: selectedRole })
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      // Capture status before consuming body
+      var status = r.status;
+      return r.json().then(function(data) { data._httpStatus = status; return data; });
+    })
     .then(function(data) {
+      // Maintenance redirect — check BOTH HTTP 503 and the maintenance flag
+      if (data._httpStatus === 503 || data.maintenance) {
+        sessionStorage.setItem('maint_data', JSON.stringify(data));
+        window.location.href = 'maintenance.html';
+        return;
+      }
       if (data.error) {
         signInButton.disabled = false;
         signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
-        if (data.maintenance) {
-          // Store maintenance info for the page to display
-          sessionStorage.setItem('maint_data', JSON.stringify(data));
-          window.location.href = 'maintenance.html';
-          return;
-        }
         errorBox.textContent = data.error;
         errorBox.style.display = 'block';
         document.getElementById('lp').value = '';
