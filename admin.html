@@ -1021,63 +1021,156 @@ body{-webkit-user-select:none;user-select:none;}
 
   <!-- ── LOGS PAGE ── -->
   <div class="pg" id="pg-logs">
-    <div class="shd">
-      <div class="stl"><span class="sdo"></span>Activity Logs</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <!-- Detail toggle -->
-        <div style="display:flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:20px;padding:3px;border:1px solid var(--br);">
-          <button id="log-mode-summary" onclick="setLogMode('summary')" style="padding:5px 12px;border:none;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif;background:var(--gD);color:#fff;">📋 Summary</button>
-          <button id="log-mode-detail"  onclick="setLogMode('detail')"  style="padding:5px 12px;border:none;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif;background:transparent;color:var(--tmu);">🔍 Detail</button>
-        </div>
+    <div class="shd"><div class="stl"><span class="sdo"></span>Activity Logs</div>
+      <div style="display:flex;gap:8px;">
         <button class="btn bout bsm" onclick="elogs()">⬇️ Export</button>
         <button class="btn bdan bsm" onclick="clrl()">🗑 Clear All</button>
+      </div></div>
+    <div class="card" style="margin-bottom:16px;"><div class="card-body-p">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+        <div class="fg"><label class="fl">Role</label>
+          <select class="fc" id="lfr" onchange="rl()"><option value="">All Roles</option><option value="admin">Admin</option><option value="teacher">Teacher</option></select></div>
+        <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="lfd" onchange="rl()"></div>
+        <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ltd" onchange="rl()"></div>
+        <div class="fg"><label class="fl">Search User</label><input type="text" class="fc" id="lsq" placeholder="Name…" oninput="rl()"></div>
       </div>
-    </div>
+    </div></div>
+    <div class="card"><div class="card-body-p" id="fll"></div></div>
+  </div>
 
-    <!-- Two-panel layout: user list (left) + log detail (right) -->
-    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;margin-top:14px;">
-
-      <!-- LEFT: User list -->
-      <div>
-        <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:12px 14px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:12px;font-weight:700;color:var(--td);">Users</span>
-            <input type="text" id="log-user-search" placeholder="Search…" oninput="filterLogUsers()"
-              style="padding:4px 8px;border:1px solid var(--br);border-radius:8px;font-size:11px;width:100px;font-family:Poppins,sans-serif;outline:none;">
-          </div>
-          <div id="log-user-list" style="max-height:calc(100vh - 240px);overflow-y:auto;"></div>
+  <!-- ══════════════════════ MAINTENANCE MODE PAGE ══════════════════════ -->
+  <div class="pg" id="pg-maintenance">
+    <div class="page-wrap">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">🔧 Maintenance Mode</div>
+          <div class="page-sub">Control system access for teachers, students, and sub-admins.</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-out btn-sm" onclick="loadMaintSettings()">🔄 Refresh</button>
         </div>
       </div>
 
-      <!-- RIGHT: Log entries -->
-      <div>
-        <!-- Filters bar -->
-        <div class="card" style="margin-bottom:12px;padding:12px 14px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-            <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="lfd" onchange="renderLogEntries()"></div>
-            <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ltd" onchange="renderLogEntries()"></div>
-            <div class="fg"><label class="fl">Category</label>
-              <select class="fc" id="log-cat-filter" onchange="renderLogEntries()">
-                <option value="">All Categories</option>
-                <option value="login">🔑 Login</option>
-                <option value="data">📊 Data</option>
-                <option value="settings">⚙️ Settings</option>
-                <option value="security">🛡️ Security</option>
-                <option value="attendance">✅ Attendance</option>
-                <option value="system">🖥️ System</option>
-              </select>
+      <!-- Status Banner -->
+      <div id="maint-status-banner" style="border-radius:16px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px;border:2px solid;transition:all .3s;">
+        <div style="font-size:32px;" id="maint-banner-icon">🟢</div>
+        <div style="flex:1;">
+          <div style="font-size:16px;font-weight:800;color:var(--td);" id="maint-banner-title">System is Online</div>
+          <div style="font-size:12px;color:var(--tmu);margin-top:2px;" id="maint-banner-sub">All users can log in normally.</div>
+        </div>
+        <button id="maint-toggle-btn" onclick="toggleMaintenance()" style="padding:10px 24px;border-radius:22px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .2s;">Enable Maintenance</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+        <!-- LEFT: Configuration -->
+        <div class="card">
+          <div class="card-hd">
+            <div class="card-title">⚙️ Maintenance Configuration</div>
+          </div>
+          <div class="card-body-p">
+
+            <!-- Affected Roles -->
+            <div class="fg" style="margin-bottom:16px;">
+              <label class="fl">Who is affected (blocked from login)</label>
+              <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;" id="maint-roles-wrap">
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;" id="role-lbl-teacher">
+                  <input type="checkbox" id="maint-role-teacher" value="teacher" onchange="updateRoleLabel('teacher')" style="accent-color:var(--gD);width:15px;height:15px;"> 👩‍🏫 Teachers
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;" id="role-lbl-student">
+                  <input type="checkbox" id="maint-role-student" value="student" onchange="updateRoleLabel('student')" style="accent-color:var(--gD);width:15px;height:15px;"> 👨‍🎓 Students
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;" id="role-lbl-subadmin">
+                  <input type="checkbox" id="maint-role-subadmin" value="subadmin" onchange="updateRoleLabel('subadmin')" style="accent-color:var(--gD);width:15px;height:15px;"> 🧑‍💼 Sub-Admins
+                </label>
+              </div>
+              <div style="font-size:10.5px;color:var(--tdi);margin-top:6px;">⚠️ Admins are never blocked regardless of this setting.</div>
+            </div>
+
+            <!-- End Time -->
+            <div class="fg" style="margin-bottom:16px;">
+              <label class="fl">Estimated End Date & Time (optional)</label>
+              <input type="datetime-local" class="fc2" id="maint-end-time" style="margin-top:4px;">
+              <div style="font-size:10.5px;color:var(--tdi);margin-top:4px;">A countdown timer will be shown to affected users.</div>
+            </div>
+
+            <!-- Message -->
+            <div class="fg" style="margin-bottom:20px;">
+              <label class="fl">Message shown to blocked users</label>
+              <textarea class="fc2" id="maint-message" rows="4" style="resize:vertical;margin-top:4px;line-height:1.5;" placeholder="e.g. System is under scheduled maintenance from 10 PM to 2 AM. Please try again later."></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;">
+              <button class="btn-form-pri" onclick="saveMaintSettings()" style="flex:1;">💾 Save Configuration</button>
+              <button class="btn-form-ghost" onclick="clearMaintEndTime()">Clear End Time</button>
             </div>
           </div>
         </div>
-        <div class="card" style="padding:0;overflow:hidden;">
-          <div id="log-entries-header" style="padding:12px 16px;border-bottom:1px solid var(--br);font-size:12px;font-weight:700;color:var(--td);display:flex;align-items:center;justify-content:space-between;">
-            <span id="log-selected-user">All Users</span>
-            <span id="log-entry-count" style="font-size:11px;color:var(--tmu);font-weight:400;"></span>
+
+        <!-- RIGHT: Status & Preview -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+          <!-- Current State card -->
+          <div class="card">
+            <div class="card-hd"><div class="card-title">📊 Current State</div></div>
+            <div class="card-body-p" style="padding-top:8px;">
+              <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
+                <div class="sh-ic" style="background:var(--gLt);font-size:18px;">🔌</div>
+                <div class="sh-body">
+                  <div class="sh-label">Maintenance Mode</div>
+                  <div class="sh-val" id="ms-active-val">Checking…</div>
+                </div>
+                <span class="sh-pill" id="ms-active-pill">—</span>
+              </div>
+              <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
+                <div class="sh-ic" style="background:#fef3c7;font-size:18px;">👥</div>
+                <div class="sh-body">
+                  <div class="sh-label">Affected Roles</div>
+                  <div class="sh-val" id="ms-roles-val">—</div>
+                </div>
+              </div>
+              <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
+                <div class="sh-ic" style="background:#e0f2fe;font-size:18px;">🏁</div>
+                <div class="sh-body">
+                  <div class="sh-label">End Time</div>
+                  <div class="sh-val" id="ms-end-val">Not set</div>
+                </div>
+              </div>
+              <div class="sh-item" style="padding:10px 0;">
+                <div class="sh-ic" style="background:#fce7f3;font-size:18px;">⏱️</div>
+                <div class="sh-body">
+                  <div class="sh-label">Started At</div>
+                  <div class="sh-val" id="ms-started-val">—</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div id="fll" style="max-height:calc(100vh - 310px);overflow-y:auto;padding:0 16px 12px;"></div>
+
+          <!-- Quick Actions card -->
+          <div class="card">
+            <div class="card-hd"><div class="card-title">⚡ Quick Actions</div></div>
+            <div class="card-body-p" style="display:flex;flex-direction:column;gap:8px;">
+              <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(1)">⏱ Set 1-hour maintenance window</button>
+              <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(2)">⏱ Set 2-hour maintenance window</button>
+              <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(6)">⏱ Set 6-hour maintenance window</button>
+              <div style="border-top:1px solid var(--brl);margin:4px 0;"></div>
+              <button class="btn bout" style="width:100%;justify-content:center;" onclick="selectAllRoles()">✅ Select All Roles</button>
+              <button class="btn bout" style="width:100%;justify-content:center;" onclick="clearAllRoles()">☐ Clear All Roles</button>
+              <div style="border-top:1px solid var(--brl);margin:4px 0;"></div>
+              <a href="maintenance.html" target="_blank" class="btn bout" style="width:100%;justify-content:center;text-decoration:none;">👁 Preview Maintenance Page</a>
+            </div>
+          </div>
+
         </div>
       </div>
 
+      <!-- Log of recent maintenance activity -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-hd"><div class="card-title">📋 Maintenance Activity Log</div></div>
+        <div id="maint-log-list" class="card-body-p">
+          <div class="empty-state"><span class="ei">📋</span><p>Loading logs…</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1635,15 +1728,15 @@ body{-webkit-user-select:none;user-select:none;}
       new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
     populateAdminDropdowns();
-    // Sync all data from MongoDB on boot — silently (no toast on load)
+    // Sync all data from MongoDB on boot
     syncAllFromDB(function() {
       nav('dash');
       populateAdminDropdowns();
-    }, true);
+    });
   }
 
   // ─── NAVIGATION ──────────────────────────────────────────────────────────────
-  var PAGE_NAMES = ['dash','depts','struct','students','teachers','reports','bulk','logs'];
+  var PAGE_NAMES = ['dash','depts','struct','students','teachers','reports','bulk','logs','maintenance'];
 
   function nav(pageName) {
     // Hide all pages
@@ -1666,7 +1759,8 @@ body{-webkit-user-select:none;user-select:none;}
       'teachers': renderTeachers,
       'reports':  initAdminReports,
       'bulk':     function() {},
-      'logs':     renderLogs
+      'logs':     renderLogs,
+      'maintenance': loadMaintSettings
     };
     if (pageInitializers[pageName]) pageInitializers[pageName]();
   }
@@ -1688,287 +1782,85 @@ body{-webkit-user-select:none;user-select:none;}
     });
   }
 
-  // ─── ENHANCED LOGS SYSTEM ────────────────────────────────────────────────────
-  var _logMode         = 'summary'; // 'summary' | 'detail'
-  var _selectedLogUser = null;      // null = all users
-  var _allLogsCache    = [];        // loaded from API
-
   function renderLogs() {
-    // Load logs from API
-    var tok = sessionStorage.getItem('eams_token');
-    if (!tok) { renderLogEntriesFallback(); return; }
-    var url = '/api/logs?';
-    var from = document.getElementById('lfd') ? document.getElementById('lfd').value : '';
-    var to   = document.getElementById('ltd') ? document.getElementById('ltd').value : '';
-    if (from) url += 'from=' + from + '&';
-    if (to)   url += 'to=' + to + '&';
-    fetch(url, { headers: { 'Authorization': 'Bearer ' + tok } })
-      .then(function(r){ return r.json(); })
-      .then(function(logs) {
-        if (!Array.isArray(logs)) { renderLogEntriesFallback(); return; }
-        _allLogsCache = logs;
-        renderLogUserList();
-        renderLogEntries();
-      }).catch(function(){ renderLogEntriesFallback(); });
-  }
+    var roleFilter   = document.getElementById('lfr') ? document.getElementById('lfr').value : '';
+    var fromDate     = document.getElementById('lfd') ? document.getElementById('lfd').value : '';
+    var toDate       = document.getElementById('ltd') ? document.getElementById('ltd').value : '';
+    var searchQuery  = (document.getElementById('lsq') ? document.getElementById('lsq').value : '').toLowerCase();
 
-  // Fallback: read from localStorage
-  function renderLogEntriesFallback() {
-    _allLogsCache = DB.get('logs').slice().reverse().map(function(l) {
-      return Object.assign({}, l, { time: l.timestamp || l.time });
-    });
-    renderLogUserList();
-    renderLogEntries();
-  }
+    var allLogs = DB.get('logs').slice().reverse();
 
-  function setLogMode(mode) {
-    _logMode = mode;
-    var summaryBtn = document.getElementById('log-mode-summary');
-    var detailBtn  = document.getElementById('log-mode-detail');
-    if (summaryBtn) {
-      summaryBtn.style.background = mode === 'summary' ? 'var(--gD)' : 'transparent';
-      summaryBtn.style.color      = mode === 'summary' ? '#fff' : 'var(--tmu)';
-    }
-    if (detailBtn) {
-      detailBtn.style.background = mode === 'detail' ? 'var(--gD)' : 'transparent';
-      detailBtn.style.color      = mode === 'detail' ? '#fff' : 'var(--tmu)';
-    }
-    renderLogEntries();
-  }
+    if (roleFilter)   allLogs = allLogs.filter(function(l) { return l.role === roleFilter; });
+    if (fromDate)     allLogs = allLogs.filter(function(l) { return l.timestamp.slice(0, 10) >= fromDate; });
+    if (toDate)       allLogs = allLogs.filter(function(l) { return l.timestamp.slice(0, 10) <= toDate; });
+    if (searchQuery)  allLogs = allLogs.filter(function(l) { return (l.userName || '').toLowerCase().includes(searchQuery); });
 
-function renderLogUserList() {
-    var el = document.getElementById('log-user-list');
-    if (!el) return;
-
-    var search = (document.getElementById('log-user-search') 
-        ? document.getElementById('log-user-search').value 
-        : '').toLowerCase();
-
-    // Build user summary from cache
-    var userMap = {};
-    _allLogsCache.forEach(function(log) {
-        var u = log.userName || '?';
-
-        if (!userMap[u]) {
-            userMap[u] = { 
-                name: u, 
-                role: log.role, 
-                count: 0, 
-                lastTime: null 
-            };
-        }
-
-        userMap[u].count++;
-
-        var t = log.time || log.timestamp;
-        if (!userMap[u].lastTime || t > userMap[u].lastTime) {
-            userMap[u].lastTime = t;
-        }
-    });
-
-    var users = Object.values(userMap).sort(function(a, b) {
-        return (b.lastTime || '') > (a.lastTime || '') ? 1 : -1;
-    });
-
-    if (search) {
-        users = users.filter(function(u) {
-            return u.name.toLowerCase().includes(search);
-        });
-    }
-
-    var roleColor = {
-        admin: '#dc2626',
-        teacher: '#2563eb',
-        system: '#7c3aed',
-        student: '#059669'
-    };
-
-    // All users block
-    var html = `
-        <div onclick="selectLogUser(null)" 
-             style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--brl);display:flex;align-items:center;gap:8px;
-             background:${_selectedLogUser === null ? 'var(--gLt)' : '#fff'};">
-             
-            <span style="font-size:16px;">👥</span>
-            <div>
-                <div style="font-size:12px;font-weight:700;color:var(--td);">All Users</div>
-                <div style="font-size:10.5px;color:var(--tmu);">${_allLogsCache.length} total entries</div>
-            </div>
-        </div>
-    `;
-
-    users.forEach(function(u) {
-        var col = roleColor[u.role] || 'var(--gD)';
-
-        var last = u.lastTime 
-            ? new Date(u.lastTime).toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) + 
-              ' ' + new Date(u.lastTime).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })
-            : '';
-
-        var isSelected = _selectedLogUser === u.name;
-
-        // SAFE string (no quote breaking)
-        var safeName = encodeURIComponent(u.name);
-
-        html += `
-            <div onclick="selectLogUser(decodeURIComponent('${safeName}'))"
-                 style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--brl);
-                 display:flex;align-items:center;gap:8px;
-                 background:${isSelected ? 'var(--gLt)' : '#fff'};">
-                 
-                <div style="width:32px;height:32px;border-radius:50%;
-                     background:${col};display:flex;align-items:center;justify-content:center;
-                     font-size:13px;font-weight:700;color:#fff;">
-                     ${(u.name[0] || '?').toUpperCase()}
-                </div>
-
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:12px;font-weight:700;color:var(--td);
-                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                         ${u.name}
-                    </div>
-
-                    <div style="font-size:10px;color:var(--tmu);">
-                        ${u.count} actions · ${last}
-                    </div>
-                </div>
-
-                <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;
-                      background:${col}20;color:${col};white-space:nowrap;">
-                      ${u.role}
-                </span>
-            </div>
-        `;
-    });
-
-    el.innerHTML = html || 
-        '<div style="padding:20px;text-align:center;color:var(--tdi);font-size:12px;">No users found</div>';
-}
-
-  function filterLogUsers() {
-    renderLogUserList();
-  }
-
-  function selectLogUser(userName) {
-    _selectedLogUser = userName;
-    var headerEl = document.getElementById('log-selected-user');
-    if (headerEl) headerEl.textContent = userName || 'All Users';
-    renderLogUserList();
-    renderLogEntries();
-  }
-
-  function renderLogEntries() {
     var container = document.getElementById('fll');
-    var countEl   = document.getElementById('log-entry-count');
-    if (!container) return;
-
-    var logs = _allLogsCache.slice();
-    if (_selectedLogUser) logs = logs.filter(function(l){ return l.userName === _selectedLogUser; });
-
-    var from = document.getElementById('lfd') ? document.getElementById('lfd').value : '';
-    var to   = document.getElementById('ltd') ? document.getElementById('ltd').value : '';
-    var cat  = document.getElementById('log-cat-filter') ? document.getElementById('log-cat-filter').value : '';
-    if (from) logs = logs.filter(function(l){ var t=(l.time||l.timestamp||'').slice(0,10); return t >= from; });
-    if (to)   logs = logs.filter(function(l){ var t=(l.time||l.timestamp||'').slice(0,10); return t <= to; });
-    if (cat)  logs = logs.filter(function(l){ return l.category === cat; });
-
-    if (countEl) countEl.textContent = logs.length + ' entries';
-
-    if (!logs.length) {
-      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--tdi);">No log entries found.</div>';
+    if (!allLogs.length) {
+      container.innerHTML = '<div class="emst"><span class="emico">📋</span><div class="emtx">No logs yet</div></div>';
       return;
     }
 
-    var catIcons  = { login:'🔑', data:'📊', settings:'⚙️', security:'🛡️', attendance:'✅', general:'📝', system:'🖥️' };
-    var sevColors = { info:'var(--gD)', warning:'#d97706', critical:'#dc2626' };
-    var sevBg     = { info:'', warning:'rgba(217,119,6,.06)', critical:'rgba(220,38,38,.06)' };
+    var typeIcons  = { add:'🟢', update:'🟡', delete:'🔴', other:'⚪' };
+    var catIcons   = { login:'🔑', data:'📊', settings:'⚙️', security:'🛡️', attendance:'✅', general:'📝' };
+    var sevColors  = { info:'var(--gD)', warning:'#d97706', critical:'#dc2626' };
+
+    // Group logs by user name
+    var groupedByUser = {};
+    allLogs.forEach(function(log) {
+      if (!groupedByUser[log.userName]) {
+        groupedByUser[log.userName] = { role: log.role, entries: [] };
+      }
+      groupedByUser[log.userName].entries.push(log);
+    });
 
     var html = '';
+    Object.entries(groupedByUser).forEach(function(entry) {
+      var userName = entry[0];
+      var group    = entry[1];
+      var rowColor  = group.role === 'admin' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)';
+      var textColor = group.role === 'admin' ? '#dc2626' : '#2563eb';
 
-    if (_logMode === 'summary') {
-      // ── SUMMARY MODE: "User logged in at DD Mon HH:MM, added dept…" ──────
-      // Group by user + day
-      var grouped = {};
-      logs.forEach(function(log) {
-        var ts  = log.time || log.timestamp || '';
-        var day = ts ? new Date(ts).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'Unknown';
-        var key = (log.userName||'?') + '|' + day;
-        if (!grouped[key]) grouped[key] = { userName: log.userName||'?', role: log.role, day: day, actions: [] };
-        grouped[key].actions.push(log);
+      html += '<div style="margin-bottom:20px;">';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0 6px;border-bottom:2px solid var(--brl);margin-bottom:8px;">';
+      html += '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;">' + (userName[0] || '?').toUpperCase() + '</div>';
+      html += '<div><div style="font-size:13px;font-weight:700;color:var(--td);">' + userName + '</div>';
+      html += '<span style="background:' + rowColor + ';color:' + textColor + ';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;">' + group.role + '</span></div>';
+      html += '<div style="margin-left:auto;font-size:11px;color:var(--tdi);">' + group.entries.length + ' actions</div></div>';
+
+      group.entries.forEach(function(log) {
+        var ts     = new Date(log.timestamp);
+        var timeString = ts.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                       + ' ' + ts.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        var dotColor = log.role === 'admin' ? 'var(--red)' : 'var(--blue)';
+        html += '<div class="logr" style="padding-left:44px;">';
+        html += '<div class="logd" style="background:' + dotColor + '"></div>';
+        var catLabel = log.category ? (catIcons[log.category] || '📝') + ' ' + log.category : '';
+        var sevStyle  = log.severity ? 'color:' + (sevColors[log.severity] || 'var(--gD)') + ';' : '';
+        html += '<div class="logbd"><div class="loga" style="' + sevStyle + '">' + (typeIcons[log.type] || '⚪') + ' ' + log.action + (catLabel ? ' <span style="font-size:10px;opacity:.7;">(' + catLabel + ')</span>' : '') + '</div>';
+        if (log.details) html += '<div class="logm"><span style="color:var(--tdi)">— ' + log.details + '</span></div>';
+        html += '</div><div class="logtm">' + timeString + '</div></div>';
       });
 
-      Object.values(grouped).forEach(function(g) {
-        var col = g.role === 'admin' ? '#dc2626' : g.role === 'teacher' ? '#2563eb' : '#059669';
-        // Build summary sentence
-        var sentences = g.actions.map(function(log) {
-          var ts = log.time || log.timestamp || '';
-          var hm = ts ? new Date(ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
-          return (catIcons[log.category]||'📝') + ' ' + log.action + (log.details ? ' — ' + log.details.slice(0,60) + (log.details.length>60?'…':'') : '') + ' <span style="color:var(--tdi);font-size:10px;">' + hm + '</span>';
-        }).join(' &nbsp;·&nbsp; ');
+      html += '</div>';
+    });
 
-        html += '<div style="padding:12px 0;border-bottom:1px solid var(--brl);">'
-          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-          + '<div style="width:26px;height:26px;border-radius:50%;background:' + col + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">' + (g.userName[0]||'?').toUpperCase() + '</div>'
-          + '<span style="font-size:12px;font-weight:700;color:var(--td);">' + g.userName + '</span>'
-          + '<span style="font-size:10px;color:var(--tmu);">' + g.day + '</span>'
-          + '<span style="font-size:10px;color:var(--tdi);margin-left:auto;">' + g.actions.length + ' actions</span>'
-          + '</div>'
-          + '<div style="font-size:11.5px;color:var(--tmu);line-height:1.8;padding-left:34px;">' + sentences + '</div>'
-          + '</div>';
-      });
-
-    } else {
-      // ── DETAIL MODE: one row per log with full timestamp ──────────────────
-      logs.forEach(function(log) {
-        var ts  = log.time || log.timestamp || '';
-        var dt  = ts ? new Date(ts) : null;
-        var fullTs = dt ? (
-          dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
-          + ' ' + dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
-        ) : '—';
-        var col    = log.role === 'admin' ? '#dc2626' : log.role === 'teacher' ? '#2563eb' : '#059669';
-        var sevBgC = sevBg[log.severity] || '';
-        var sevCol = sevColors[log.severity] || 'var(--gD)';
-        html += '<div style="padding:10px 0;border-bottom:1px solid var(--brl);display:flex;gap:10px;align-items:flex-start;' + (sevBgC ? 'background:' + sevBgC + ';margin:0 -16px;padding:10px 16px;' : '') + '">'
-          + '<div style="width:28px;height:28px;border-radius:50%;background:' + col + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;">' + (log.userName||'?')[0].toUpperCase() + '</div>'
-          + '<div style="flex:1;min-width:0;">'
-          + '<div style="font-size:12.5px;font-weight:600;color:' + sevCol + ';">'
-          + (catIcons[log.category]||'📝') + ' ' + (log.action||'')
-          + (log.severity === 'warning' ? ' ⚠️' : log.severity === 'critical' ? ' 🚨' : '')
-          + '</div>'
-          + (log.details ? '<div style="font-size:11px;color:var(--tmu);margin-top:2px;word-break:break-word;">' + log.details + '</div>' : '')
-          + '<div style="font-size:10px;color:var(--tdi);margin-top:3px;display:flex;gap:10px;">'
-          + '<span>' + (log.userName||'?') + '</span>'
-          + '<span style="background:' + col + '15;color:' + col + ';padding:0 5px;border-radius:5px;">' + (log.role||'') + '</span>'
-          + (log.ip && log.ip !== 'localhost' ? '<span>📍 ' + log.ip + '</span>' : '')
-          + (log.category ? '<span>' + (catIcons[log.category]||'') + ' ' + log.category + '</span>' : '')
-          + '</div>'
-          + '</div>'
-          + '<div style="font-size:10px;color:var(--tdi);white-space:nowrap;text-align:right;flex-shrink:0;">' + fullTs + '</div>'
-          + '</div>';
-      });
-    }
-
-    container.innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--tdi);">No entries.</div>';
+    container.innerHTML = html;
   }
-
-  var rl = renderLogs; // alias for filters
 
   function clearAllLogs() {
     document.getElementById('dc-confirm-id').value = 'logs';
     document.getElementById('dc-confirm-msg').textContent = 'Clear all activity logs? This cannot be undone.';
     document.getElementById('dc-confirm-btn').onclick = function() {
-      var tok = sessionStorage.getItem('eams_token');
-      if (tok) {
-        fetch('/api/logs', { method:'DELETE', headers:{'Authorization':'Bearer '+tok} })
-          .then(function(){ DB.set('logs',[]); _allLogsCache=[]; renderLogs(); closeModalBg('m-dc-confirm'); showToast('Logs cleared','warn'); })
-          .catch(function(){ DB.set('logs',[]); renderLogs(); closeModalBg('m-dc-confirm'); });
-      } else {
-        DB.set('logs', []); _allLogsCache = []; renderLogs(); closeModalBg('m-dc-confirm'); showToast('Logs cleared','warn');
-      }
+      DB.set('logs', []);
+      renderLogs();
+      addLog('Logs Cleared', 'All logs cleared');
+      closeModalBg('m-dc-confirm');
+      showToast('Logs cleared', 'warn');
     };
     openModal_('m-dc-confirm');
   }
+  // alias the HTML calls
   var clrl = clearAllLogs;
 
   function exportLogs() {
@@ -1991,45 +1883,31 @@ function renderLogUserList() {
     renderActivityFeed();
     renderDefaulters();
     renderSystemHealth();
+    // Check maintenance badge
+    api('/api/settings/maintenance').then(function(d) {
+      var badge = document.getElementById('sb-maint-badge');
+      if (badge) badge.style.display = (d && d.active) ? 'inline-flex' : 'none';
+    }).catch(function(){});
   }
 
   // ─── STAT CARDS ──────────────────────────────────────────────────────────────
   function updateStatCards() {
     var students  = DB.get('students');
     var depts     = DB.get('depts');
-    var teachers  = DB.get('users').filter(function(u) { return u.role === 'teacher' && u.active !== false; });
+    var teachers  = DB.get('users').filter(function(u) { return u.role === 'teacher'; });
     var classes   = DB.get('classes');
     var unmarked  = getUnmarked();
     var el;
-    // Dashboard stat cards
     el = document.getElementById('c-students');  if(el) el.textContent = students.length;
     el = document.getElementById('c-depts');     if(el) el.textContent = depts.length;
     el = document.getElementById('c-teachers');  if(el) el.textContent = teachers.length;
     el = document.getElementById('c-classes');   if(el) el.textContent = classes.length;
-    el = document.getElementById('c-unmarked-mini'); if(el) el.textContent = unmarked.length + ' unmarked';
-    // Sidebar badges — set immediately from localStorage (already synced)
     el = document.getElementById('sb-stu-badge');   if(el) el.textContent = students.length;
     el = document.getElementById('sb-dept-badge');  if(el) el.textContent = depts.length;
     el = document.getElementById('sb-teach-badge'); if(el) el.textContent = teachers.length;
-    // These counts are final — do NOT re-fetch from API here as it causes flicker
-  }
-  function syncBadgesFromAPI() {
-    // Only call this explicitly when needed, not from updateStatCards
-    var tok = sessionStorage.getItem('eams_token');
-    if (!tok) return;
-    fetch('/api/dashboard/summary', { headers:{'Authorization':'Bearer '+tok} })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (d.error) return;
-        var el;
-        el = document.getElementById('c-students');  if(el) el.textContent = d.students;
-        el = document.getElementById('c-depts');     if(el) el.textContent = d.depts;
-        el = document.getElementById('c-teachers');  if(el) el.textContent = d.teachers;
-        el = document.getElementById('c-classes');   if(el) el.textContent = d.classes;
-        el = document.getElementById('sb-stu-badge');   if(el) el.textContent = d.students;
-        el = document.getElementById('sb-dept-badge');  if(el) el.textContent = d.depts;
-        el = document.getElementById('sb-teach-badge'); if(el) el.textContent = d.teachers;
-      }).catch(function(){});
+    el = document.getElementById('c-unmarked-mini');if(el) el.textContent = unmarked.length + ' unmarked';
+    // Also sync to DB counts via API if token available
+    syncBadgesFromAPI();
   }
   function syncBadgesFromAPI() {
     var tok = sessionStorage.getItem('eams_token');
@@ -2775,6 +2653,9 @@ function renderLogUserList() {
 
   function dDept(deptId) {
     var dept = DB.get('depts').find(function(x) { return x._id === deptId; });
+    requireSpecialPw(function() { dDeptConfirmed(deptId, dept); });
+  }
+  function dDeptConfirmed(deptId, dept) {
     document.getElementById('dc-confirm-id').value  = deptId;
     document.getElementById('dc-confirm-msg').textContent =
       'Delete department "' + (dept ? dept.name : '') + '"? All linked classes and subjects will be removed.';
@@ -4340,7 +4221,6 @@ function renderLogUserList() {
 
   // --- SIDEBAR BADGE UPDATES ---
   function updateAllSidebarBadges() {
-    // Read from localStorage (always synced after every API mutation)
     var stuCount  = DB.get('students').length;
     var tchCount  = DB.get('users').filter(function(u){ return u.role==='teacher' && u.active!==false; }).length;
     var deptCount = DB.get('depts').length;
@@ -4348,10 +4228,7 @@ function renderLogUserList() {
     el = document.getElementById('sb-stu-badge');   if(el) el.textContent = stuCount;
     el = document.getElementById('sb-teach-badge'); if(el) el.textContent = tchCount;
     el = document.getElementById('sb-dept-badge');  if(el) el.textContent = deptCount;
-    // Update dashboard cards too
-    el = document.getElementById('c-students'); if(el) el.textContent = stuCount;
-    el = document.getElementById('c-depts');    if(el) el.textContent = deptCount;
-    el = document.getElementById('c-teachers'); if(el) el.textContent = tchCount;
+    syncBadgesFromAPI();
   }
 
 
@@ -4404,13 +4281,9 @@ function renderLogUserList() {
     var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
     var changesHtml = changes ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>' : '';
     el.innerHTML = spinHtml + '<div><div>' + icon + ' ' + msg + '</div>' + changesHtml + '</div>';
-    // success: hide after 2.5s | error: hide after 5s | saving: stays until next call
-    if (state === 'success') _dbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2500);
-    if (state === 'error')   _dbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, 5000);
-  }
-  function hideSyncToast() {
-    var el = document.getElementById('db-toast');
-    if (el) el.classList.remove('show');
+    if (state !== 'saving') {
+      _dbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
+    }
   }
 
   // API helper
@@ -4438,9 +4311,9 @@ function renderLogUserList() {
       }).catch(function(){ return []; });
   }
 
-  // Sync all collections — silent=true means no toast (used on page load)
-  function syncAllFromDB(cb, silent) {
-    if (!silent) dbToast('Fetching from MongoDB…', 'saving');
+  // Sync all collections
+  function syncAllFromDB(cb) {
+    dbToast('Fetching from MongoDB…', 'saving');
     Promise.all([
       syncFromAPI('depts',    '/depts'),
       syncFromAPI('classes',  '/classes'),
@@ -4449,12 +4322,11 @@ function renderLogUserList() {
       syncFromAPI('users',    '/users'),
       syncFromAPI('assignments','/assignments'),
     ]).then(function(results) {
-      if (!silent) {
-        dbToast('Synced', 'success');
-        setTimeout(function(){ hideSyncToast(); }, 2000);
-      }
+      dbToast('Synced from MongoDB', 'success', results.map(function(r,i){
+        var names = ['depts','classes','subjects','students','users','assignments'];
+        return r.length + ' ' + names[i];
+      }).join(' · '));
       updateStatCards();
-      updateAllSidebarBadges();
       if (cb) cb();
     }).catch(function(){
       dbToast('Sync failed', 'error');
@@ -4699,7 +4571,6 @@ function renderLogUserList() {
 <iframe id="bulk-drw-frame" src="bulk.html" title="Bulk Upload"></iframe>
 
 <div id="db-toast"></div>
-
 
 <!-- Special Delete Password Modal -->
 <div class="modal-bg" id="m-special-pw"><div class="modal modal-sm" style="text-align:center;">

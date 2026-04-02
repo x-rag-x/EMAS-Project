@@ -103,12 +103,14 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
   <div class="lh">EAMS Login</div>
 
   <!-- ROLE SELECTOR -->
-  <div class="rtabs">
-    <div class="rtab" id="tab-teacher" onclick="pickRole('teacher')">
+  <div class="rtabs" style="gap:8px;">
+    <div class="rtab" id="tab-student" onclick="pickRole('student')" style="padding:8px 18px;">
+      Student
+    </div>
+    <div class="rtab" id="tab-teacher" onclick="pickRole('teacher')" style="padding:8px 18px;">
       Teacher
     </div>
-
-    <div class="rtab sel" id="tab-admin" onclick="pickRole('admin')">
+    <div class="rtab sel" id="tab-admin" onclick="pickRole('admin')" style="padding:8px 18px;">
       Admin
     </div>
   </div>
@@ -171,15 +173,10 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
 
   function pickRole(role) {
     selectedRole = role;
-
-    // Toggle the active tab highlight
+    document.getElementById('tab-student').classList.toggle('sel', role === 'student');
     document.getElementById('tab-teacher').classList.toggle('sel', role === 'teacher');
     document.getElementById('tab-admin').classList.toggle('sel', role === 'admin');
-
-    // Hide any previous error message
     document.getElementById('lerr').style.display = 'none';
-
-    // Move focus to the username field
     document.getElementById('lu').focus();
   }
 
@@ -207,6 +204,12 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
       if (data.error) {
         signInButton.disabled = false;
         signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
+        if (data.maintenance) {
+          // Store maintenance info for the page to display
+          sessionStorage.setItem('maint_data', JSON.stringify(data));
+          window.location.href = 'maintenance.html';
+          return;
+        }
         errorBox.textContent = data.error;
         errorBox.style.display = 'block';
         document.getElementById('lp').value = '';
@@ -216,7 +219,13 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
       sessionStorage.setItem('eams_user', JSON.stringify(data.user));
       sessionStorage.setItem('eams_sessionId', data.sessionId || '');
       sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
-      window.location.href = selectedRole === 'teacher' ? 'teacher.html' : 'admin.html';
+      if (selectedRole === 'student') {
+        window.location.href = 'student.html';
+      } else if (selectedRole === 'teacher') {
+        window.location.href = 'teacher.html';
+      } else {
+        window.location.href = 'admin.html';
+      }
     })
     .catch(function() {
       signInButton.disabled = false;

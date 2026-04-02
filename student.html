@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;
+  --gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;
+  --td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;
+  --br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);
+  --sh:0 4px 24px rgba(27,94,32,0.10);--shd:0 8px 32px rgba(0,0,0,0.08);
+  --red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ── TOPBAR ─── */
+.topbar{
+  background:#fff;border-bottom:1px solid var(--br);
+  height:60px;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;gap:12px;
+}
+.tb-brand{display:flex;align-items:center;gap:10px;}
+.tb-logo{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gD),var(--gM));display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700;}
+.tb-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--td);}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.profile-chip{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;border-radius:28px;border:1.5px solid var(--br);background:#fff;cursor:pointer;transition:all .2s;}
+.profile-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gD);}
+.profile-name{font-size:12.5px;font-weight:700;color:var(--td);}
+.profile-role{font-size:10px;color:var(--tmu);}
+.logout-btn{padding:7px 16px;border-radius:20px;border:1.5px solid rgba(239,68,68,.3);background:rgba(239,68,68,.05);color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .2s;}
+.logout-btn:hover{background:rgba(239,68,68,.12);}
+
+/* ── LAYOUT ─── */
+.main{max-width:1100px;margin:0 auto;padding:24px 20px 40px;}
+
+/* ── WELCOME HERO ─── */
+.hero{
+  background:linear-gradient(140deg,var(--gD) 0%,#2e7d32 60%,#388e3c 100%);
+  border-radius:24px;padding:28px 28px 24px;
+  display:flex;align-items:center;gap:20px;
+  margin-bottom:22px;overflow:hidden;position:relative;
+}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07);}
+.hero::after{content:'';position:absolute;bottom:-40px;right:80px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05);}
+.hero-av{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:800;color:#fff;flex-shrink:0;
+  position:relative;z-index:1;
+}
+.hero-info{flex:1;position:relative;z-index:1;}
+.hero-greeting{font-size:12px;color:rgba(255,255,255,.65);font-weight:500;margin-bottom:2px;}
+.hero-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:4px;}
+.hero-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.hero-pill{font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
+.hero-right{text-align:right;position:relative;z-index:1;flex-shrink:0;}
+.hero-pct-wrap{display:flex;flex-direction:column;align-items:center;}
+.hero-pct{font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-2px;}
+.hero-pct-label{font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.hero-pct-badge{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-ok{background:rgba(74,222,128,.2);color:#4ade80;}
+.badge-warn{background:rgba(251,191,36,.2);color:#fbbf24;}
+.badge-danger{background:rgba(248,113,113,.2);color:#f87171;}
+
+/* ── STATS ROW ─── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:16px;padding:18px 16px;border:1px solid var(--br);box-shadow:0 2px 10px rgba(27,94,32,.06);}
+.sc-icon{font-size:22px;margin-bottom:8px;}
+.sc-val{font-size:28px;font-weight:800;color:var(--td);line-height:1;letter-spacing:-1px;}
+.sc-label{font-size:11px;color:var(--tmu);margin-top:3px;font-weight:500;}
+.sc-sub{font-size:10px;color:var(--tdi);margin-top:2px;}
+
+/* ── SECTION CARDS ─── */
+.card{background:#fff;border-radius:18px;border:1px solid var(--br);overflow:hidden;}
+.card-hd{padding:16px 18px 12px;border-bottom:1px solid var(--brl);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:14px;font-weight:700;color:var(--td);}
+.card-body{padding:16px 18px;}
+
+/* ── TWO-COL GRID ─── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+
+/* ── SUBJECT ATTENDANCE TABLE ─── */
+.sub-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.sub-table th{background:var(--gLt);padding:9px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;color:var(--tmu);text-align:left;white-space:nowrap;border-bottom:1px solid var(--br);}
+.sub-table td{padding:10px 12px;border-bottom:1px solid var(--brl);vertical-align:middle;color:var(--tmu);}
+.sub-table tr:last-child td{border-bottom:none;}
+.sub-table tbody tr:hover td{background:var(--gP);}
+.sub-table td.b{font-weight:600;color:var(--td);}
+
+/* Progress bar in table */
+.prog-wrap{display:flex;align-items:center;gap:8px;}
+.prog-bar{flex:1;height:6px;background:#e5e7eb;border-radius:10px;overflow:hidden;min-width:60px;}
+.prog-fill{height:100%;border-radius:10px;transition:width .6s ease;}
+.prog-pct{font-size:12px;font-weight:700;min-width:34px;text-align:right;}
+.prog-ok .prog-fill{background:linear-gradient(90deg,var(--gM),var(--gL));}
+.prog-warn .prog-fill{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+.prog-danger .prog-fill{background:linear-gradient(90deg,#ef4444,#f87171);}
+.prog-ok .prog-pct{color:var(--gK);}
+.prog-warn .prog-pct{color:#b45309;}
+.prog-danger .prog-pct{color:#dc2626;}
+
+/* Shortage badge */
+.shortage-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.1);color:#dc2626;white-space:nowrap;}
+.ok-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(76,175,80,.1);color:var(--gK);white-space:nowrap;}
+
+/* ── PROFILE CARD ─── */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.prow{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--brl);}
+.prow:last-child{border-bottom:none;}
+.plabel{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);font-weight:700;}
+.pval{font-size:13px;font-weight:600;color:var(--td);}
+
+/* ── CALENDAR / RECENT ATTENDANCE ─── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
+.cal-day-hdr{font-size:9px;text-align:center;font-weight:700;color:var(--tdi);text-transform:uppercase;padding-bottom:4px;}
+.cal-day{height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;cursor:default;position:relative;}
+.cal-day.present{background:rgba(76,175,80,.15);color:var(--gK);}
+.cal-day.absent{background:rgba(239,68,68,.1);color:#dc2626;}
+.cal-day.empty{background:transparent;color:var(--tdi);}
+.cal-day.today {
+  box-shadow: 0 0 0 2px var(--gM);
+}
+
+/* ── SUBJECT DETAIL DRAWER ─── */
+.sub-detail-row{background:var(--gP);padding:0 12px;overflow:hidden;transition:max-height .3s ease;max-height:0;}
+.sub-detail-row.open{max-height:300px;padding:10px 12px;}
+.att-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:10.5px;font-weight:600;margin:2px;}
+.att-chip.present{background:rgba(76,175,80,.12);color:var(--gK);}
+.att-chip.absent{background:rgba(239,68,68,.09);color:#dc2626;}
+
+/* ── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:#fff;border:1px solid var(--br);border-left:4px solid var(--gM);border-radius:12px;padding:12px 18px;font-size:12.5px;color:var(--td);box-shadow:var(--shd);z-index:9999;transform:translateY(70px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);max-width:300px;}
+.toast.show{transform:none;opacity:1;}
+.toast.error{border-left-color:#ef4444;}
+
+/* ── LOADING ─── */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;color:var(--tmu);}
+.spinner{width:40px;height:40px;border:3px solid var(--br);border-top-color:var(--gM);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── CHANGE PASSWORD ─── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(5px);z-index:700;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:all .25s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:20px;width:94%;max-width:420px;padding:28px;transform:translateY(20px) scale(.97);transition:all .25s;box-shadow:0 28px 70px rgba(0,0,0,.15);}
+.modal-bg.open .modal{transform:none;}
+.modal-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--td);}
+.modal-close{width:28px;height:28px;border-radius:8px;background:var(--gP);border:1px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--tmu);}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;}
+.fl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);}
+.fc2{background:var(--gP);border:1.5px solid var(--br);border-radius:9px;padding:9px 12px;font-size:13px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;transition:all .2s;}
+.fc2:focus{border-color:var(--gM);}
+.btn-pri{background:var(--gD);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;width:100%;margin-top:4px;transition:all .2s;}
+.btn-pri:hover{background:var(--gM);}
+.pw-wrap{position:relative;display:flex;align-items:center;}
+.pw-wrap .fc2{padding-right:36px;}
+.pw-eye{position:absolute;right:10px;background:none;border:none;cursor:pointer;font-size:15px;color:var(--tdi);}
+
+/* ── OVERALL GAUGE ─── */
+.gauge-outer{position:relative;width:130px;height:130px;margin:0 auto;}
+.gauge-svg{transform:rotate(-90deg);}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.gauge-pct-txt{font-size:26px;font-weight:800;color:var(--td);line-height:1;letter-spacing:-1px;}
+.gauge-lbl-txt{font-size:9px;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+
+/* ── TABS ─── */
+.tabs-row{display:flex;gap:4px;background:var(--gLt);border-radius:12px;padding:4px;margin-bottom:18px;width:fit-content;}
+.tab-btn{padding:6px 16px;border-radius:9px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--tmu);transition:all .2s;border:none;background:transparent;font-family:'Poppins',sans-serif;}
+.tab-btn.act{background:#fff;color:var(--gD);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+/* ── EMPTY STATE ─── */
+.empty-state{text-align:center;padding:30px 14px;color:var(--tdi);}
+.empty-state .ei{font-size:32px;display:block;margin-bottom:8px;}
+
+@media(max-width:768px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .two-col{grid-template-columns:1fr;}
+  .hero{flex-direction:column;text-align:center;}
+  .hero-right{margin-top:12px;}
+  .profile-grid{grid-template-columns:1fr;}
+  .main{padding:14px 12px 32px;}
+}
+@media(max-width:480px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .sub-table{font-size:11.5px;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-brand">
+    <div class="tb-logo">S</div>
+    <div>
+      <div class="tb-title">Student Portal</div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="profile-chip" onclick="openChangePw()">
+      <div class="profile-av" id="av-initials">S</div>
+      <div>
+        <div class="profile-name" id="tb-name">Loading…</div>
+        <div class="profile-role">Student</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="main-content">
+  <div class="loading-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:var(--tmu);">Loading your attendance data…</div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-bg" id="m-chpw">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">🔐 Change Password</div>
+      <div class="modal-close" onclick="closeModal('m-chpw')">✕</div>
+    </div>
+    <div id="chpw-err" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:14px;"></div>
+    <div class="fg">
+      <label class="fl">Current Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-old" placeholder="Current password"><button type="button" class="pw-eye" onclick="togglePw('chpw-old',this)">👁</button></div>
+    </div>
+    <div class="fg">
+      <label class="fl">New Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-new" placeholder="Min. 6 characters"><button type="button" class="pw-eye" onclick="togglePw('chpw-new',this)">👁</button></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Confirm New Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password"><button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button></div>
+    </div>
+    <button class="btn-pri" onclick="doChangePw()">Update Password</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── AUTH ──────────────────────────────────────────────────────────
+var TOKEN = sessionStorage.getItem('eams_token');
+var USER  = null;
+try { USER = JSON.parse(sessionStorage.getItem('eams_user')); } catch(e) {}
+
+if (!TOKEN || !USER) { window.location.href = 'index.html'; }
+if (USER && USER.role !== 'student') { window.location.href = 'index.html'; }
+
+// Set topbar name
+if (USER) {
+  var initials = (USER.name || 'S').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  document.getElementById('av-initials').textContent = initials;
+  document.getElementById('tb-name').textContent = USER.name || 'Student';
+}
+
+// ── API HELPER ────────────────────────────────────────────────────
+function api(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, opts.headers || {});
+  return fetch(url, opts).then(function(r) {
+    if (r.status === 401) { doLogout(); throw new Error('Session expired'); }
+    if (r.status === 503) { return r.json().then(function(d) { if (d.maintenance) { sessionStorage.setItem('maint_data', JSON.stringify(d)); window.location.href = 'maintenance.html'; } throw new Error(d.error); }); }
+    return r.json();
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (type === 'error' ? ' error' : '') + ' show';
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.className = 'toast'; }, 3200);
+}
+
+// ── LOGOUT ────────────────────────────────────────────────────────
+function doLogout() {
+  sessionStorage.clear();
+  window.location.href = 'index.html';
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openChangePw() { openModal('m-chpw'); }
+
+// ── TOGGLE PW ─────────────────────────────────────────────────────
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────
+function doChangePw() {
+  var oldPw = document.getElementById('chpw-old').value;
+  var newPw = document.getElementById('chpw-new').value;
+  var cfm   = document.getElementById('chpw-confirm').value;
+  var errEl = document.getElementById('chpw-err');
+  errEl.style.display = 'none';
+  if (!oldPw || !newPw || !cfm) { errEl.textContent = 'All fields required.'; errEl.style.display = 'block'; return; }
+  if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (newPw !== cfm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+  api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: USER.username || USER.name, password: oldPw, role: 'student' }) })
+    .then(function(d) {
+      if (d.error) { errEl.textContent = 'Current password is wrong.'; errEl.style.display = 'block'; return; }
+      return api('/api/users/' + USER._id, { method: 'PUT', body: JSON.stringify({ password: newPw, mustChangePassword: false }) });
+    }).then(function(d) {
+      if (!d) return;
+      closeModal('m-chpw');
+      toast('✅ Password updated successfully!');
+      document.getElementById('chpw-old').value = '';
+      document.getElementById('chpw-new').value = '';
+      document.getElementById('chpw-confirm').value = '';
+    }).catch(function(e) { errEl.textContent = e.message; errEl.style.display = 'block'; });
+}
+
+// ── MAIN DATA LOAD ────────────────────────────────────────────────
+var _data = null;
+var _activeSubject = null;
+
+function getClass(pct, minReq) {
+  if (pct >= minReq) return 'ok';
+  if (pct >= minReq - 10) return 'warn';
+  return 'danger';
+}
+function getEmoji(pct, minReq) {
+  if (pct >= minReq) return '✅';
+  if (pct >= minReq - 10) return '⚠️';
+  return '🚨';
+}
+function pad2(n) { return String(n).padStart(2,'0'); }
+function fmtDate(str) {
+  if (!str) return '—';
+  var d = new Date(str);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function buildGaugeSVG(pct, cls) {
+  var r = 52, cx = 65, cy = 65;
+  var circ = 2 * Math.PI * r;
+  var fillColor = cls === 'ok' ? '#4caf50' : cls === 'warn' ? '#f59e0b' : '#ef4444';
+  var dashLen = (pct / 100) * circ;
+  return '<svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">'
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="#e5e7eb" stroke-width="10"/>'
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + fillColor + '" stroke-width="10"'
+    + ' stroke-dasharray="' + dashLen + ' ' + circ + '" stroke-linecap="round"'
+    + ' style="transition:stroke-dasharray .8s ease;"/>'
+    + '</svg>';
+}
+
+function calcShortage(present, total, minReq) {
+  // classes needed to attend to reach minReq
+  if (total === 0) return 0;
+  var pct = present / total;
+  if (pct * 100 >= minReq) return 0;
+  // (present + x) / (total + x) >= minReq/100 → x >= (minReq*total - 100*present)/(100 - minReq)
+  var needed = Math.ceil((minReq * total - 100 * present) / (100 - minReq));
+  return Math.max(0, needed);
+}
+
+function renderPortal(d) {
+  _data = d;
+  var stu  = d.student;
+  var att  = d.attendance;
+  var usr  = d.user;
+  var minR = att.minRequired;
+  var oPct = att.overall;
+  var oCls = getClass(oPct, minR);
+
+  var mustChange = sessionStorage.getItem('eams_mustChangePw') === '1';
+
+  var html = '';
+
+  // ── Must change password banner
+  if (mustChange) {
+    html += '<div style="background:#fff3cd;border:1.5px solid #f59e0b;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+      + '<span style="font-size:20px;">🔐</span>'
+      + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#92400e;">Password Change Required</div><div style="font-size:11.5px;color:#b45309;margin-top:2px;">Your default password must be changed before proceeding.</div></div>'
+      + '<button onclick="openChangePw()" style="padding:8px 16px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif;">Change Now →</button>'
+      + '</div>';
+  }
+
+  // ── HERO
+  var initials = stu.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  var badgeClass = oCls === 'ok' ? 'badge-ok' : oCls === 'warn' ? 'badge-warn' : 'badge-danger';
+  var badgeText  = oCls === 'ok' ? '✅ On Track' : oCls === 'warn' ? '⚠️ Below Threshold' : '🚨 Critical';
+  html += '<div class="hero">'
+    + '<div class="hero-av">' + initials + '</div>'
+    + '<div class="hero-info">'
+    + '<div class="hero-greeting">Welcome back,</div>'
+    + '<div class="hero-name">' + stu.name + '</div>'
+    + '<div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:2px;">' + stu.regNo + ' &nbsp;·&nbsp; ' + (stu.deptName || '—') + '</div>'
+    + '<div class="hero-pills">'
+    + '<span class="hero-pill">🏫 ' + (stu.className || '—') + '</span>'
+    + '<span class="hero-pill">📅 ' + (stu.academicYear || '—') + '</span>'
+    + (stu.isClassRep ? '<span class="hero-pill">⭐ Class Rep</span>' : '')
+    + (stu.isSportsRep ? '<span class="hero-pill">🏆 Sports Rep</span>' : '')
+    + '</div></div>'
+    + '<div class="hero-right">'
+    + '<div class="hero-pct-wrap">'
+    + '<div class="hero-pct">' + oPct + '%</div>'
+    + '<div class="hero-pct-label">Overall Attendance</div>'
+    + '<span class="hero-pct-badge ' + badgeClass + '">' + badgeText + '</span>'
+    + '</div></div></div>';
+
+  // ── STAT CARDS
+  var shortage = calcShortage(att.totalPresent, att.totalClasses, minR);
+  html += '<div class="stats-row">'
+    + '<div class="stat-card"><div class="sc-icon">📚</div><div class="sc-val">' + att.totalClasses + '</div><div class="sc-label">Total Classes</div><div class="sc-sub">Across all subjects</div></div>'
+    + '<div class="stat-card"><div class="sc-icon">✅</div><div class="sc-val" style="color:var(--gK);">' + att.totalPresent + '</div><div class="sc-label">Present</div><div class="sc-sub">Classes attended</div></div>'
+    + '<div class="stat-card"><div class="sc-icon">❌</div><div class="sc-val" style="color:#ef4444;">' + att.totalAbsent + '</div><div class="sc-label">Absent</div><div class="sc-sub">Classes missed</div></div>'
+    + '<div class="stat-card"><div class="sc-icon">' + (shortage > 0 ? '⚠️' : '🎯') + '</div><div class="sc-val" style="color:' + (shortage > 0 ? '#f59e0b' : 'var(--gK)') + ';">' + (shortage > 0 ? shortage : '—') + '</div><div class="sc-label">' + (shortage > 0 ? 'Classes Needed' : 'Requirement Met') + '</div><div class="sc-sub">To reach ' + minR + '% threshold</div></div>'
+    + '</div>';
+
+  // ── TWO-COL: Gauge + Profile
+  var gaugeSVG = buildGaugeSVG(oPct, oCls);
+  var gaugeColor = oCls === 'ok' ? 'var(--gK)' : oCls === 'warn' ? '#b45309' : '#dc2626';
+
+  html += '<div class="two-col">';
+
+  // LEFT: Gauge + summary
+  html += '<div class="card">'
+    + '<div class="card-hd"><div class="card-title">📊 Attendance Overview</div></div>'
+    + '<div class="card-body" style="display:flex;flex-direction:column;align-items:center;padding:20px;">'
+    + '<div class="gauge-outer">' + gaugeSVG
+    + '<div class="gauge-center"><div class="gauge-pct-txt" style="color:' + gaugeColor + ';">' + oPct + '%</div><div class="gauge-lbl-txt">Overall</div></div>'
+    + '</div>'
+    + '<div style="margin-top:18px;width:100%;display:flex;flex-direction:column;gap:8px;">'
+    + gaugeRow('Present', att.totalPresent, att.totalClasses, 'var(--gK)')
+    + gaugeRow('Absent', att.totalAbsent, att.totalClasses, '#ef4444')
+    + '<div style="padding:10px 0 0;border-top:1px solid var(--brl);text-align:center;font-size:11.5px;color:var(--tmu);">Minimum required: <b style="color:' + gaugeColor + ';">' + minR + '%</b>'
+    + (shortage > 0 ? ' &nbsp;·&nbsp; Need <b style="color:#dc2626;">' + shortage + '</b> more classes' : ' &nbsp;·&nbsp; <b style="color:var(--gK);">You are on track 🎉</b>')
+    + '</div></div></div></div>';
+
+  // RIGHT: Profile info
+  html += '<div class="card">'
+    + '<div class="card-hd"><div class="card-title">👤 Student Profile</div>'
+    + '<button onclick="openChangePw()" style="font-size:11px;padding:4px 12px;border-radius:12px;border:1.5px solid var(--br);background:var(--gP);color:var(--tmu);cursor:pointer;font-family:Poppins,sans-serif;">🔐 Change Password</button>'
+    + '</div>'
+    + '<div class="card-body"><div class="profile-grid">'
+    + pRow('Register No.', stu.regNo)
+    + pRow('Department', stu.deptName || '—')
+    + pRow('Class', stu.className || '—')
+    + pRow('Year', stu.year || '—')
+    + pRow('Section', stu.section || '—')
+    + pRow('Course', stu.courseType || '—')
+    + pRow('Branch', stu.branch || '—')
+    + pRow('Academic Year', stu.academicYear || '—')
+    + pRow('Email', stu.email || usr.email || '—')
+    + pRow('Blood Group', stu.bloodGroup || '—')
+    + pRow('Parent Contact', stu.parentContact || '—')
+    + pRow('Last Login', usr.lastLogin ? fmtDate(usr.lastLogin) : 'First login')
+    + '</div></div></div>';
+
+  html += '</div>'; // end two-col
+
+  // ── SUBJECT-WISE TABLE
+  html += '<div class="card" style="margin-bottom:18px;">'
+    + '<div class="card-hd"><div class="card-title">📖 Subject-wise Attendance</div>'
+    + '<span style="font-size:11px;color:var(--tdi);">Click a subject row to see details</span>'
+    + '</div>'
+    + '<div style="overflow-x:auto;">'
+    + '<table class="sub-table"><thead><tr>'
+    + '<th>Subject</th><th>Teacher</th><th>Present</th><th>Absent</th><th>Total</th><th style="min-width:140px;">Attendance</th><th>Status</th>'
+    + '</tr></thead><tbody id="sub-tbody"></tbody></table></div></div>';
+
+  // ── RECENT ATTENDANCE (calendar strip per subject)
+  html += '<div class="card">'
+    + '<div class="card-hd"><div class="card-title">📅 Recent Attendance Log</div></div>'
+    + '<div class="card-body">'
+    + '<div class="tabs-row" id="sub-tabs"></div>'
+    + '<div id="sub-cal"></div>'
+    + '</div></div>';
+
+  document.getElementById('main-content').innerHTML = html;
+  renderSubjectTable(att.subjects, minR);
+  renderSubjectTabs(att.subjects);
+}
+
+function gaugeRow(label, val, total, color) {
+  var pct = total > 0 ? Math.round(val/total*100) : 0;
+  return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;">'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0;display:inline-block;"></span>'
+    + '<span style="color:var(--tmu);flex:1;">' + label + '</span>'
+    + '<span style="font-weight:700;color:' + color + ';">' + val + '</span>'
+    + '<span style="color:var(--tdi);font-size:10px;">(' + pct + '%)</span>'
+    + '</div>';
+}
+
+function pRow(label, val) {
+  return '<div class="prow"><div class="plabel">' + label + '</div><div class="pval">' + val + '</div></div>';
+}
+
+function renderSubjectTable(subjects, minR) {
+  if (!subjects || !subjects.length) {
+    document.getElementById('sub-tbody').innerHTML = '<tr><td colspan="7"><div class="empty-state"><span class="ei">📭</span><p>No attendance data found yet.</p></div></td></tr>';
+    return;
+  }
+  var html = '';
+  subjects.forEach(function(s, idx) {
+    var cls = getClass(s.percentage, minR);
+    var progClass = 'prog-' + cls;
+    var shortage = calcShortage(s.present, s.total, minR);
+    var statusHtml = shortage > 0
+      ? '<span class="shortage-badge">Need ' + shortage + ' more</span>'
+      : '<span class="ok-badge">✅ On Track</span>';
+    html += '<tr style="cursor:pointer;" onclick="toggleSubDetail(' + idx + ')">'
+      + '<td class="b">📘 ' + (s.subjectName || '—') + '</td>'
+      + '<td>' + (s.teacherName || '—') + '</td>'
+      + '<td style="color:var(--gK);font-weight:600;">' + s.present + '</td>'
+      + '<td style="color:#ef4444;font-weight:600;">' + s.absent + '</td>'
+      + '<td>' + s.total + '</td>'
+      + '<td><div class="prog-wrap ' + progClass + '"><div class="prog-bar"><div class="prog-fill" style="width:' + s.percentage + '%;"></div></div><div class="prog-pct">' + s.percentage + '%</div></div></td>'
+      + '<td>' + statusHtml + '</td>'
+      + '</tr>'
+      + '<tr><td colspan="7" style="padding:0;"><div class="sub-detail-row" id="sub-detail-' + idx + '">'
+      + renderDateChips(s.dates)
+      + '</div></td></tr>';
+  });
+  document.getElementById('sub-tbody').innerHTML = html;
+}
+
+function renderDateChips(dates) {
+  if (!dates || !dates.length) return '<div style="font-size:12px;color:var(--tdi);padding:4px;">No records yet.</div>';
+  var chips = dates.slice().reverse().map(function(d) {
+    return '<span class="att-chip ' + d.status + '">' + d.date + ' ' + (d.status === 'present' ? '✅' : '❌') + '</span>';
+  }).join('');
+  return '<div style="display:flex;flex-wrap:wrap;gap:2px;">' + chips + '</div>';
+}
+
+function toggleSubDetail(idx) {
+  var el = document.getElementById('sub-detail-' + idx);
+  if (!el) return;
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+  } else {
+    document.querySelectorAll('.sub-detail-row.open').forEach(function(e) { e.classList.remove('open'); });
+    el.classList.add('open');
+  }
+}
+
+function renderSubjectTabs(subjects) {
+  if (!subjects || !subjects.length) {
+    document.getElementById('sub-tabs').innerHTML = '';
+    document.getElementById('sub-cal').innerHTML = '<div class="empty-state"><span class="ei">📭</span><p>No subjects found.</p></div>';
+    return;
+  }
+  var tabsHtml = subjects.map(function(s, idx) {
+    return '<button class="tab-btn' + (idx === 0 ? ' act' : '') + '" onclick="switchSubjectCal(' + idx + ',this)">' + (s.subjectName || 'Subject ' + (idx+1)) + '</button>';
+  }).join('');
+  document.getElementById('sub-tabs').innerHTML = tabsHtml;
+  renderCalendar(subjects[0]);
+}
+
+function switchSubjectCal(idx, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('act'); });
+  btn.classList.add('act');
+  renderCalendar(_data.attendance.subjects[idx]);
+}
+
+function renderCalendar(subject) {
+  var dates = subject ? subject.dates : [];
+  var calEl = document.getElementById('sub-cal');
+  if (!dates || !dates.length) {
+    calEl.innerHTML = '<div class="empty-state"><span class="ei">📅</span><p>No attendance records for this subject yet.</p></div>';
+    return;
+  }
+
+  // Build map by date
+  var map = {};
+  dates.forEach(function(d) { map[d.date] = d.status; });
+
+  // Find date range
+  var sortedDates = dates.map(function(d) { return d.date; }).sort();
+  var first = new Date(sortedDates[0]);
+  var last  = new Date(sortedDates[sortedDates.length - 1]);
+
+  // Show last 5 weeks
+  var today = new Date();
+  var calStart = new Date(today);
+  calStart.setDate(today.getDate() - today.getDay() - 28); // 5 weeks back, from Sunday
+
+  var html = '<div style="font-size:12px;font-weight:600;color:var(--tmu);margin-bottom:10px;">Last 5 weeks — ' + subject.subjectName + '</div>';
+  html += '<div class="cal-grid">';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d) {
+    html += '<div class="cal-day-hdr">' + d + '</div>';
+  });
+
+  for (var i = 0; i < 35; i++) {
+    var d = new Date(calStart);
+    d.setDate(calStart.getDate() + i);
+    var iso = d.toISOString().split('T')[0];
+    var status = map[iso];
+    var cls = 'empty';
+    var txt = d.getDate();
+    if (status === 'present') cls = 'present';
+    else if (status === 'absent') cls = 'absent';
+    var isToday = iso === new Date().toISOString().split('T')[0];
+    html += '<div class="cal-day ' + cls + (isToday ? ' today' : '') + '" title="' + iso + (status ? ' — ' + status : '') + '">'
+      + (status ? (status === 'present' ? '✅' : '❌') : '<span style="opacity:.4;">' + txt + '</span>')
+      + '</div>';
+  }
+  html += '</div>';
+
+  // Legend
+  html += '<div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;">'
+    + '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:rgba(76,175,80,.15);"></div>Present</div>'
+    + '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:rgba(239,68,68,.1);"></div>Absent</div>'
+    + '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:#e5e7eb;"></div>No class</div>'
+    + '</div>';
+
+  calEl.innerHTML = html;
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────
+api('/api/student/me').then(function(d) {
+  if (d.error) { toast(d.error, 'error'); return; }
+  renderPortal(d);
+  // Check if must change password
+  if (sessionStorage.getItem('eams_mustChangePw') === '1') {
+    setTimeout(openChangePw, 600);
+  }
+}).catch(function(e) {
+  document.getElementById('main-content').innerHTML =
+    '<div class="loading-screen"><span style="font-size:40px;">⚠️</span><div style="font-size:14px;color:#dc2626;">' + e.message + '</div><a href="index.html" style="color:var(--gK);font-size:13px;font-weight:600;">← Back to Login</a></div>';
+});
+
+// Security
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
+    e.preventDefault(); return false;
+  }
+});
+</script>
+</body>
+</html>
