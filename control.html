@@ -123,6 +123,16 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 select.form-input{cursor:pointer;}
 
 /* ── MAINTENANCE BANNER ── */
+.health-chip{background:#fff;border:1.5px solid var(--br);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:140px;}
+.health-dot{font-size:14px;line-height:1;color:#94a3b8;}
+.health-dot.green{color:#16a34a;}
+.health-dot.red{color:#dc2626;}
+.health-dot.amber{color:#d97706;}
+.health-chip-label{font-size:10px;color:var(--tmu);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.health-chip-val{font-size:13px;font-weight:700;color:var(--td);}
+.undo-filter-btn{padding:5px 13px;border-radius:20px;border:1.5px solid var(--br);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--tmu);font-family:Poppins,sans-serif;transition:all .15s;}
+.undo-filter-btn:hover,.undo-filter-btn.act{background:var(--gLt);border-color:var(--gLr);color:var(--gD);}
+.card-icon.amber{background:#fffbeb;color:#d97706;}
 .maint-banner{background:linear-gradient(135deg,#7c2d12,#dc2626);border-radius:16px;padding:20px 24px;color:#fff;display:flex;align-items:center;gap:16px;margin-bottom:20px;}
 .maint-banner.hidden{display:none;}
 .maint-banner-ic{font-size:28px;flex-shrink:0;}
@@ -194,6 +204,8 @@ select.form-input{cursor:pointer;}
 
     <div class="sb-section-label">Danger Zone</div>
     <button class="sb-item" onclick="nav('data')"><span class="sbi-ic">🗑️</span>Data Management</button>
+    <button class="sb-item" onclick="nav('backup')"><span class="sbi-ic">🗄️</span>Backup</button>
+    <button class="sb-item" onclick="nav('undo')"><span class="sbi-ic">↩️</span>Undo</button>
     <button class="sb-item" onclick="nav('maintenance')"><span class="sbi-ic">🔧</span>Maintenance Mode</button>
 
     <div class="sb-section-label">Configuration</div>
@@ -236,6 +248,40 @@ select.form-input{cursor:pointer;}
     <div class="page-hd">
       <div class="page-title">System Overview</div>
       <div class="page-sub">Live stats and system health at a glance</div>
+    </div>
+
+    <!-- ── Live Health Strip ── -->
+    <div id="health-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+      <div class="health-chip">
+        <span class="health-dot" id="hc-db-dot">●</span>
+        <div><div class="health-chip-label">Database</div><div class="health-chip-val" id="hc-db-val">Checking…</div></div>
+      </div>
+      <div class="health-chip">
+        <span class="health-dot green">●</span>
+        <div><div class="health-chip-label">Server</div><div class="health-chip-val" id="hc-server-val">Online</div></div>
+      </div>
+      <div class="health-chip">
+        <span class="health-dot" id="hc-err-dot">●</span>
+        <div><div class="health-chip-label">Errors / Warnings</div><div class="health-chip-val" id="hc-err-val">—</div></div>
+      </div>
+      <div class="health-chip">
+        <span class="health-dot green">●</span>
+        <div><div class="health-chip-label">Uptime</div><div class="health-chip-val" id="hc-uptime">—</div></div>
+      </div>
+      <div class="health-chip">
+        <span class="health-dot" style="color:#8b5cf6;">●</span>
+        <div><div class="health-chip-label">Memory</div><div class="health-chip-val" id="hc-mem">—</div></div>
+      </div>
+      <button onclick="loadHealth()" style="margin-left:auto;align-self:center;padding:7px 16px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
+    </div>
+
+    <!-- ── Recent Errors Card ── -->
+    <div id="health-errors-card" class="card" style="margin-bottom:16px;display:none;">
+      <div class="card-hd">
+        <div class="card-icon red">⚠️</div>
+        <div><div class="card-title">Recent Errors &amp; Warnings</div><div class="card-desc">Last 5 error-level log entries</div></div>
+      </div>
+      <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
     <div id="maint-banner" class="maint-banner hidden">
@@ -350,33 +396,111 @@ select.form-input{cursor:pointer;}
 
       </div>
 
-      <div class="warn-box">⚠️ These actions call the server API directly and immediately affect the MongoDB database. There is no undo.</div>
+      <div class="warn-box">⚠️ These actions call the server API directly and immediately affect the MongoDB database. Deleted items can be undone within 10 days via the Undo menu.</div>
     </div>
 
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-icon green">↩️</div>
-        <div><div class="card-title">Backup &amp; Undo</div><div class="card-desc">Auto-snapshots before every destructive action — restore within 7 days</div></div>
-      </div>
-      <div id="backup-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-        <div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">No backups yet. Backups are created automatically before any delete operation.</div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-out btn-sm" onclick="loadBackups()">↻ Refresh Backups</button>
-        <button class="btn btn-out btn-sm" onclick="clearOldBackups()">🗑 Clear Old Backups</button>
-      </div>
-    </div>
-
+    <!-- ── Export Data (expanded) ── -->
     <div class="card">
       <div class="card-hd">
         <div class="card-icon blue">📤</div>
-        <div><div class="card-title">Export Data</div><div class="card-desc">Download collections as JSON for backup</div></div>
+        <div><div class="card-title">Export Data</div><div class="card-desc">Password-protected JSON download — password mailed to admin</div></div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-out btn-sm" onclick="exportData('students')">⬇ Export Students</button>
-        <button class="btn btn-out btn-sm" onclick="exportData('teachers')">⬇ Export Teachers</button>
-        <button class="btn btn-out btn-sm" onclick="exportData('attendance')">⬇ Export Attendance</button>
-        <button class="btn btn-out btn-sm" onclick="exportData('all')">⬇ Full Backup</button>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">👥</span>
+        <div><div style="font-size:11px;color:var(--tmu);font-weight:600;">TOTAL STUDENTS IN DATABASE</div>
+        <div style="font-size:22px;font-weight:800;color:#0369a1;" id="export-student-count">—</div></div>
+        <button onclick="refreshExportCount()" style="margin-left:auto;padding:5px 12px;background:#0369a1;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">↻ Count</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
+        <button class="btn btn-out btn-sm" onclick="exportDataSecure('students')">⬇ Export Students</button>
+        <button class="btn btn-out btn-sm" onclick="exportDataSecure('teachers')">⬇ Export Teachers</button>
+        <button class="btn btn-out btn-sm" onclick="exportDataSecure('attendance')">⬇ Export Attendance</button>
+        <button class="btn btn-pri btn-sm" onclick="exportDataSecure('all')">⬇ Full Export (All Data)</button>
+      </div>
+      <div id="export-result-box" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;">
+        <div style="font-weight:700;font-size:13px;color:#15803d;margin-bottom:6px;">✅ Export ready — downloading…</div>
+        <div style="font-size:12px;color:var(--tmu);" id="export-result-details"></div>
+        <div style="margin-top:10px;background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:600;color:var(--tmu);margin-bottom:4px;">FILE PASSWORD (also mailed to admin)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#15803d;letter-spacing:3px;" id="export-password-display">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ BACKUP PAGE ══ -->
+  <div class="pg" id="pg-backup">
+    <div class="page-hd">
+      <div class="page-title">🗄️ Backup</div>
+      <div class="page-sub">Full database snapshots — uploaded to Google Drive &amp; password mailed to admin</div>
+    </div>
+    <div class="stats-strip" style="margin-bottom:18px;">
+      <div class="stat-chip"><span class="stat-chip-ic">🕐</span><div><div class="stat-chip-val" id="bk-last-date">—</div><div class="stat-chip-label">Last Backup</div></div></div>
+      <div class="stat-chip"><span class="stat-chip-ic">📦</span><div><div class="stat-chip-val" id="bk-last-docs">—</div><div class="stat-chip-label">Docs Backed Up</div></div></div>
+      <div class="stat-chip"><span class="stat-chip-ic">👤</span><div><div class="stat-chip-val" id="bk-last-by">—</div><div class="stat-chip-label">Created By</div></div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd">
+        <div class="card-icon green">☁️</div>
+        <div><div class="card-title">Create Full Backup</div><div class="card-desc">Fetches all collections, generates password, uploads to Google Drive — password mailed to admin</div></div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#15803d;">
+        ℹ️ This process fetches <strong>all collections</strong> (students, teachers, departments, classes, subjects, attendance, assignments). It may take 10–30 seconds depending on data size.
+      </div>
+      <div id="bk-progress-wrap" style="display:none;margin-bottom:14px;">
+        <div style="font-size:12px;color:var(--tmu);margin-bottom:6px;" id="bk-progress-label">Preparing backup…</div>
+        <div style="background:#f1f5f9;border-radius:8px;height:10px;overflow:hidden;">
+          <div id="bk-progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:8px;transition:width .5s ease;"></div>
+        </div>
+      </div>
+      <div id="bk-result-box" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-weight:700;font-size:13px;color:#15803d;margin-bottom:8px;">✅ Backup created successfully</div>
+        <div style="font-size:12px;color:var(--tmu);" id="bk-result-details"></div>
+        <div style="margin-top:10px;background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:600;color:var(--tmu);margin-bottom:4px;">BACKUP FILE PASSWORD (mailed to admin)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#15803d;letter-spacing:3px;" id="bk-password-display">—</div>
+        </div>
+      </div>
+      <button class="btn btn-pri" id="bk-create-btn" onclick="createBackup()">☁️ Start Full Backup Now</button>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon blue">📋</div>
+        <div><div class="card-title">Backup History</div><div class="card-desc">All backup operations recorded in system logs</div></div>
+        <button onclick="loadBackupPage()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
+      </div>
+      <div id="bk-history-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">Loading backup history…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ UNDO PAGE ══ -->
+  <div class="pg" id="pg-undo">
+    <div class="page-hd">
+      <div class="page-title">↩️ Undo</div>
+      <div class="page-sub">Restore accidentally deleted records within 10 days</div>
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:#92400e;">
+      ⚠️ Undo entries are automatically purged after <strong>10 days</strong>. Restoring re-inserts the record into the database with a fresh ID.
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon amber">↩️</div>
+        <div><div class="card-title">Restorable Deletions</div><div class="card-desc">Departments, classes, subjects, students and teachers deleted in the last 10 days</div></div>
+        <button onclick="loadUndoPage()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="undo-filter-btn act" onclick="filterUndo('all',this)">All</button>
+        <button class="undo-filter-btn" onclick="filterUndo('departments',this)">Departments</button>
+        <button class="undo-filter-btn" onclick="filterUndo('classes',this)">Classes</button>
+        <button class="undo-filter-btn" onclick="filterUndo('subjects',this)">Subjects</button>
+        <button class="undo-filter-btn" onclick="filterUndo('students',this)">Students</button>
+        <button class="undo-filter-btn" onclick="filterUndo('teachers',this)">Teachers</button>
+      </div>
+      <div id="undo-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="color:var(--tmu);font-size:13px;text-align:center;padding:30px 0;">Loading…</div>
       </div>
     </div>
   </div>
@@ -886,6 +1010,8 @@ var MAINT_KEY     = 'eams_maintenance';
   document.getElementById('srv-session').value   = TOKEN ? TOKEN.slice(0,20)+'...' : 'Session active (no token)';
   // Load overview after auth confirmed
   loadOverview();
+  loadHealth();
+  refreshExportCount();
 })();
 
 // ── Clock ──────────────────────────────────────────────
@@ -897,7 +1023,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // ── Nav ───────────────────────────────────────────────
-var PAGE_NAMES = ['overview','data','maintenance','settings','security','appearance','advanced'];
+var PAGE_NAMES = ['overview','data','backup','undo','maintenance','settings','security','appearance','advanced'];
 
 function nav(page) {
   document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('act'); });
@@ -907,8 +1033,10 @@ function nav(page) {
   var idx = PAGE_NAMES.indexOf(page);
   var items = document.querySelectorAll('.sb-item');
   if (idx >= 0 && items[idx]) items[idx].classList.add('act');
-  if (page === 'overview')    loadOverview();
-  if (page === 'data')         loadBackups();
+  if (page === 'overview')    { loadOverview(); loadHealth(); }
+  if (page === 'data')        refreshExportCount();
+  if (page === 'backup')      loadBackupPage();
+  if (page === 'undo')        loadUndoPage();
   if (page === 'maintenance') loadMaintenance();
 }
 
@@ -1672,21 +1800,7 @@ function getDeleteSteps(action) {
 }
 
 function runSteps(steps, idx) {
-  // On first step, take a backup first
-  if (idx === 0 && currentAction) {
-    var token = sessionStorage.getItem('eams_token');
-    var h = { 'Authorization': 'Bearer ' + token };
-    var backupUrl = currentAction === 'students' ? '/api/students'
-                  : currentAction === 'teachers' ? '/api/users?role=teacher'
-                  : currentAction === 'attendance' ? '/api/attendance'
-                  : currentAction === 'clearall' ? '/api/students'
-                  : null;
-    if (backupUrl) {
-      fetch(backupUrl, { headers: h }).then(function(r){ return r.json(); }).then(function(d){
-        saveBackup('Before ' + currentAction + ' delete', Array.isArray(d) ? d : []);
-      }).catch(function(){});
-    }
-  }
+  // Server-side UndoLog snapshots are saved automatically by delete API endpoints.
   if (idx >= steps.length) {
     showProgress('Done!', 100);
     setTimeout(function() {
@@ -1718,30 +1832,50 @@ function showProgress(label, pct) {
   document.getElementById('m-progress-label').textContent = label;
 }
 
-// ── Export Data ────────────────────────────────────────
-function exportData(type) {
-  var endpoints = {
-    students:   ['/students'],
-    teachers:   ['/users?role=teacher'],
-    attendance: ['/attendance'],
-    all:        ['/students','/users?role=teacher','/departments','/classes','/subjects','/attendance'],
-  };
-  var calls = (endpoints[type] || []).map(function(ep) { return api('GET', ep.replace('/api','').replace('/api','')); });
-  Promise.all(calls).then(function(results) {
-    var blob = new Blob([JSON.stringify(type === 'all' ? {
-      students: results[0], teachers: results[1], departments: results[2],
-      classes: results[3], subjects: results[4], attendance: results[5],
-      exported: new Date().toISOString()
-    } : results[0], null, 2)], { type:'application/json' });
-    var url  = URL.createObjectURL(blob);
-    var a    = document.createElement('a');
-    a.href   = url;
-    a.download = 'eams_' + type + '_' + new Date().toISOString().split('T')[0] + '.json';
-    a.click();
-    logLine('Exported: ' + type, 'success');
-    showToast('⬇ ' + type + ' exported as JSON');
-  }).catch(function() { showToast('❌ Export failed', 'danger'); });
+// ── Export Data (secure, password-protected) ──────────
+function refreshExportCount() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/students/count', { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('export-student-count');
+      if (el) el.textContent = (d.count !== undefined ? d.count : '—') + ' students';
+    }).catch(function() {});
 }
+
+function exportDataSecure(type) {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var resultBox = document.getElementById('export-result-box');
+  var detailsEl = document.getElementById('export-result-details');
+  var pwEl      = document.getElementById('export-password-display');
+  if (resultBox) resultBox.style.display = 'none';
+  showToast('⏳ Preparing export…');
+  fetch('/api/system/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({ type: type })
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) { showToast('❌ Export failed: ' + d.error, 'danger'); return; }
+      var blob = new Blob([JSON.stringify(d.payload, null, 2)], { type: 'application/json' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href   = url;
+      a.download = 'eams_export_' + type + '_' + new Date().toISOString().split('T')[0] + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      if (resultBox) resultBox.style.display = 'block';
+      if (pwEl) pwEl.textContent = d.exportPassword || '—';
+      if (detailsEl) detailsEl.textContent = 'Type: ' + type + '  |  Total students: ' + d.totalStudents
+        + '  |  Exported: ' + new Date().toLocaleString('en-IN')
+        + '  |  Password mailed to admin (wire exportMail() to activate).';
+      logLine('Export ' + type + ' done — password: ' + d.exportPassword, 'success');
+      showToast('⬇ Export ready — check your downloads');
+    }).catch(function(err) { showToast('❌ Export error: ' + (err.message || 'network'), 'danger'); });
+}
+
+// Legacy alias (keep in case anything still calls exportData)
+function exportData(type) { exportDataSecure(type); }
 
 // ── Server utilities ───────────────────────────────────
 function pingServer() {
@@ -1791,91 +1925,212 @@ function showToast(msg) {
 function goBack()    { window.location.href = 'admin.html'; }
 function doLogout()  { sessionStorage.clear(); window.location.href = 'index.html'; }
 
-// ── Boot ───────────────────────────────────────────────
-
-// ── Backup & Undo System ───────────────────────────────
-var BACKUP_KEY = 'eams_backups';
-
-function saveBackup(label, data) {
-  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
-  backups.unshift({
-    id:        Date.now(),
-    label:     label,
-    timestamp: new Date().toISOString(),
-    data:      data
-  });
-  // Keep only last 20 backups
-  backups = backups.slice(0, 20);
-  localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
-  logLine('Backup saved: ' + label, 'success');
+// ── Health stats (for Overview live strip) ─────────────
+function loadHealth() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/system/health', { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var dbDot = document.getElementById('hc-db-dot');
+      var dbVal = document.getElementById('hc-db-val');
+      if (dbDot) dbDot.className = 'health-dot ' + (d.dbConnected ? 'green' : 'red');
+      if (dbVal) dbVal.textContent = d.dbStatus || '—';
+      var up = document.getElementById('hc-uptime');
+      if (up) {
+        var s = d.serverUptime || 0;
+        up.textContent = (Math.floor(s/3600) ? Math.floor(s/3600)+'h ' : '') +
+          (Math.floor((s%3600)/60) ? Math.floor((s%3600)/60)+'m ' : '') + (s%60) + 's';
+      }
+      var errDot = document.getElementById('hc-err-dot');
+      var errVal = document.getElementById('hc-err-val');
+      if (errDot) errDot.className = 'health-dot ' + (d.errorCount > 0 ? 'red' : d.warnCount > 0 ? 'amber' : 'green');
+      if (errVal) errVal.textContent = d.errorCount + ' errors / ' + d.warnCount + ' warnings';
+      var mem = document.getElementById('hc-mem');
+      if (mem) mem.textContent = d.memoryMB + ' MB';
+      // Recent errors card
+      var card = document.getElementById('health-errors-card');
+      var list = document.getElementById('health-errors-list');
+      if (card && list && d.recentErrors && d.recentErrors.length) {
+        card.style.display = 'block';
+        list.innerHTML = d.recentErrors.map(function(e) {
+          var col = e.severity === 'critical' ? '#dc2626' : e.severity === 'warning' ? '#d97706' : '#64748b';
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:#fff8f0;border-radius:8px;border-left:3px solid '+col+';">'
+            + '<span style="font-size:12px;font-weight:700;color:'+col+';white-space:nowrap;">['+e.severity.toUpperCase()+']</span>'
+            + '<div><div style="font-size:12.5px;font-weight:600;color:var(--td);">'+e.action+' — '+e.details+'</div>'
+            + '<div style="font-size:11px;color:var(--tmu);">'+new Date(e.time).toLocaleString('en-IN')+'</div></div></div>';
+        }).join('');
+      } else if (card) { card.style.display = 'none'; }
+      logLine('Health: DB=' + d.dbStatus + ' Errors=' + d.errorCount + ' Mem=' + d.memoryMB + 'MB', 'success');
+    }).catch(function(err) {
+      var dbVal = document.getElementById('hc-db-val');
+      if (dbVal) dbVal.textContent = 'Unreachable';
+      var dbDot = document.getElementById('hc-db-dot');
+      if (dbDot) dbDot.className = 'health-dot red';
+      logLine('Health check failed: ' + (err.message || 'network error'), 'danger');
+    });
 }
 
-function loadBackups() {
-  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
-  var el = document.getElementById('backup-list');
-  if (!backups.length) {
-    el.innerHTML = '<div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">No backups yet.</div>';
+// ── Backup page ────────────────────────────────────────
+function loadBackupPage() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/system/backup/history', { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(logs) {
+      var list = document.getElementById('bk-history-list');
+      if (!list) return;
+      if (!logs.length) {
+        list.innerHTML = '<div style="color:var(--tmu);font-size:13px;text-align:center;padding:20px 0;">No backup history yet.</div>';
+        return;
+      }
+      var last = logs[0];
+      var ld = document.getElementById('bk-last-date'); if (ld) ld.textContent = new Date(last.time).toLocaleDateString('en-IN');
+      var lb = document.getElementById('bk-last-by');   if (lb) lb.textContent = last.userName || '—';
+      var ldocs = document.getElementById('bk-last-docs');
+      if (ldocs) ldocs.textContent = (last.details || '—').split(' docs')[0] || '—';
+      list.innerHTML = logs.map(function(l) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">'
+          + '<div><div style="font-weight:600;font-size:13px;color:var(--td);">🗄️ ' + (l.details || 'Full backup') + '</div>'
+          + '<div style="font-size:11px;color:var(--tmu);">' + new Date(l.time).toLocaleString('en-IN') + ' · ' + l.userName + '</div></div>'
+          + '<span style="font-size:11px;font-weight:600;color:#16a34a;">✓ Completed</span></div>';
+      }).join('');
+    }).catch(function() {
+      var list = document.getElementById('bk-history-list');
+      if (list) list.innerHTML = '<div style="color:#dc2626;font-size:13px;text-align:center;padding:20px 0;">Failed to load history.</div>';
+    });
+}
+
+function createBackup() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var btn = document.getElementById('bk-create-btn');
+  var progWrap  = document.getElementById('bk-progress-wrap');
+  var progFill  = document.getElementById('bk-progress-fill');
+  var progLabel = document.getElementById('bk-progress-label');
+  var resultBox = document.getElementById('bk-result-box');
+  var resultDet = document.getElementById('bk-result-details');
+  var pwEl      = document.getElementById('bk-password-display');
+  if (btn) btn.disabled = true;
+  if (resultBox) resultBox.style.display = 'none';
+  if (progWrap) progWrap.style.display = 'block';
+  var pct = 0;
+  var stages = ['Connecting to database…','Fetching students…','Fetching teachers…',
+    'Fetching departments & classes…','Fetching attendance records…',
+    'Compressing payload…','Uploading to Google Drive (stub)…','Mailing password (stub)…'];
+  var fakeTimer = setInterval(function() {
+    pct = Math.min(pct + 4, 85);
+    if (progFill) progFill.style.width = pct + '%';
+    if (progLabel) progLabel.textContent = stages[Math.min(Math.floor(pct / 12), stages.length - 1)];
+  }, 400);
+  fetch('/api/system/backup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      clearInterval(fakeTimer);
+      if (progFill) progFill.style.width = '100%';
+      if (d.error) {
+        if (progLabel) progLabel.textContent = 'Error: ' + d.error;
+        showToast('❌ Backup failed: ' + d.error, 'danger');
+        if (btn) btn.disabled = false;
+        return;
+      }
+      setTimeout(function() {
+        if (progWrap) progWrap.style.display = 'none';
+        if (resultBox) resultBox.style.display = 'block';
+        if (pwEl) pwEl.textContent = d.backupPassword || '—';
+        var cols = d.collections || {};
+        if (resultDet) resultDet.innerHTML = 'Total docs: <strong>' + d.totalDocs + '</strong>'
+          + ' | Students: ' + cols.students + ' | Teachers: ' + cols.teachers
+          + ' | Departments: ' + cols.departments + ' | Classes: ' + cols.classes
+          + '<br><em>GDrive upload: wire uploadToGDrive() · Password mail: wire sendMail() to activate</em>';
+        logLine('Backup created — ' + d.totalDocs + ' docs | pw: ' + d.backupPassword, 'success');
+        showToast('✅ Backup created — ' + d.totalDocs + ' docs');
+        loadBackupPage();
+      }, 500);
+      if (btn) btn.disabled = false;
+    }).catch(function(err) {
+      clearInterval(fakeTimer);
+      if (progLabel) progLabel.textContent = 'Backup failed — check server';
+      showToast('❌ Backup error: ' + (err.message || 'network'), 'danger');
+      if (btn) btn.disabled = false;
+    });
+}
+
+// ── Undo page ──────────────────────────────────────────
+var _undoData = [];
+var _undoFilter = 'all';
+
+function loadUndoPage() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var list = document.getElementById('undo-list');
+  if (list) list.innerHTML = '<div style="color:var(--tmu);font-size:13px;text-align:center;padding:30px 0;">Loading…</div>';
+  fetch('/api/undo', { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { _undoData = data || []; renderUndoList(); })
+    .catch(function() {
+      if (list) list.innerHTML = '<div style="color:#dc2626;font-size:13px;text-align:center;padding:20px 0;">Failed to load undo entries.</div>';
+    });
+}
+
+function filterUndo(col, btn) {
+  _undoFilter = col;
+  document.querySelectorAll('.undo-filter-btn').forEach(function(b) { b.classList.remove('act'); });
+  if (btn) btn.classList.add('act');
+  renderUndoList();
+}
+
+function renderUndoList() {
+  var list = document.getElementById('undo-list');
+  if (!list) return;
+  var items = _undoFilter === 'all' ? _undoData : _undoData.filter(function(x) { return x.collectionName === _undoFilter; });
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--tmu);font-size:13px;text-align:center;padding:30px 0;">No restorable deletions'
+      + (_undoFilter !== 'all' ? ' for ' + _undoFilter : '') + '.</div>';
     return;
   }
+  var colIcons = { departments:'🏛️', classes:'🏫', subjects:'📚', students:'👨‍🎓', teachers:'👩‍🏫' };
   var now = Date.now();
-  var week = 7 * 24 * 60 * 60 * 1000;
-  el.innerHTML = backups.map(function(b) {
-    var age   = now - b.id;
-    var fresh = age < week;
-    var ts    = new Date(b.timestamp).toLocaleString('en-IN');
-    var size  = JSON.stringify(b.data).length;
-    var sizeStr = size > 1024 ? (size/1024).toFixed(1)+'KB' : size+'B';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(fresh?'#f0fdf4':'#f9fafb')+';border-radius:10px;border:1px solid '+(fresh?'#bbf7d0':'#e5e7eb')+';">'
-      + '<div><div style="font-weight:600;font-size:13px;color:var(--td);">'+b.label+'</div>'
-      + '<div style="font-size:11px;color:var(--tmu);">'+ts+' &middot; '+sizeStr+'</div></div>'
-      + (fresh ? '<button onclick="restoreBackup('+b.id+')" class="btn btn-pri btn-sm">↩ Restore</button>' : '<span style="font-size:11px;color:var(--tmu);">Expired</span>')
-      + '</div>';
+  list.innerHTML = items.map(function(e) {
+    var daysLeft = Math.ceil((new Date(e.expiresAt).getTime() - now) / 86400000);
+    var urgency  = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#16a34a';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-size:20px;">' + (colIcons[e.collectionName] || '📄') + '</span>'
+      + '<div><div style="font-weight:600;font-size:13px;color:var(--td);">' + e.label + '</div>'
+      + '<div style="font-size:11px;color:var(--tmu);">' + e.collectionName + ' · deleted by '
+      + (e.deletedBy || 'admin') + ' · ' + new Date(e.createdAt).toLocaleString('en-IN') + '</div></div></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<span style="font-size:11px;font-weight:700;color:' + urgency + ';">' + daysLeft + 'd left</span>'
+      + '<button onclick="doUndo(\'' + e._id + '\', this)" class="btn btn-pri btn-sm">↩ Restore</button>'
+      + '<button onclick="dismissUndo(\'' + e._id + '\', this)" class="btn btn-out btn-sm" style="color:#dc2626;border-color:#fca5a5;">✕</button>'
+      + '</div></div>';
   }).join('');
 }
 
-function restoreBackup(id) {
-  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
-  var backup  = backups.find(function(b){ return b.id === id; });
-  if (!backup) { showToast('Backup not found'); return; }
-  if (!confirm('Restore backup "' + backup.label + '"? This will re-insert the saved data into MongoDB.')) return;
-  var data    = backup.data;
-  var token   = sessionStorage.getItem('eams_token');
-  var promises = [];
-  // Re-insert each record
-  (data || []).forEach(function(item) {
-    var endpoint = backup.label.toLowerCase().includes('student') ? '/api/students'
-                 : backup.label.toLowerCase().includes('teacher') ? '/api/teachers'
-                 : backup.label.toLowerCase().includes('dept')    ? '/api/departments'
-                 : null;
-    if (endpoint) {
-      var copy = Object.assign({}, item);
-      delete copy._id; delete copy.__v; delete copy.createdAt; delete copy.updatedAt;
-      promises.push(
-        fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
-          body: JSON.stringify(copy)
-        })
-      );
-    }
-  });
-  Promise.all(promises).then(function() {
-    logLine('Backup restored: ' + backup.label + ' (' + (data||[]).length + ' records)', 'success');
-    showToast('Backup restored — ' + (data||[]).length + ' records re-inserted');
-    loadOverview();
-  }).catch(function(e) {
-    showToast('Restore failed: ' + e.message);
-  });
+function doUndo(id, btn) {
+  if (!confirm('Restore this deleted record back to the database?')) return;
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  if (btn) btn.disabled = true;
+  fetch('/api/undo/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) { showToast('❌ Restore failed: ' + d.error, 'danger'); if (btn) btn.disabled = false; return; }
+      showToast('✅ Restored: ' + d.label);
+      logLine('Undo restore: ' + d.label, 'success');
+      loadUndoPage();
+    }).catch(function(err) { showToast('❌ Error: ' + (err.message || 'network'), 'danger'); if (btn) btn.disabled = false; });
 }
 
-function clearOldBackups() {
-  var backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
-  var week    = 7 * 24 * 60 * 60 * 1000;
-  var fresh   = backups.filter(function(b){ return Date.now() - b.id < week; });
-  localStorage.setItem(BACKUP_KEY, JSON.stringify(fresh));
-  loadBackups();
-  showToast('Cleared ' + (backups.length - fresh.length) + ' old backups');
+function dismissUndo(id, btn) {
+  if (!confirm('Permanently discard this undo entry? This cannot be recovered.')) return;
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/undo/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function() { showToast('🗑 Undo entry discarded'); loadUndoPage(); })
+    .catch(function() { showToast('❌ Failed to discard'); });
 }
+
+// ── Legacy saveBackup stub (runSteps calls this — no-op now) ───────────
+function saveBackup(label, data) { /* superseded by server-side UndoLog */ }
+function loadBackups() { /* legacy no-op */ }
 
 </script>
 </body>

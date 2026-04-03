@@ -202,6 +202,18 @@ const LogSchema = new mongoose.Schema({
   time:         { type: Date, default: Date.now },
 }, { timestamps: true });
 
+
+// ── UndoLog — stores deleted documents for 10-day undo ──
+const UndoLogSchema = new mongoose.Schema({
+  collectionName: { type: String, required: true },  // 'departments','classes','subjects','teachers','students'
+  action:       { type: String, default: 'delete' },
+  label:        { type: String, required: true },   // human-readable e.g. "Department: Computer Science"
+  snapshot:     { type: mongoose.Schema.Types.Mixed, required: true }, // full document JSON
+  deletedBy:    { type: String, default: 'admin' },
+  expiresAt:    { type: Date, required: true },     // Date.now + 10 days — used for TTL
+}, { timestamps: true });
+UndoLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-cleanup
+
 module.exports = {
   User:        mongoose.model('User',        UserSchema),
   Session:     mongoose.model('Session',     SessionSchema),
@@ -216,4 +228,5 @@ module.exports = {
   Notification:mongoose.model('Notification',NotificationSchema),
   Grievance:   mongoose.model('Grievance',   GrievanceSchema),
   Log:         mongoose.model('Log',         LogSchema),
+  UndoLog:     mongoose.model('UndoLog',     UndoLogSchema),
 };

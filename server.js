@@ -349,7 +349,12 @@ app.put('/api/departments/:id', authMiddleware, adminOnly, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 app.delete('/api/departments/:id', authMiddleware, adminOnly, async (req, res) => {
-  const dept = await M.Department.findByIdAndDelete(req.params.id);
+  const dept = await M.Department.findById(req.params.id).lean();
+  if (dept) {
+    await M.UndoLog.create({ collectionName: 'departments', label: `Department: ${dept.name}`,
+      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.Department.findByIdAndDelete(req.params.id);
+  }
   await logAction(req.user._id, req.user.name, req.user.role, 'Department Deleted', dept?.name || req.params.id, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
@@ -369,7 +374,12 @@ app.put('/api/depts/:id', authMiddleware, adminOnly, async (req, res) => {
   res.json(dept);
 });
 app.delete('/api/depts/:id', authMiddleware, adminOnly, async (req, res) => {
-  const dept = await M.Department.findByIdAndDelete(req.params.id);
+  const dept = await M.Department.findById(req.params.id).lean();
+  if (dept) {
+    await M.UndoLog.create({ collectionName: 'departments', label: `Department: ${dept.name}`,
+      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.Department.findByIdAndDelete(req.params.id);
+  }
   await logAction(req.user._id, req.user.name, req.user.role, 'Department Deleted', dept?.name, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
@@ -396,7 +406,12 @@ app.put('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
   res.json(cls);
 });
 app.delete('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
-  const cls = await M.Class.findByIdAndDelete(req.params.id);
+  const cls = await M.Class.findById(req.params.id).lean();
+  if (cls) {
+    await M.UndoLog.create({ collectionName: 'classes', label: `Class: ${cls.name}`,
+      snapshot: cls, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.Class.findByIdAndDelete(req.params.id);
+  }
   await logAction(req.user._id, req.user.name, req.user.role, 'Class Deleted', cls?.name, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
@@ -428,7 +443,12 @@ app.put('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
   res.json(stu);
 });
 app.delete('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
-  const stu = await M.Student.findByIdAndDelete(req.params.id);
+  const stu = await M.Student.findById(req.params.id).lean();
+  if (stu) {
+    await M.UndoLog.create({ collectionName: 'students', label: `Student: ${stu.name} (${stu.regNo})`,
+      snapshot: stu, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.Student.findByIdAndDelete(req.params.id);
+  }
   await logAction(req.user._id, req.user.name, req.user.role, 'Student Deleted', stu?.name, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
@@ -497,8 +517,13 @@ app.put('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
   res.json(teacher);
 });
 app.delete('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
-  const teacher = await M.User.findByIdAndUpdate(req.params.id, { active: false }, { new: true });
-  await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Deactivated', teacher?.name, 'data', 'warning', req.ip);
+  const teacher = await M.User.findById(req.params.id).lean();
+  if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+  await M.UndoLog.create({ collectionName: 'teachers', label: `Teacher: ${teacher.name} (@${teacher.username})`,
+    snapshot: teacher, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+  await M.User.findByIdAndDelete(req.params.id);
+  await M.Assignment.deleteMany({ teacherId: req.params.id });
+  await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Deleted', teacher.name, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
 
@@ -691,7 +716,12 @@ app.put('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
   res.json(subj);
 });
 app.delete('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
-  const subj = await M.Subject.findByIdAndDelete(req.params.id);
+  const subj = await M.Subject.findById(req.params.id).lean();
+  if (subj) {
+    await M.UndoLog.create({ collectionName: 'subjects', label: `Subject: ${subj.name} (${subj.code || ''})`,
+      snapshot: subj, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.Subject.findByIdAndDelete(req.params.id);
+  }
   await logAction(req.user._id, req.user.name, req.user.role, 'Subject Deleted', subj?.name, 'data', 'warning', req.ip);
   res.json({ deleted: true });
 });
@@ -797,6 +827,145 @@ app.get('/api/system/serverlogs', authMiddleware, adminOnly, (req, res) => {
     env: process.env.NODE_ENV || 'development',
     memMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
   });
+});
+
+
+// ════════════════════════════════════════════════════════
+//  SYSTEM HEALTH  (for Overview live stats)
+// ════════════════════════════════════════════════════════
+app.get('/api/system/health', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const dbState = mongoose.connection.readyState;
+    const dbStateMap = { 0:'Disconnected', 1:'Connected', 2:'Connecting', 3:'Disconnecting' };
+    const [errorCount, warnCount, totalUsers, activeTeachers] = await Promise.all([
+      M.Log.countDocuments({ severity: { $in: ['critical','error'] } }),
+      M.Log.countDocuments({ severity: 'warning' }),
+      M.User.countDocuments({ active: true }),
+      M.User.countDocuments({ role: 'teacher', active: true }),
+    ]);
+    const recentErrors = await M.Log.find({ severity: { $in: ['critical','error','warning'] } })
+      .sort({ time: -1 }).limit(5).lean();
+    res.json({
+      dbStatus:      dbStateMap[dbState] || 'Unknown',
+      dbConnected:   dbState === 1,
+      serverUptime:  Math.floor(process.uptime()),
+      errorCount, warnCount, totalUsers, activeTeachers, recentErrors,
+      memoryMB:      (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1),
+      nodeVersion:   process.version,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  UNDO LOG  (10-day restorable deletes)
+// ════════════════════════════════════════════════════════
+app.get('/api/undo', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const items = await M.UndoLog.find({ expiresAt: { $gt: new Date() } })
+      .sort({ createdAt: -1 }).limit(100).lean();
+    res.json(items);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/undo/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const entry = await M.UndoLog.findById(req.params.id).lean();
+    if (!entry) return res.status(404).json({ error: 'Undo entry not found or expired' });
+    const snap = entry.snapshot;
+    const { _id, __v, createdAt, updatedAt, ...body } = snap;
+    let restored;
+    if      (entry.collectionName === 'departments') restored = await M.Department.create(body);
+    else if (entry.collectionName === 'classes')     restored = await M.Class.create(body);
+    else if (entry.collectionName === 'subjects')    restored = await M.Subject.create(body);
+    else if (entry.collectionName === 'students')    restored = await M.Student.create(body);
+    else if (entry.collectionName === 'teachers')    restored = await M.User.create(snap);
+    else return res.status(400).json({ error: 'Cannot restore collection: ' + entry.collectionName });
+    await M.UndoLog.findByIdAndDelete(req.params.id);
+    await logAction(req.user._id, req.user.name, req.user.role, 'Undo Restore', entry.label, 'data', 'info', req.ip);
+    res.json({ restored: true, label: entry.label });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/undo/:id', authMiddleware, adminOnly, async (req, res) => {
+  await M.UndoLog.findByIdAndDelete(req.params.id);
+  res.json({ deleted: true });
+});
+
+// ════════════════════════════════════════════════════════
+//  BACKUP  (full DB snapshot — GDrive upload stub)
+// ════════════════════════════════════════════════════════
+app.post('/api/system/backup', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
+      M.Student.find().lean(),
+      M.User.find({ role: 'teacher' }, '-password').lean(),
+      M.Department.find().lean(),
+      M.Class.find().lean(),
+      M.Subject.find().lean(),
+      M.Attendance.find().lean(),
+      M.Assignment.find().lean(),
+    ]);
+    const totalDocs = students.length + teachers.length + departments.length
+                    + classes.length + subjects.length + attendance.length + assignments.length;
+    const backupPayload = {
+      meta: { createdAt: new Date().toISOString(), createdBy: req.user.name, totalDocs },
+      students, teachers, departments, classes, subjects, attendance, assignments
+    };
+    const backupPassword = crypto.randomBytes(6).toString('hex').toUpperCase();
+    // ─── Stubs (wire these when ready) ──────────────────
+    // await uploadToGDrive('backupfolder', backupPassword, JSON.stringify(backupPayload));
+    // await sendMail('mainMail', backupPassword, 'EAMS Backup Password', `Your backup password is: ${backupPassword}`);
+    // ────────────────────────────────────────────────────
+    await logAction(req.user._id, req.user.name, req.user.role, 'System Backup Created',
+      `${totalDocs} docs — GDrive upload pending`, 'data', 'info', req.ip);
+    res.json({ ok: true, totalDocs, backupPassword, createdAt: backupPayload.meta.createdAt,
+      collections: { students: students.length, teachers: teachers.length, departments: departments.length,
+        classes: classes.length, subjects: subjects.length, attendance: attendance.length, assignments: assignments.length }
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/system/backup/history', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const logs = await M.Log.find({ action: 'System Backup Created' }).sort({ time: -1 }).limit(20).lean();
+    res.json(logs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  EXPORT DATA  (password-protected, email stub)
+// ════════════════════════════════════════════════════════
+app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const type = req.body.type || 'all';
+    const studentCount = await M.Student.countDocuments();
+    let payload;
+    if (type === 'all') {
+      const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
+        M.Student.find().lean(), M.User.find({ role:'teacher' }, '-password').lean(),
+        M.Department.find().lean(), M.Class.find().lean(), M.Subject.find().lean(),
+        M.Attendance.find().lean(), M.Assignment.find().lean(),
+      ]);
+      payload = { meta: { exportedAt: new Date().toISOString(), exportedBy: req.user.name,
+          type, totalStudents: studentCount }, students, teachers, departments, classes, subjects, attendance, assignments };
+    } else {
+      const dataMap = {
+        students:   () => M.Student.find().lean(),
+        teachers:   () => M.User.find({ role:'teacher' }, '-password').lean(),
+        attendance: () => M.Attendance.find().lean(),
+      };
+      const data = dataMap[type] ? await dataMap[type]() : [];
+      payload = { meta: { exportedAt: new Date().toISOString(), exportedBy: req.user.name,
+          type, totalStudents: studentCount }, data };
+    }
+    const exportPassword = crypto.randomBytes(6).toString('hex').toUpperCase();
+    // ─── Stub (wire when ready) ──────────────────────────
+    // await exportMail(req.user.email || 'admin', exportPassword, JSON.stringify(payload));
+    // ────────────────────────────────────────────────────
+    await logAction(req.user._id, req.user.name, req.user.role, 'Data Exported',
+      `Type: ${type} — password mailed (stub)`, 'data', 'info', req.ip);
+    res.json({ ok: true, payload, exportPassword, totalStudents: studentCount });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Start Server ──────────────────────────────────────

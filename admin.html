@@ -3404,16 +3404,23 @@ body{-webkit-user-select:none;user-select:none;}
       : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No assignments.</div>';
 
     document.getElementById('td-del').onclick = function() {
-      document.getElementById('dc-confirm-msg').textContent = 'Delete teacher "' + teacher.name + '"?';
+      document.getElementById('dc-confirm-msg').textContent =
+        'Delete teacher "' + teacher.name + '"? This permanently removes them from the database. Restorable via Undo for 10 days.';
       document.getElementById('dc-confirm-btn').onclick = function() {
-        DB.delete('users', teacherId);
-        DB.get('assignments').filter(function(a) { return a.teacherId === teacherId; })
-          .forEach(function(a) { DB.delete('assignments', a._id); });
-        addLog('Teacher Deleted', '"' + teacher.name + '"');
-        closeModalBg('m-dc-confirm');
-        closeModalBg('m-tch-detail');
-        renderTeachers();
-        showToast('Deleted', 'warn');
+        var btn = document.getElementById('dc-confirm-btn');
+        btn.disabled = true;
+        apiDeleteTeacher(teacherId, teacher.name).then(function() {
+          DB.delete('users', teacherId);
+          DB.get('assignments').filter(function(a) { return a.teacherId === teacherId; })
+            .forEach(function(a) { DB.delete('assignments', a._id); });
+          addLog('Teacher Deleted', '"' + teacher.name + '"');
+          closeModalBg('m-dc-confirm');
+          closeModalBg('m-tch-detail');
+          renderTeachers();
+          showToast('Teacher deleted — restorable via Undo for 10 days', 'warn');
+        }).catch(function(err) {
+          showToast('Delete failed: ' + (err.message || 'server error'), 'error');
+        }).finally(function() { btn.disabled = false; });
       };
       openModal_('m-dc-confirm');
     };
@@ -4448,6 +4455,17 @@ body{-webkit-user-select:none;user-select:none;}
         return syncFromAPI('users', '/users').then(function() {
           dbToast('Teacher added', 'success', '"' + data.name + '" ('+data.username+') → MongoDB\nPassword: ' + data.password);
           return d;
+        });
+      });
+  }
+
+  function apiDeleteTeacher(id, name) {
+    dbToast('Deleting teacher…', 'saving', '"' + name + '"');
+    return apiCall('DELETE', '/teachers/' + id)
+      .then(function(d) {
+        if (d && d.error) { dbToast('Error: ' + d.error, 'error'); throw new Error(d.error); }
+        return syncFromAPI('users', '/users').then(function() {
+          dbToast('Teacher deleted', 'success', '"' + name + '" removed from DB — undoable 10 days');
         });
       });
   }
