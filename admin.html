@@ -6992,18 +6992,55 @@
     // DB Update Toast
     var _dbToastTimer = null;
     function dbToast(msg, state, changes) {
-      // state: 'saving' | 'success' | 'error'
-      var el = document.getElementById('db-toast');
-      if (!el) return;
+    // state: 'saving' | 'success' | 'error'
+    var el = document.getElementById('db-toast');
+    if (!el) return;
+
+    clearTimeout(_dbToastTimer);
+    el.className = 'show ' + (state || 'saving');
+
+    var icon = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
+    var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
+    var changesHtml = changes
+      ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>'
+      : '';
+
+    // ✅ Added close button
+    var closeBtn = '<span id="db-toast-close" style="position:absolute;top:6px;right:8px;cursor:pointer;font-size:10px;">✕</span>';
+
+    el.innerHTML =
+      closeBtn +
+      spinHtml +
+      '<div><div>' + icon + ' ' + msg + '</div>' + changesHtml + '</div>';
+
+    // ✅ Close on click
+    var closeEl = document.getElementById('db-toast-close');
+    if (closeEl) {
+      closeEl.onclick = function () {
+        el.classList.remove('show');
+        clearTimeout(_dbToastTimer);
+      };
+    }
+
+    // ✅ Hover pause logic
+    el.onmouseenter = function () {
       clearTimeout(_dbToastTimer);
-      el.className = 'show ' + (state || 'saving');
-      var icon = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
-      var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
-      var changesHtml = changes ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>' : '';
-      el.innerHTML = spinHtml + '<div><div>' + icon + ' ' + msg + '</div>' + changesHtml + '</div>';
+    };
+
+    el.onmouseleave = function () {
       if (state !== 'saving') {
-        _dbToastTimer = setTimeout(function () { el.classList.remove('show'); }, 3000);
+        _dbToastTimer = setTimeout(function () {
+          el.classList.remove('show');
+        }, 5000);
       }
+    };
+
+    // ✅ Auto hide
+    if (state !== 'saving') {
+      _dbToastTimer = setTimeout(function () {
+        el.classList.remove('show');
+      }, 5000);
+    }
     }
 
     // API helper

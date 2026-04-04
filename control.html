@@ -665,7 +665,7 @@ select.form-input{cursor:pointer;}
           </div>
           <button class="btn btn-out btn-sm" onclick="loadMaintLogs()" style="font-size:11px;padding:4px 10px;">🔄</button>
         </div>
-        <div id="maint-log-list" style="max-height:320px;overflow-y:auto;">
+        <div id="maint-log-list" style="max-height:240px;overflow-y:auto;">
           <div style="text-align:center;padding:20px;color:var(--tdi);font-size:13px;">⏳ Loading…</div>
         </div>
       </div>
@@ -688,7 +688,7 @@ select.form-input{cursor:pointer;}
           <span>Node: <b id="srv-node">—</b></span>
           <span>Env: <b id="srv-env">—</b></span>
         </div>
-        <div class="terminal" id="srv-log-terminal" style="max-height:272px;">
+        <div class="terminal" id="srv-log-terminal" style="max-height:352px;">
           <div class="terminal-line info">Click 🔄 to load server logs…</div>
         </div>
       </div>
@@ -985,6 +985,28 @@ select.form-input{cursor:pointer;}
   </div>
 </div>
 
+<!-- ══ MAINTENANCE EXPIRY DIALOG ══ -->
+<div class="modal-overlay" id="maint-expiry-modal" style="z-index:10000;">
+  <div class="modal-box" style="max-width:480px;padding:32px 28px;">
+    <div style="font-size:48px;margin-bottom:12px;">⏰</div>
+    <div class="modal-title" style="font-size:20px;margin-bottom:8px;">Maintenance Window Ended</div>
+    <div class="modal-body" style="margin-bottom:20px;">
+      The scheduled end time has been reached. What would you like to do?
+      <div id="expiry-maint-summary" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:12px;color:#374151;text-align:left;white-space:pre-line;line-height:1.6;"></div>
+    </div>
+    <!-- Extension options -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <button class="btn btn-warn" onclick="extendMaintenance(1)" style="justify-content:center;font-size:12px;">⏱ Extend +1 Hour</button>
+      <button class="btn btn-warn" onclick="extendMaintenance(2)" style="justify-content:center;font-size:12px;">⏱ Extend +2 Hours</button>
+      <button class="btn btn-warn" onclick="extendMaintenance(4)" style="justify-content:center;font-size:12px;">⏱ Extend +4 Hours</button>
+      <button class="btn btn-warn" onclick="extendMaintenance(24)" style="justify-content:center;font-size:12px;">⏱ Extend +1 Day</button>
+    </div>
+    <div style="border-top:1px solid #e2e8f0;margin:10px 0 14px;"></div>
+    <button class="btn btn-pri" onclick="disableMaintenanceFromExpiry()" style="width:100%;justify-content:center;font-size:13px;margin-bottom:8px;">✅ Disable Maintenance — System Back Online</button>
+    <button class="btn btn-out" onclick="dismissExpiryDialog()" style="width:100%;justify-content:center;font-size:12px;color:var(--tmu);">🔕 Dismiss (keep maintenance active)</button>
+  </div>
+</div>
+
 <!-- ══ TOAST ══ -->
 <div class="toast" id="toast"></div>
 
@@ -1180,6 +1202,14 @@ function loadMaintenance() {
     if (!d || d.error) { showToast('⚠️ ' + (d && d.error ? d.error : 'Load failed')); return; }
     _maintData = d;
     renderMaintUI(d);
+    // Start expiry polling if already active with an end time
+    if (d.active && d.endTime) {
+      if (Date.now() >= new Date(d.endTime).getTime()) {
+        showExpiryDialog(); // already expired — show immediately
+      } else {
+        startExpiryPolling();
+      }
+    }
   }).catch(function(e) {
     showToast('❌ Failed to load: ' + e.message);
     document.getElementById('ms-active-val').textContent = 'Error';
@@ -1384,6 +1414,14 @@ function doToggleMaintenance() {
     logLine(nowActive ? 'MAINTENANCE ENABLED' : 'MAINTENANCE DISABLED', nowActive ? 'warn' : 'success');
     loadMaintLogs();
     loadServerLogs();
+    // Start expiry polling when enabled; stop when disabled
+    if (nowActive && d.endTime) {
+      startExpiryPolling();
+    } else if (!nowActive && _expiryPollInterval) {
+      clearInterval(_expiryPollInterval);
+      _expiryPollInterval = null;
+      document.getElementById('maint-expiry-modal').classList.remove('open');
+    }
   }).catch(function(e) {
     showToast('❌ Toggle failed: ' + e.message);
     toggleBtn.disabled = false;
@@ -1430,11 +1468,20 @@ function studentsOnly() {
 
 function renderRoleTable(maintActive, affected) {
   affected = affected || [];
+  // When maintenance is OFF nobody is blocked regardless of checkbox state
   var roles = [
-    { role:'Admin',     icon:'🔑', blocked:false,                         note:'Always has full access' },
-    { role:'Teacher',   icon:'👩‍🏫', blocked:affected.includes('teacher'),   note:affected.includes('teacher')  ? 'Blocked — shown maintenance page' : 'Full access' },
-    { role:'Student',   icon:'👨‍🎓', blocked:affected.includes('student'),   note:affected.includes('student')  ? 'Blocked — shown maintenance page' : 'Full access' },
-    { role:'Sub-Admin', icon:'🧑‍💼', blocked:affected.includes('subadmin'), note:affected.includes('subadmin') ? 'Blocked — shown maintenance page' : 'Full access' },
+    { role:'Admin',     icon:'🔑',
+      blocked: false,
+      note: 'Always has full access' },
+    { role:'Teacher',   icon:'👩‍🏫',
+      blocked: maintActive && affected.includes('teacher'),
+      note: (maintActive && affected.includes('teacher')) ? 'Blocked — shown maintenance page' : 'Full access' },
+    { role:'Student',   icon:'👨‍🎓',
+      blocked: maintActive && affected.includes('student'),
+      note: (maintActive && affected.includes('student')) ? 'Blocked — shown maintenance page' : 'Full access' },
+    { role:'Sub-Admin', icon:'🧑‍💼',
+      blocked: maintActive && affected.includes('subadmin'),
+      note: (maintActive && affected.includes('subadmin')) ? 'Blocked — shown maintenance page' : 'Full access' },
   ];
   document.getElementById('role-access-table').innerHTML = roles.map(function(r) {
     var color  = r.blocked ? '#dc2626' : '#16a34a';
@@ -1564,10 +1611,108 @@ function toggleServerLogPoll() {
   }
 }
 
+// ── Maintenance Expiry Polling ─────────────────────────
+var _expiryPollInterval = null;
+var _expiryDialogDismissed = false;
+
+function startExpiryPolling() {
+  if (_expiryPollInterval) clearInterval(_expiryPollInterval);
+  _expiryDialogDismissed = false;
+  _expiryPollInterval = setInterval(function() {
+    if (!_maintData || !_maintData.active || !_maintData.endTime) {
+      clearInterval(_expiryPollInterval); _expiryPollInterval = null; return;
+    }
+    var endMs = new Date(_maintData.endTime).getTime();
+    if (Date.now() >= endMs && !_expiryDialogDismissed) {
+      clearInterval(_expiryPollInterval); _expiryPollInterval = null;
+      showExpiryDialog();
+    }
+  }, 10000); // poll every 10s
+}
+
+function showExpiryDialog() {
+  // Re-fetch to confirm still active
+  api('GET', '/settings/maintenance').then(function(d) {
+    if (!d || !d.active) return; // already disabled elsewhere
+    _maintData = d;
+    renderMaintUI(d);
+    var affected = d.affectedRoles || [];
+    var rLabels = affectedRoleLabels(affected);
+    document.getElementById('expiry-maint-summary').textContent =
+      '🔧 Blocked roles: ' + (rLabels.join(', ') || 'None') + '\n'
+      + '📅 Scheduled end: ' + fmtDateTime(d.endTime) + '\n'
+      + '💬 ' + (d.message || '—');
+    document.getElementById('maint-expiry-modal').classList.add('open');
+    // Subtle audio ping
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 520;
+      g.gain.setValueAtTime(0.25, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      o.start(); o.stop(ctx.currentTime + 0.6);
+    } catch(e) {}
+  }).catch(function() {});
+}
+
+function dismissExpiryDialog() {
+  _expiryDialogDismissed = true;
+  document.getElementById('maint-expiry-modal').classList.remove('open');
+  showToast('ℹ️ Dismissed — maintenance still active');
+}
+
+function extendMaintenance(hours) {
+  if (!_maintData) return;
+  var newEnd = new Date(Date.now() + hours * 3600000).toISOString();
+  var payload = {
+    value: {
+      active:        true,
+      message:       _maintData.message || '',
+      affectedRoles: _maintData.affectedRoles || [],
+      endTime:       newEnd,
+      startedAt:     _maintData.startedAt || new Date().toISOString(),
+    }
+  };
+  api('PUT', '/settings/maintenance', payload).then(function(d) {
+    if (d && d.error) { showToast('❌ ' + d.error); return; }
+    _maintData = d;
+    renderMaintUI(d);
+    document.getElementById('maint-expiry-modal').classList.remove('open');
+    showToast('⏱ Extended +' + hours + ' hr' + (hours > 1 ? 's' : '') + ' → ends ' + fmtDateTime(newEnd));
+    logLine('Maintenance EXTENDED +' + hours + 'h — new end: ' + fmtDateTime(newEnd), 'warn');
+    loadMaintLogs();
+    startExpiryPolling(); // restart for the new end time
+  }).catch(function(e) { showToast('❌ Extend failed: ' + e.message); });
+}
+
+function disableMaintenanceFromExpiry() {
+  if (!_maintData) return;
+  var payload = {
+    value: {
+      active:        false,
+      message:       _maintData.message || '',
+      affectedRoles: _maintData.affectedRoles || [],
+      endTime:       null,
+      startedAt:     null,
+    }
+  };
+  api('PUT', '/settings/maintenance', payload).then(function(d) {
+    if (d && d.error) { showToast('❌ ' + d.error); return; }
+    _maintData = d;
+    renderMaintUI(d);
+    document.getElementById('maint-expiry-modal').classList.remove('open');
+    showToast('✅ Maintenance DISABLED — System is back online');
+    logLine('Maintenance DISABLED after expiry', 'success');
+    loadMaintLogs();
+  }).catch(function(e) { showToast('❌ ' + e.message); });
+}
+
 // Legacy stubs
 function toggleMaintenance() { doToggleMaintenance(); }
 function saveMaintMsg() { saveMaintConfig(); }
 function updateMaintLabel() {}
+
 function clearMaintEndTime() {
   document.getElementById('maint-end-time').value = '';
   document.getElementById('maint-end-time').style.borderColor = '#e2e8f0';

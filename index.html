@@ -102,8 +102,8 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
   </div>
   <div class="lh">EAMS Login</div>
 
-  <!-- ROLE SELECTOR -->
-  <div class="rtabs" style="gap:8px;">
+  <!-- ROLE SELECTOR — tabs hidden dynamically if blocked by maintenance -->
+  <div class="rtabs" style="gap:8px;" id="rtabs-wrap">
     <div class="rtab" id="tab-student" onclick="pickRole('student')" style="padding:8px 18px;">
       Student
     </div>
@@ -115,6 +115,11 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
     </div>
   </div>
 
+  <!-- Shown when some roles are blocked by maintenance -->
+  <div id="maint-notice" style="display:none;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;position:relative;z-index:1;line-height:1.5;">
+    🔧 <b>Maintenance in progress</b> — some logins are restricted. Only available roles are shown above.
+  </div>
+
   <div class="le" id="lerr">Invalid credentials. Please try again.</div>
 
   <div class="lf2"><label>Username</label><input type="text" id="lu" placeholder="Enter username" autocomplete="username"></div>
@@ -124,6 +129,37 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
 </div>
 
 <script>
+  // ─── MAINTENANCE PRE-CHECK ON PAGE LOAD ─────────────────────────────────────
+  // Fetches maintenance state; hides blocked role tabs and shows notice.
+  // If the currently selected role is blocked, switches to Admin tab.
+  (function checkMaintOnLoad() {
+    fetch('/api/settings/maintenance')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d || !d.active) return; // off — show all tabs normally
+        var affected = d.affectedRoles || [];
+        if (!affected.length) return;
+
+        // Show maintenance notice banner
+        var notice = document.getElementById('maint-notice');
+        if (notice) notice.style.display = 'block';
+
+        // Hide each blocked role tab
+        ['student', 'teacher', 'subadmin'].forEach(function(role) {
+          if (affected.includes(role)) {
+            var tab = document.getElementById('tab-' + role);
+            if (tab) tab.style.display = 'none';
+          }
+        });
+
+        // If currently selected role is blocked, switch to admin
+        if (affected.includes(selectedRole)) {
+          pickRole('admin');
+        }
+      })
+      .catch(function() {}); // silent — login attempt will handle any real errors
+  })();
+
   // ─── LOCAL STORAGE DATABASE ──────────────────────────────────────────────────
   // Simple key-value store that persists data in localStorage under 'ss3_' prefix
   const DB = {
@@ -248,7 +284,7 @@ body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
     });
   });
 
-  function togglePw(inputId, btn) {
+function togglePw(inputId, btn) {
   var inp = document.getElementById(inputId);
   if (!inp) return;
 

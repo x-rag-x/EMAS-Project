@@ -74,6 +74,11 @@ async function seedDefaults() {
     const exists = await M.Settings.findOne({ key: d.key });
     if (!exists) await M.Settings.create(d);
   }
+  // ── Migrate: patch any old maintenance record missing new fields (runs once, harmless after)
+  await M.Settings.findOneAndUpdate(
+    { key: 'maintenance', 'value.affectedRoles': { $exists: false } },
+    { $set: { 'value.affectedRoles': ['teacher','student'], 'value.endTime': null, 'value.startedAt': null } }
+  );
 
   // Log current credentials to DB (visible in Logs menu, not terminal)
   const adminUser2   = await M.User.findOne({ role: 'admin' });
