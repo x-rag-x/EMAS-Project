@@ -164,6 +164,15 @@
       padding: 14px 18px 4px;
     }
 
+    .text-popup {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--tdi);
+      font-weight: 700;
+      padding: 14px 18px 4px;
+    }
+
     .sb-item {
       display: flex;
       align-items: center;
@@ -715,7 +724,7 @@
     }
 
     .fl {
-      font-size: 9.5px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--tdi);
       text-transform: uppercase;
@@ -3883,11 +3892,11 @@
         <div class="modal-title">👨‍🎓 Add Student</div>
         <div class="modal-close" onclick="closeModalBg('m-add-student')">✕</div>
       </div>
-      <div class="form-grid form-grid-2">
+      <div class="form-grid" style="grid-template-columns:1.2fr 0.8fr;">
         <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="s-nm"
-            placeholder="Student full name"></div>
+            placeholder="Student full name" required></div>
         <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="s-rg"
-            placeholder="e.g. CSE25001"></div>
+            placeholder="e.g. 714025xxxxxx"></div>
       </div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="s-ay"></select></div>
@@ -3898,28 +3907,34 @@
             <option>PG</option>
           </select>
         </div>
-        <div class="fg"><label class="fl">Course</label>
+        <div class="fg"><label class="fl">Branch</label>
           <select class="fc2" id="s-co" onchange="ococ()">
             <option value="">— Select —</option>
           </select>
         </div>
       </div>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Branch</label><select class="fc2" id="s-br">
-            <option value="">— Select —</option>
-          </select></div>
+      <div class="form-grid" style="grid-template-columns:1.5fr 1fr 0.5fr;">
         <div class="fg"><label class="fl">Department</label><select class="fc2" id="s-dp">
             <option value="">— Select —</option>
           </select></div>
         <div class="fg"><label class="fl">Class</label><select class="fc2" id="s-cl">
             <option value="">— Select —</option>
           </select></div>
-      </div>
-      <div class="fg" style="margin-bottom:14px;"><label class="fl">Section</label><input type="text" class="fc2"
+          <div class="fg" style="margin-bottom:14px;"><label class="fl">Section</label><input type="text" class="fc2"
           id="s-se" placeholder="A / B"></div>
-      <div class="form-actions"><button class="btn-form-ghost"
-          onclick="closeModalBg('m-add-student')">Cancel</button><button class="btn-form-pri" onclick="addStu()">Add
-          Student</button></div>
+      </div>
+      <div class="fl">Student Login Details</div><br>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="fg"><label class="fl">Email</label><input type="email" class="fc2"
+            placeholder="College Email" required></div>
+        <div class="fg"><label class="fl">User Name</label><input type="text" class="fc2"
+            placeholder="Login Username" required></div>
+        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input type="password" class="fc2" id="t-pw" value="student123"><button type="button"
+              class="pw-eye" onclick="togglePwField('t-pw',this)" tabindex="-1">👁</button></div></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-add-student')">Close</button>
+        <button class="btn-form-pri" onclick="addStu()">Add Student</button></div>
     </div>
   </div>
 
@@ -3944,14 +3959,11 @@
             <option>UG</option>
             <option>PG</option>
           </select></div>
-        <div class="fg"><label class="fl">Course</label><select class="fc2" id="se-co" onchange="seCoc()">
+        <div class="fg"><label class="fl">Branch</label><select class="fc2" id="se-co" onchange="seCoc()">
             <option value="">— Select —</option>
           </select></div>
       </div>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Branch</label><select class="fc2" id="se-br">
-            <option value="">— Select —</option>
-          </select></div>
+      <div class="form-grid" style="grid-template-columns:2fr 1fr;">
         <div class="fg"><label class="fl">Department</label><select class="fc2" id="se-dp">
             <option value="">— Select —</option>
           </select></div>
@@ -6971,9 +6983,12 @@
     function togglePwField(inputId, btn) {
       var inp = document.getElementById(inputId);
       if (!inp) return;
+
       var show = inp.type === 'password';
       inp.type = show ? 'text' : 'password';
-      btn.textContent = show ? '\xf0\x9f\x99\x88' : '\xf0\x9f\x91\x81';
+
+      btn.textContent = show ? '🙈' : '👁';
+      btn.title = show ? 'Hide password' : 'Show password';
     }
 
     // ═══════════════════════════════════════════════════════
