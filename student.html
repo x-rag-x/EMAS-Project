@@ -268,13 +268,24 @@ if (USER) {
 }
 
 // ── API HELPER ────────────────────────────────────────────────────
-function api(url, opts) {
+function api(url, opts, skipLogout) {
   opts = opts || {};
   opts.headers = Object.assign({ 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, opts.headers || {});
   return fetch(url, opts).then(function(r) {
-    if (r.status === 401) { doLogout(); throw new Error('Session expired'); }
-    if (r.status === 503) { return r.json().then(function(d) { if (d.maintenance) { sessionStorage.setItem('maint_data', JSON.stringify(d)); window.location.href = 'maintenance.html'; } throw new Error(d.error); }); }
-    return r.json();
+    // Only auto-logout on 401 for normal data calls, not for change-password (wrong pw = 401 there too)
+    if (r.status === 401 && !skipLogout) { doLogout(); throw new Error('Session expired'); }
+    if (r.status === 503) {
+      return r.text().then(function(txt) {
+        var d; try { d = JSON.parse(txt); } catch(e) { throw new Error('Server error (503)'); }
+        if (d.maintenance) { sessionStorage.setItem('maint_data', JSON.stringify(d)); window.location.href = 'maintenance.html'; }
+        throw new Error(d.error || 'Service unavailable');
+      });
+    }
+    return r.text().then(function(txt) {
+      if (!txt || !txt.trim()) return {};
+      if (txt.trim().charAt(0) === '<') throw new Error('Server returned an unexpected response (HTTP ' + r.status + '). Check that the API server is running.');
+      try { return JSON.parse(txt); } catch(e) { throw new Error('Invalid response from server.'); }
+    });
   });
 }
 
@@ -315,18 +326,24 @@ function doChangePw() {
   if (!oldPw || !newPw || !cfm) { errEl.textContent = 'All fields required.'; errEl.style.display = 'block'; return; }
   if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
   if (newPw !== cfm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
-  api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: USER.username || USER.name, password: oldPw, role: 'student' }) })
-    .then(function(d) {
-      if (d.error) { errEl.textContent = 'Current password is wrong.'; errEl.style.display = 'block'; return; }
-      return api('/api/users/' + USER._id, { method: 'PUT', body: JSON.stringify({ password: newPw, mustChangePassword: false }) });
-    }).then(function(d) {
-      if (!d) return;
-      closeModal('m-chpw');
-      toast('✅ Password updated successfully!');
-      document.getElementById('chpw-old').value = '';
-      document.getElementById('chpw-new').value = '';
-      document.getElementById('chpw-confirm').value = '';
-    }).catch(function(e) { errEl.textContent = e.message; errEl.style.display = 'block'; });
+  // Use the dedicated endpoint — it verifies old pw server-side without touching the session
+  api('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: oldPw, newPassword: newPw })
+  }, true /* skipLogout — wrong pw returns 401, don't boot the student */)
+  .then(function(d) {
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    sessionStorage.removeItem('eams_mustChangePw');
+    closeModal('m-chpw');
+    toast('✅ Password updated! You can now use your new password next login.');
+    document.getElementById('chpw-old').value = '';
+    document.getElementById('chpw-new').value = '';
+    document.getElementById('chpw-confirm').value = '';
+    // Hide the must-change banner if still visible
+    var banner = document.querySelector('.must-change-banner');
+    if (banner) banner.style.display = 'none';
+  })
+  .catch(function(e) { errEl.textContent = e.message; errEl.style.display = 'block'; });
 }
 
 // ── MAIN DATA LOAD ────────────────────────────────────────────────
@@ -388,12 +405,15 @@ function renderPortal(d) {
 
   // ── Must change password banner
   if (mustChange) {
-    html += '<div style="background:#fff3cd;border:1.5px solid #f59e0b;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+    html += '<div class="must-change-banner" style="background:#fff3cd;border:1.5px solid #f59e0b;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
       + '<span style="font-size:20px;">🔐</span>'
       + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#92400e;">Password Change Required</div><div style="font-size:11.5px;color:#b45309;margin-top:2px;">Your default password must be changed before proceeding.</div></div>'
       + '<button onclick="openChangePw()" style="padding:8px 16px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif;">Change Now →</button>'
       + '</div>';
   }
+
+  // ── LIVE SESSION BANNER
+  html += '<div id="live-session-container"></div>';
 
   // ── HERO
   var initials = stu.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
@@ -639,6 +659,61 @@ api('/api/student/me').then(function(d) {
   document.getElementById('main-content').innerHTML =
     '<div class="loading-screen"><span style="font-size:40px;">⚠️</span><div style="font-size:14px;color:#dc2626;">' + e.message + '</div><a href="index.html" style="color:var(--gK);font-size:13px;font-weight:600;">← Back to Login</a></div>';
 });
+
+// ── LIVE SESSION POLLING ───────────────────────────────────────
+let activeLiveSessionId = null;
+
+function pollLiveSessionActive() {
+  fetch('/api/live-session/active', {
+    headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') }
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(d) {
+    var cont = document.getElementById('live-session-container');
+    if (!cont) return;
+    
+    if (d.active) {
+      activeLiveSessionId = d.sessionId;
+      if (d.alreadyMarked) {
+        cont.innerHTML = '<div style="background:#f0fdfa;border:1.5px solid #5eead4;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:24px;">✅</span>'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#0f766e;">Attendance Marked</div><div style="font-size:11.5px;color:#115e59;margin-top:2px;">You have successfully marked your attendance for ' + d.subjectName + '.</div></div>'
+          + '</div>';
+      } else {
+        cont.innerHTML = '<div style="background:#fdf4ff;border:1.5px solid #f0abfc;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:24px;">📡</span>'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#86198f;">Live Class Active: ' + d.subjectName + '</div><div style="font-size:11.5px;color:#701a75;margin-top:2px;">Enter the passcode shown by your teacher to mark attendance.</div></div>'
+          + '<input type="text" id="live-passcode" placeholder="----" maxlength="4" style="width:70px;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;padding:8px;border:1px solid #f0abfc;border-radius:8px;">'
+          + '<button onclick="submitLiveSession()" style="padding:10px 16px;border-radius:10px;background:#d946ef;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">Mark</button>'
+          + '</div>';
+      }
+    } else {
+      activeLiveSessionId = null;
+      cont.innerHTML = '';
+    }
+  })
+  .catch(function(e){});
+}
+window.submitLiveSession = function() {
+  if (!activeLiveSessionId) return;
+  var code = document.getElementById('live-passcode').value;
+  if (!code || code.length < 4) { toast('Enter 4-digit passcode', 'warn'); return; }
+  
+  fetch('/api/live-session/mark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') },
+    body: JSON.stringify({ sessionId: activeLiveSessionId, passcode: code })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(d) {
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('Attendance Self-Marked!', 'success');
+    pollLiveSessionActive();
+  })
+  .catch(function(e){ toast('Error submitting', 'error'); });
+};
+setInterval(pollLiveSessionActive, 10000);
+setTimeout(pollLiveSessionActive, 1500);
 
 // Security
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });

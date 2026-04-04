@@ -1,312 +1,656 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EAMS – Sign In | Sri Shakthi</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;
-  --gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;
-  --td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;
-  --br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:'Poppins',sans-serif;
-  min-height:100vh;
-  background:#7bbc7e;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-}
-body::before{content:'';position:absolute;top:-20%;right:-10%;width:500px;height:500px;background:rgba(27,94,32,.15);border-radius:50%;}
-body::after{content:'';position:absolute;bottom:-15%;left:-8%;width:400px;height:400px;background:rgba(27,94,32,.12);border-radius:50%;}
-.lc{
-  width:420px;background:var(--gLt);border-radius:30px;
-  box-shadow:0 25px 60px rgba(0,0,0,.25);
-  padding:44px 36px;position:relative;overflow:hidden;
-  animation:lf .8s ease;z-index:1;
-}
-@keyframes lf{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-.lc::before{content:'';position:absolute;top:-130px;right:-130px;width:260px;height:260px;background:var(--gD);border-radius:50%;}
-.lc::after{content:'';position:absolute;bottom:-130px;left:-100px;width:220px;height:220px;background:var(--gD);border-radius:50%;}
-.ll{text-align:center;margin-bottom:8px;position:relative;z-index:1;}
-.lb{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gD);display:block;}
-.lt{font-size:11px;color:var(--tmu);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:22px;}
-.lh{font-size:22px;font-weight:700;color:var(--td);margin-bottom:20px;position:relative;z-index:1;}
-/* ROLE TABS */
-.rtabs{
-    display:flex;
-    gap:14px;
-    margin-bottom:22px;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAMS – Sign In | Sri Shakthi</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --gD: #1b5e20;
+      --gK: #2e7d32;
+      --gM: #388e3c;
+      --gB: #4caf50;
+      --gL: #66bb6a;
+      --gLr: #a5d6a7;
+      --gLt: #e8f5e9;
+      --gP: #f4f7f4;
+      --td: #1a2e1a;
+      --tmu: #5a7a5a;
+      --tdi: #8aab8a;
+      --br: rgba(27, 94, 32, 0.1);
+      --brl: rgba(27, 94, 32, 0.06);
+    }
 
-.rtab{
-    padding:8px 26px;
-    border-radius:25px;
-    border:1.8px solid #2e7d32;
-    background:#fff;
-    cursor:pointer;
-    transition:all .25s ease;
-    font-weight:600;
-    font-size:14px;
-    color:#2e7d32;
-}
-.rtab.sel{
-    background:#1b5e20;
-    color:#fff;
-    border-color:#1b5e20;
-}
-.rtab:hover{
-    transform:translateY(-1px);
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-}
-.rtab::after{
-    display:none;
-}
-/* FORM */
-.lf2{margin-bottom:20px;position:relative;z-index:1;}
-.lf2 label{display:block;font-weight:600;font-size:13px;color:var(--gK);margin-bottom:5px;}
-.lf2 input{
-  width:100%;border:none;border-bottom:2px solid var(--gL);
-  padding:9px 0;background:transparent;outline:none;
-  font-size:14px;font-family:'Poppins',sans-serif;color:var(--td);transition:all .3s;
-}
-.lf2 input:focus{border-bottom-color:var(--gD);}
-.le{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:10px 14px;font-size:12px;color:#dc2626;margin-bottom:12px;display:none;position:relative;z-index:1;}
-.lbn{
-  width:100%;padding:13px;border:none;border-radius:25px;
-  background:var(--gD);color:#fff;font-weight:700;font-size:15px;
-  cursor:pointer;font-family:'Poppins',sans-serif;transition:all .3s;
-  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.lbn:hover{background:var(--gL);box-shadow:0 8px 24px rgba(27,94,32,.35);}
-.lbn:active{transform:scale(.98);}
-.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;flex-shrink:0;}
-@keyframes sp{to{transform:rotate(360deg)}}
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
-.pw-wrap{position:relative;}
-.pw-wrap input{padding-right:36px !important;}
-.pw-eye{position:absolute;right:0;bottom:9px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--tmu);padding:0 2px;line-height:1;transition:color .2s;}
-.pw-eye:hover{color:var(--gD);}
-body{-webkit-user-select:none;-moz-user-select:none;user-select:none;}
-</style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      background: #7bbc7e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 500px;
+      height: 500px;
+      background: rgba(27, 94, 32, .15);
+      border-radius: 50%;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      bottom: -15%;
+      left: -8%;
+      width: 400px;
+      height: 400px;
+      background: rgba(27, 94, 32, .12);
+      border-radius: 50%;
+    }
+
+    .lc {
+      width: 420px;
+      background: var(--gLt);
+      border-radius: 30px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, .25);
+      padding: 44px 36px;
+      position: relative;
+      overflow: hidden;
+      animation: lf .8s ease;
+      z-index: 1;
+    }
+
+    @keyframes lf {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(.97)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1)
+      }
+    }
+
+    .lc::before {
+      content: '';
+      position: absolute;
+      top: -130px;
+      right: -130px;
+      width: 260px;
+      height: 260px;
+      background: var(--gD);
+      border-radius: 50%;
+    }
+
+    .lc::after {
+      content: '';
+      position: absolute;
+      bottom: -130px;
+      left: -100px;
+      width: 220px;
+      height: 220px;
+      background: var(--gD);
+      border-radius: 50%;
+    }
+
+    .ll {
+      text-align: center;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .lb {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gD);
+      display: block;
+    }
+
+    .lt {
+      font-size: 11px;
+      color: var(--tmu);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      display: block;
+      margin-bottom: 22px;
+    }
+
+    .lh {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--td);
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ROLE TABS */
+    .rtabs {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .rtab {
+      padding: 8px 26px;
+      border-radius: 25px;
+      border: 1.8px solid #2e7d32;
+      background: #fff;
+      cursor: pointer;
+      transition: all .25s ease;
+      font-weight: 600;
+      font-size: 14px;
+      color: #2e7d32;
+    }
+
+    .rtab.sel {
+      background: #1b5e20;
+      color: #fff;
+      border-color: #1b5e20;
+    }
+
+    .rtab:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .rtab::after {
+      display: none;
+    }
+
+    /* FORM */
+    .lf2 {
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .lf2 label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--gK);
+      margin-bottom: 5px;
+    }
+
+    .lf2 input {
+      width: 100%;
+      border: none;
+      border-bottom: 2px solid var(--gL);
+      padding: 9px 0;
+      background: transparent;
+      outline: none;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+      color: var(--td);
+      transition: all .3s;
+    }
+
+    .lf2 input:focus {
+      border-bottom-color: var(--gD);
+    }
+
+    .le {
+      background: rgba(239, 68, 68, .1);
+      border: 1px solid rgba(239, 68, 68, .25);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #dc2626;
+      margin-bottom: 12px;
+      display: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .lbn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 25px;
+      background: var(--gD);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      transition: all .3s;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .lbn:hover {
+      background: var(--gL);
+      box-shadow: 0 8px 24px rgba(27, 94, 32, .35);
+    }
+
+    .lbn:active {
+      transform: scale(.98);
+    }
+
+    .spin {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, .35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: sp .6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .pw-wrap {
+      position: relative;
+    }
+
+    .pw-wrap input {
+      padding-right: 36px !important;
+    }
+
+    .pw-eye {
+      position: absolute;
+      right: 0;
+      bottom: 9px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--tmu);
+      padding: 0 2px;
+      line-height: 1;
+      transition: color .2s;
+    }
+
+    .pw-eye:hover {
+      color: var(--gD);
+    }
+
+    body {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+    }
+  </style>
 </head>
 <body>
 
-<div class="lc">
-  <div class="ll">
-    <img src="asserts/logo.png" alt="Logo" height=60 class="center-img">
-    <span class="lb">Sri Shakthi Institute</span>
-  </div>
-  <div class="lh">EAMS Login</div>
-
-  <!-- ROLE SELECTOR — tabs hidden dynamically if blocked by maintenance -->
-  <div class="rtabs" style="gap:8px;" id="rtabs-wrap">
-    <div class="rtab" id="tab-student" onclick="pickRole('student')" style="padding:8px 18px;">
-      Student
+  <div class="lc">
+    <div class="ll">
+      <img src="asserts/logo.png" alt="Logo" height=60 class="center-img">
+      <span class="lb">Sri Shakthi Institute</span>
     </div>
-    <div class="rtab" id="tab-teacher" onclick="pickRole('teacher')" style="padding:8px 18px;">
-      Teacher
+    <div class="lh">EAMS Login</div>
+
+    <!-- ROLE SELECTOR — tabs hidden dynamically if blocked by maintenance -->
+    <div class="rtabs" style="gap:8px;" id="rtabs-wrap">
+      <div class="rtab" id="tab-student" onclick="pickRole('student')" style="padding:8px 18px;">
+        Student
+      </div>
+      <div class="rtab" id="tab-teacher" onclick="pickRole('teacher')" style="padding:8px 18px;">
+        Teacher
+      </div>
+      <div class="rtab sel" id="tab-admin" onclick="pickRole('admin')" style="padding:8px 18px;">
+        Admin
+      </div>
     </div>
-    <div class="rtab sel" id="tab-admin" onclick="pickRole('admin')" style="padding:8px 18px;">
-      Admin
+
+    <!-- Shown when some roles are blocked by maintenance -->
+    <div id="maint-notice"
+      style="display:none;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;position:relative;z-index:1;line-height:1.5;">
+      🔧 <b>Maintenance in progress</b> — some logins are restricted. Only available roles are shown above.
     </div>
+
+    <div class="le" id="lerr">Invalid credentials. Please try again.</div>
+
+    <div class="lf2"><label>Username</label><input type="text" id="lu" placeholder="Enter username"
+        autocomplete="username"></div>
+    <div class="lf2"><label>Password</label>
+      <div class="pw-wrap"><input type="password" id="lp" placeholder="Enter password"
+          autocomplete="current-password"><button type="button" class="pw-eye" onclick="togglePw('lp',this)"
+          tabindex="-1" title="Show password">👁</button></div>
+    </div>
+
+    <button class="lbn" id="lbn" onclick="doSignIn()"><span id="lbn-txt">Sign In</span></button>
   </div>
 
-  <!-- Shown when some roles are blocked by maintenance -->
-  <div id="maint-notice" style="display:none;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;position:relative;z-index:1;line-height:1.5;">
-    🔧 <b>Maintenance in progress</b> — some logins are restricted. Only available roles are shown above.
-  </div>
+  <script>
+    // ─── MAINTENANCE PRE-CHECK ON PAGE LOAD ─────────────────────────────────────
+    // Fetches maintenance state; hides blocked role tabs and shows notice.
+    // If the currently selected role is blocked, switches to Admin tab.
+    (function checkMaintOnLoad() {
+      fetch('/api/settings/maintenance')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.active) return; // off — show all tabs normally
+          var affected = d.affectedRoles || [];
+          if (!affected.length) return;
 
-  <div class="le" id="lerr">Invalid credentials. Please try again.</div>
+          // Show maintenance notice banner
+          var notice = document.getElementById('maint-notice');
+          if (notice) notice.style.display = 'block';
 
-  <div class="lf2"><label>Username</label><input type="text" id="lu" placeholder="Enter username" autocomplete="username"></div>
-  <div class="lf2"><label>Password</label><div class="pw-wrap"><input type="password" id="lp" placeholder="Enter password" autocomplete="current-password"><button type="button" class="pw-eye" onclick="togglePw('lp',this)" tabindex="-1" title="Show password">👁</button></div></div>
+          // Hide each blocked role tab
+          ['student', 'teacher', 'subadmin'].forEach(function (role) {
+            if (affected.includes(role)) {
+              var tab = document.getElementById('tab-' + role);
+              if (tab) tab.style.display = 'none';
+            }
+          });
 
-  <button class="lbn" id="lbn" onclick="doSignIn()"><span id="lbn-txt">Sign In</span></button>
-</div>
-
-<script>
-  // ─── MAINTENANCE PRE-CHECK ON PAGE LOAD ─────────────────────────────────────
-  // Fetches maintenance state; hides blocked role tabs and shows notice.
-  // If the currently selected role is blocked, switches to Admin tab.
-  (function checkMaintOnLoad() {
-    fetch('/api/settings/maintenance')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d || !d.active) return; // off — show all tabs normally
-        var affected = d.affectedRoles || [];
-        if (!affected.length) return;
-
-        // Show maintenance notice banner
-        var notice = document.getElementById('maint-notice');
-        if (notice) notice.style.display = 'block';
-
-        // Hide each blocked role tab
-        ['student', 'teacher', 'subadmin'].forEach(function(role) {
-          if (affected.includes(role)) {
-            var tab = document.getElementById('tab-' + role);
-            if (tab) tab.style.display = 'none';
+          // If currently selected role is blocked, switch to admin
+          if (affected.includes(selectedRole)) {
+            pickRole('admin');
           }
-        });
+        })
+        .catch(function () { }); // silent — login attempt will handle any real errors
+    })();
 
-        // If currently selected role is blocked, switch to admin
-        if (affected.includes(selectedRole)) {
-          pickRole('admin');
+    // ─── LOCAL STORAGE DATABASE ──────────────────────────────────────────────────
+    // Simple key-value store that persists data in localStorage under 'ss3_' prefix
+    const DB = {
+      get: function (collectionName) {
+        try {
+          return JSON.parse(localStorage.getItem('ss3_' + collectionName) || '[]');
+        } catch (error) {
+          return [];
         }
-      })
-      .catch(function() {}); // silent — login attempt will handle any real errors
-  })();
-
-  // ─── LOCAL STORAGE DATABASE ──────────────────────────────────────────────────
-  // Simple key-value store that persists data in localStorage under 'ss3_' prefix
-  const DB = {
-    get: function(collectionName) {
-      try {
-        return JSON.parse(localStorage.getItem('ss3_' + collectionName) || '[]');
-      } catch (error) {
-        return [];
+      },
+      set: function (collectionName, data) {
+        localStorage.setItem('ss3_' + collectionName, JSON.stringify(data));
+      },
+      insert: function (collectionName, doc) {
+        const collection = DB.get(collectionName);
+        // Generate a unique ID using timestamp + random suffix
+        doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        collection.push(doc);
+        DB.set(collectionName, collection);
+        return doc;
       }
-    },
-    set: function(collectionName, data) {
-      localStorage.setItem('ss3_' + collectionName, JSON.stringify(data));
-    },
-    insert: function(collectionName, doc) {
-      const collection = DB.get(collectionName);
-      // Generate a unique ID using timestamp + random suffix
-      doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      collection.push(doc);
-      DB.set(collectionName, collection);
-      return doc;
-    }
-  };
+    };
 
-  // ─── SEED DEFAULT USERS ON FIRST VISIT ───────────────────────────────────────
-  (function seedDefaultUsers() {
-    if (!DB.get('users').length) {
-      DB.insert('users', {
-        name: 'Administrator',
-        username: 'admin',
-        password: 'admin123',
-        role: 'admin'
-      });
-      DB.insert('users', {
-        name: 'Default Teacher',
-        username: 'teacher',
-        password: 'teacher123',
-        role: 'teacher',
-        empId: 'EMP001',
-        dept: 'Computer Science Engineering',
-        desig: 'Assistant Professor'
-      });
-    }
-  })();
-
-  // ─── ROLE SELECTION ──────────────────────────────────────────────────────────
-  let selectedRole = 'admin';
-
-  function pickRole(role) {
-    selectedRole = role;
-    document.getElementById('tab-student').classList.toggle('sel', role === 'student');
-    document.getElementById('tab-teacher').classList.toggle('sel', role === 'teacher');
-    document.getElementById('tab-admin').classList.toggle('sel', role === 'admin');
-    document.getElementById('lerr').style.display = 'none';
-    document.getElementById('lu').focus();
-  }
-
-  // ─── SIGN IN ─────────────────────────────────────────────────────────────────
-  function doSignIn() {
-    var usernameInput = document.getElementById('lu').value.trim();
-    var passwordInput = document.getElementById('lp').value.trim();
-    var errorBox      = document.getElementById('lerr');
-    var signInButton  = document.getElementById('lbn');
-    errorBox.style.display = 'none';
-    if (!usernameInput || !passwordInput) {
-      errorBox.textContent = 'Please enter username and password.';
-      errorBox.style.display = 'block';
-      return;
-    }
-    signInButton.disabled = true;
-    signInButton.innerHTML = '<div class="spin"></div><span>Signing in…</span>';
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: usernameInput, password: passwordInput, role: selectedRole })
-    })
-    .then(function(r) {
-      // Capture status before consuming body
-      var status = r.status;
-      return r.json().then(function(data) { data._httpStatus = status; return data; });
-    })
-    .then(function(data) {
-      // Maintenance redirect — check BOTH HTTP 503 and the maintenance flag
-      if (data._httpStatus === 503 || data.maintenance) {
-        sessionStorage.setItem('maint_data', JSON.stringify(data));
-        window.location.href = 'maintenance.html';
-        return;
+    // ─── SEED DEFAULT USERS ON FIRST VISIT ───────────────────────────────────────
+    (function seedDefaultUsers() {
+      if (!DB.get('users').length) {
+        DB.insert('users', {
+          name: 'Administrator',
+          username: 'admin',
+          password: 'admin123',
+          role: 'admin'
+        });
+        DB.insert('users', {
+          name: 'Default Teacher',
+          username: 'teacher',
+          password: 'teacher123',
+          role: 'teacher',
+          empId: 'EMP001',
+          dept: 'Computer Science Engineering',
+          desig: 'Assistant Professor'
+        });
       }
-      if (data.error) {
-        signInButton.disabled = false;
-        signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
-        errorBox.textContent = data.error;
+    })();
+
+    // ─── ROLE SELECTION ──────────────────────────────────────────────────────────
+    let selectedRole = 'admin';
+
+    function pickRole(role) {
+      selectedRole = role;
+      document.getElementById('tab-student').classList.toggle('sel', role === 'student');
+      document.getElementById('tab-teacher').classList.toggle('sel', role === 'teacher');
+      document.getElementById('tab-admin').classList.toggle('sel', role === 'admin');
+      document.getElementById('lerr').style.display = 'none';
+      document.getElementById('lu').focus();
+    }
+
+    // ─── SIGN IN ─────────────────────────────────────────────────────────────────
+    function doSignIn() {
+      var usernameInput = document.getElementById('lu').value.trim();
+      var passwordInput = document.getElementById('lp').value.trim();
+      var errorBox = document.getElementById('lerr');
+      var signInButton = document.getElementById('lbn');
+      errorBox.style.display = 'none';
+      if (!usernameInput || !passwordInput) {
+        errorBox.textContent = 'Please enter username and password.';
         errorBox.style.display = 'block';
-        document.getElementById('lp').value = '';
         return;
       }
-      sessionStorage.setItem('eams_token', data.token);
-      sessionStorage.setItem('eams_user', JSON.stringify(data.user));
-      sessionStorage.setItem('eams_sessionId', data.sessionId || '');
-      sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
-      if (selectedRole === 'student') {
-        window.location.href = 'student.html';
-      } else if (selectedRole === 'teacher') {
-        window.location.href = 'teacher.html';
-      } else {
-        window.location.href = 'admin.html';
-      }
-    })
-    .catch(function() {
-      signInButton.disabled = false;
-      signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
-      errorBox.textContent = 'Cannot reach server. Try Again ;(';
-      errorBox.style.display = 'block';
+      signInButton.disabled = true;
+      signInButton.innerHTML = '<div class="spin"></div><span>Signing in…</span>';
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: usernameInput, password: passwordInput, role: selectedRole })
+      })
+        .then(function (r) {
+          // Capture status before consuming body
+          var status = r.status;
+          return r.json().then(function (data) { data._httpStatus = status; return data; });
+        })
+        .then(function (data) {
+          // Maintenance redirect — check BOTH HTTP 503 and the maintenance flag
+          if (data._httpStatus === 503 || data.maintenance) {
+            sessionStorage.setItem('maint_data', JSON.stringify(data));
+            window.location.href = 'maintenance.html';
+            return;
+          }
+          if (data.error) {
+            signInButton.disabled = false;
+            signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
+            errorBox.textContent = data.error;
+            errorBox.style.display = 'block';
+            document.getElementById('lp').value = '';
+            return;
+          }
+          sessionStorage.setItem('eams_token', data.token);
+          sessionStorage.setItem('eams_user', JSON.stringify(data.user));
+          sessionStorage.setItem('eams_sessionId', data.sessionId || '');
+          sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
+          if (selectedRole === 'student') {
+            window.location.href = 'student.html';
+          } else if (selectedRole === 'teacher') {
+            window.location.href = 'teacher.html';
+          } else {
+            window.location.href = 'admin.html';
+          }
+        })
+        .catch(function () {
+          signInButton.disabled = false;
+          signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
+          errorBox.textContent = 'Cannot reach server. Try Again ;(';
+          errorBox.style.display = 'block';
+        });
+    }
+
+    // ─── ALLOW PRESSING ENTER IN USERNAME/PASSWORD FIELDS ────────────────────────
+    ['lu', 'lp'].forEach(function (fieldId) {
+      document.getElementById(fieldId).addEventListener('keypress', function (event) {
+        if (event.key === 'Enter') {
+          doSignIn();
+        }
+      });
     });
-  }
 
-  // ─── ALLOW PRESSING ENTER IN USERNAME/PASSWORD FIELDS ────────────────────────
-  ['lu', 'lp'].forEach(function(fieldId) {
-    document.getElementById(fieldId).addEventListener('keypress', function(event) {
-      if (event.key === 'Enter') {
-        doSignIn();
-      }
+    function togglePw(inputId, btn) {
+      var inp = document.getElementById(inputId);
+      if (!inp) return;
+
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+
+      btn.textContent = show ? '🙈' : '👁';
+      btn.title = show ? 'Hide password' : 'Show password';
+    }
+
+    // Security: disable right-click, F12, devtools
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'K'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) { e.preventDefault(); return false; }
     });
-  });
+    (function devDetect() {
+      var warned = false;
+      setInterval(function () {
+        var d = window.outerWidth - window.innerWidth > 200 || window.outerHeight - window.innerHeight > 200;
+        if (d && !warned) { warned = true; document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Poppins,sans-serif;font-size:18px;color:#dc2626;flex-direction:column;gap:12px;"><span style="font-size:48px;">&#128274;</span><b>Developer tools are not allowed on this platform.</b></div>'; }
+      }, 1500);
+    })();
 
-function togglePw(inputId, btn) {
-  var inp = document.getElementById(inputId);
-  if (!inp) return;
+    // ─── PLAYFUL INTERACTIVE BOX GRID BACKGROUND ───────────────────────────
+    const canvas = document.createElement('canvas');
+    canvas.id = 'bgCanvas';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.zIndex = '0'; // Appears behind the card class '.lc'
+    canvas.style.pointerEvents = 'none';
+    document.body.appendChild(canvas);
 
-  var show = inp.type === 'password';
-  inp.type = show ? 'text' : 'password';
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    
+    // Grid settings
+    let spacing = 50; // distance between box centers
+    let boxes = [];
 
-  btn.textContent = show ? '🙈' : '👁';
-  btn.title = show ? 'Hide password' : 'Show password';
-}
+    // Mouse tracking
+    let mouse = { x: -1000, y: -1000, radius: 160 };
 
-  // Security: disable right-click, F12, devtools
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-  document.addEventListener('keydown', function(e){
-    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
-  });
-  (function devDetect(){
-    var warned=false;
-    setInterval(function(){
-      var d=window.outerWidth-window.innerWidth>200||window.outerHeight-window.innerHeight>200;
-      if(d&&!warned){ warned=true; document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Poppins,sans-serif;font-size:18px;color:#dc2626;flex-direction:column;gap:12px;"><span style="font-size:48px;">&#128274;</span><b>Developer tools are not allowed on this platform.</b></div>'; }
-    },1500);
-  })();
-</script>
+    window.addEventListener('mousemove', function(e) {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseout', function() {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    });
+
+    class Box {
+      constructor(x, y) {
+        this.baseX = x;
+        this.baseY = y;
+        this.x = x;
+        this.y = y;
+        this.baseSize = 10; 
+        this.size = this.baseSize;
+        this.targetSize = this.baseSize;
+        this.angle = 0;
+        this.targetAngle = 0;
+        this.baseColor = 'rgba(27, 94, 32, 0.18)'; // faint dark green outline
+        this.colorAlpha = 0;
+      }
+      
+      update() {
+        const dx = this.baseX - mouse.x;
+        const dy = this.baseY - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < mouse.radius) {
+          // Inside radius - playfully react
+          const force = (mouse.radius - dist) / mouse.radius;
+          this.targetSize = this.baseSize + (force * 30);
+          this.targetAngle = force * Math.PI; // Spin
+          
+          // Push away slightly
+          const pushAngle = Math.atan2(dy, dx);
+          this.x = this.baseX + Math.cos(pushAngle) * force * 15;
+          this.y = this.baseY + Math.sin(pushAngle) * force * 15;
+          
+          this.colorAlpha = force;
+        } else {
+          // Return to normal
+          this.targetSize = this.baseSize;
+          this.targetAngle = 0;
+          this.x += (this.baseX - this.x) * 0.1;
+          this.y += (this.baseY - this.y) * 0.1;
+          this.colorAlpha -= 0.05;
+          if (this.colorAlpha < 0) this.colorAlpha = 0;
+        }
+        
+        // Ease size and angle
+        this.size += (this.targetSize - this.size) * 0.15;
+        this.angle += (this.targetAngle - this.angle) * 0.15;
+      }
+      
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        
+        ctx.beginPath();
+        // Draw centered box, with a little roundness if we were using arcs, but rect is fine
+        ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
+        
+        // Fill color based on hover proximity
+        if (this.colorAlpha > 0) {
+          ctx.fillStyle = `rgba(76, 175, 80, ${this.colorAlpha})`; // Bright green fill
+          ctx.fill();
+        }
+        
+        ctx.strokeStyle = this.baseColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function initGrid() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      boxes = [];
+      
+      const cols = Math.ceil(width / spacing) + 1;
+      const rows = Math.ceil(height / spacing) + 1;
+      
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          boxes.push(new Box(i * spacing, j * spacing));
+        }
+      }
+    }
+    
+    window.addEventListener('resize', initGrid);
+    initGrid();
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      for (let i = 0; i < boxes.length; i++) {
+        boxes[i].update();
+        boxes[i].draw();
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
 </body>
 </html>

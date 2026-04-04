@@ -214,6 +214,23 @@ const UndoLogSchema = new mongoose.Schema({
 }, { timestamps: true });
 UndoLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-cleanup
 
+// ── Live Session ──────────────────────────────────────
+const LiveSessionSchema = new mongoose.Schema({
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+  date:         { type: String, required: true },
+  passcode:     { type: String, required: true },
+  expiresAt:    { type: Date, required: true },
+  active:       { type: Boolean, default: true },
+  markedStudents: [{
+    studentId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    regNo:      { type: String },
+    time:       { type: Date, default: Date.now },
+    ip:         { type: String }
+  }]
+}, { timestamps: true });
+
 module.exports = {
   User:        mongoose.model('User',        UserSchema),
   Session:     mongoose.model('Session',     SessionSchema),
@@ -229,4 +246,5 @@ module.exports = {
   Grievance:   mongoose.model('Grievance',   GrievanceSchema),
   Log:         mongoose.model('Log',         LogSchema),
   UndoLog:     mongoose.model('UndoLog',     UndoLogSchema),
+  LiveSession: mongoose.model('LiveSession', LiveSessionSchema),
 };

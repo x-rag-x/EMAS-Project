@@ -69,6 +69,7 @@ async function seedDefaults() {
     { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 5 } },
     { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
     { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
+    { key: 'college_ips', value: ['127.0.0.1', '::1', '192.', '10.'] },
   ];
   for (const d of defaults) {
     const exists = await M.Settings.findOne({ key: d.key });
@@ -570,6 +571,207 @@ app.get('/api/attendance/unmarked-teachers', authMiddleware, adminOnly, async (r
     if (missingDays.length > 0) unmarked.push({ ...a, missingDays, missingCount: missingDays.length });
   }
   res.json(unmarked);
+});
+
+// ── Live Session Endpoints ──────────────────────────────
+app.post('/api/live-session/start', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'teacher') return res.status(403).json({ error: 'Only teachers can start live sessions' });
+  const { classId, subjectId, date } = req.body;
+  if (!classId || !subjectId || !date) return res.status(400).json({ error: 'classId, subjectId, date required' });
+  
+  // Close any existing active sessions for this teacher/class
+  await M.LiveSession.updateMany({ teacherId: req.user._id, classId, active: true }, { active: false });
+  
+  const passcode = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+  const session = await M.LiveSession.create({
+    teacherId: req.user._id, classId, subjectId, date, passcode, expiresAt, active: true, markedStudents: []
+  });
+  res.status(201).json(session);
+});
+
+app.get('/api/live-session/active', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+  try {
+    // Find student's classId
+    const student = await M.Student.findOne({ userId: req.user._id });
+    if (!student || !student.classId) return res.json({ active: false });
+
+    // Find active session for this class
+    const session = await M.LiveSession.findOne({ classId: student.classId, active: true, expiresAt: { $gt: new Date() } }).populate('subjectId', 'name').lean();
+    if (!session) return res.json({ active: false });
+
+    // Check if already marked
+    const alreadyMarked = session.markedStudents.some(s => String(s.studentId) === String(student._id));
+    
+    res.json({ active: true, sessionId: session._id, subjectName: session.subjectId?.name || 'Subject', alreadyMarked });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+  const { sessionId, passcode } = req.body;
+  
+  try {
+    const student = await M.Student.findOne({ userId: req.user._id });
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+
+    const session = await M.LiveSession.findById(sessionId);
+    if (!session || !session.active || session.expiresAt < new Date()) {
+      return res.status(400).json({ error: 'Session is no longer active' });
+    }
+
+    // IP Check
+    const settings = await M.Settings.findOne({ key: 'college_ips' });
+    const allowed = settings ? settings.value : [];
+    let isAllowed = allowed.length === 0; // if empty, allow all
+    if (!isAllowed) {
+       for (const ip of allowed) {
+         if (req.ip.startsWith(ip) || (ip === '::1' && req.ip === '::1') || (ip === '127.0.0.1' && req.ip === '127.0.0.1') || req.ip.includes(ip)) {
+           isAllowed = true; break;
+         }
+       }
+    }
+    if (!isAllowed) return res.status(403).json({ error: 'Must connect via College Wi-Fi' });
+
+    // Passcode Check
+    if (session.passcode !== passcode) {
+      return res.status(400).json({ error: 'Incorrect Passcode' });
+    }
+
+    // Already marked?
+    const alreadyMarked = session.markedStudents.some(s => String(s.studentId) === String(student._id));
+    if (alreadyMarked) return res.json({ success: true, message: 'Already marked' });
+
+    session.markedStudents.push({
+      studentId: student._id,
+      regNo: student.regNo,
+      time: new Date(),
+      ip: req.ip
+    });
+    await session.save();
+
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/live-session/status/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+  const session = await M.LiveSession.findOne({ _id: req.params.id, teacherId: req.user._id });
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  res.json({ active: session.active, expiresAt: session.expiresAt, markedStudents: session.markedStudents });
+});
+
+app.post('/api/live-session/end/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+  await M.LiveSession.findOneAndUpdate({ _id: req.params.id, teacherId: req.user._id }, { active: false });
+  res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════════
+//  STUDENT PORTAL  — /api/student/me
+// ════════════════════════════════════════════════════════
+
+app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+
+    // ── User record
+    const user = await M.User.findById(req.user._id).select('-password').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // ── Student profile — try userId first, fall back to regNo then name, auto-link if found
+    let student = await M.Student.findOne({ userId: req.user._id }).lean();
+    if (!student && user.regNo) {
+      student = await M.Student.findOneAndUpdate(
+        { regNo: user.regNo },
+        { $set: { userId: req.user._id } },
+        { new: true }
+      ).lean();
+    }
+    if (!student) {
+      student = await M.Student.findOneAndUpdate(
+        { name: user.name },
+        { $set: { userId: req.user._id } },
+        { new: true }
+      ).lean();
+    }
+    if (!student) {
+      // No Student profile record at all — return user info with empty attendance so portal loads
+      const academic2 = await M.Settings.findOne({ key: 'academic' });
+      const minReq2 = academic2?.value?.minAttendance || 75;
+      return res.json({
+        user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: user.lastLogin, loginCount: user.loginCount },
+        student: { name: user.name, regNo: user.regNo || '—', deptName: user.deptName || '—', className: '—', year: '—', section: '—', academicYear: '—', courseType: '—', branch: '—', email: user.email || '—', bloodGroup: '—', parentContact: '—' },
+        attendance: { subjects: [], totalPresent: 0, totalAbsent: 0, totalClasses: 0, overall: 0, minRequired: minReq2 },
+      });
+    }
+
+    // ── Minimum attendance requirement
+    const academic = await M.Settings.findOne({ key: 'academic' });
+    const minRequired = academic?.value?.minAttendance || 75;
+
+    // ── All attendance records for this student's class
+    const allAttendance = await M.Attendance.find({ classId: student.classId }).lean();
+
+    // ── Aggregate per subject
+    const subjectMap = {}; // subjectId → { subjectName, teacherName, present, absent, dates[] }
+
+    for (const rec of allAttendance) {
+      const sid = String(rec.subjectId);
+      if (!subjectMap[sid]) {
+        subjectMap[sid] = {
+          subjectId:   sid,
+          subjectName: rec.subjectName || 'Unknown',
+          teacherName: rec.teacherName || '—',
+          present: 0,
+          absent:  0,
+          total:   0,
+          dates:   [],
+        };
+      }
+      const entry = subjectMap[sid];
+      // Find this student's record in the attendance doc
+      const myRecord = rec.records.find(r =>
+        (r.studentId && String(r.studentId) === String(student._id)) ||
+        (r.regNo && r.regNo === student.regNo)
+      );
+      if (myRecord) {
+        entry.total++;
+        if (myRecord.status === 'present') entry.present++;
+        else entry.absent++;
+        entry.dates.push({ date: rec.date, status: myRecord.status });
+      }
+    }
+
+    const subjects = Object.values(subjectMap).map(s => ({
+      ...s,
+      percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
+      dates: s.dates.sort((a, b) => a.date.localeCompare(b.date)),
+    }));
+
+    // ── Overall totals
+    const totalPresent = subjects.reduce((n, s) => n + s.present, 0);
+    const totalAbsent  = subjects.reduce((n, s) => n + s.absent,  0);
+    const totalClasses = subjects.reduce((n, s) => n + s.total,   0);
+    const overall      = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+
+    res.json({
+      user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: user.lastLogin, loginCount: user.loginCount },
+      student,
+      attendance: {
+        subjects,
+        totalPresent,
+        totalAbsent,
+        totalClasses,
+        overall,
+        minRequired,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ════════════════════════════════════════════════════════
