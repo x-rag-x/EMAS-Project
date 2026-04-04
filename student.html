@@ -395,6 +395,9 @@ function renderPortal(d) {
       + '</div>';
   }
 
+  // ── LIVE SESSION BANNER
+  html += '<div id="live-session-container"></div>';
+
   // ── HERO
   var initials = stu.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
   var badgeClass = oCls === 'ok' ? 'badge-ok' : oCls === 'warn' ? 'badge-warn' : 'badge-danger';
@@ -639,6 +642,61 @@ api('/api/student/me').then(function(d) {
   document.getElementById('main-content').innerHTML =
     '<div class="loading-screen"><span style="font-size:40px;">⚠️</span><div style="font-size:14px;color:#dc2626;">' + e.message + '</div><a href="index.html" style="color:var(--gK);font-size:13px;font-weight:600;">← Back to Login</a></div>';
 });
+
+// ── LIVE SESSION POLLING ───────────────────────────────────────
+let activeLiveSessionId = null;
+
+function pollLiveSessionActive() {
+  fetch('/api/live-session/active', {
+    headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') }
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(d) {
+    var cont = document.getElementById('live-session-container');
+    if (!cont) return;
+    
+    if (d.active) {
+      activeLiveSessionId = d.sessionId;
+      if (d.alreadyMarked) {
+        cont.innerHTML = '<div style="background:#f0fdfa;border:1.5px solid #5eead4;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:24px;">✅</span>'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#0f766e;">Attendance Marked</div><div style="font-size:11.5px;color:#115e59;margin-top:2px;">You have successfully marked your attendance for ' + d.subjectName + '.</div></div>'
+          + '</div>';
+      } else {
+        cont.innerHTML = '<div style="background:#fdf4ff;border:1.5px solid #f0abfc;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:24px;">📡</span>'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#86198f;">Live Class Active: ' + d.subjectName + '</div><div style="font-size:11.5px;color:#701a75;margin-top:2px;">Enter the passcode shown by your teacher to mark attendance.</div></div>'
+          + '<input type="text" id="live-passcode" placeholder="----" maxlength="4" style="width:70px;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;padding:8px;border:1px solid #f0abfc;border-radius:8px;">'
+          + '<button onclick="submitLiveSession()" style="padding:10px 16px;border-radius:10px;background:#d946ef;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">Mark</button>'
+          + '</div>';
+      }
+    } else {
+      activeLiveSessionId = null;
+      cont.innerHTML = '';
+    }
+  })
+  .catch(function(e){});
+}
+window.submitLiveSession = function() {
+  if (!activeLiveSessionId) return;
+  var code = document.getElementById('live-passcode').value;
+  if (!code || code.length < 4) { toast('Enter 4-digit passcode', 'warn'); return; }
+  
+  fetch('/api/live-session/mark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') },
+    body: JSON.stringify({ sessionId: activeLiveSessionId, passcode: code })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(d) {
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('Attendance Self-Marked!', 'success');
+    pollLiveSessionActive();
+  })
+  .catch(function(e){ toast('Error submitting', 'error'); });
+};
+setInterval(pollLiveSessionActive, 10000);
+setTimeout(pollLiveSessionActive, 1500);
 
 // Security
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
