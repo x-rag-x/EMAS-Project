@@ -252,7 +252,7 @@ h1{
     💬 &nbsp;<span id="maint-message">System is currently under scheduled maintenance. We apologize for the inconvenience.</span>
   </div>
 
-  <a href="index.html" class="back-btn">← Back to Login</a>
+  <a href="../index.html" class="back-btn">← Back to Login</a>
 
   <p class="auto-refresh">Auto-refreshes every <b id="refresh-secs">30</b>s &nbsp;·&nbsp; <span id="next-refresh">checking...</span></p>
   <p class="contact-note">For urgent matters, contact your system administrator.</p>
@@ -358,7 +358,7 @@ h1{
       .then(function(data) {
         if (!data.active) {
           // Maintenance is OFF — redirect to login
-          window.location.href = 'index.html';
+          window.location.href = '../index.html';
           return;
         }
         renderMaint(data);

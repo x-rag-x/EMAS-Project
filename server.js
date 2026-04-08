@@ -23,7 +23,15 @@ const app    = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
-app.use(cors({ origin: process.env.NODE_ENV === 'production' ? true : cfg.CORS_ORIGIN, credentials: true }));
+app.use(cors({
+  origin: function(origin, callback) {
+    if (process.env.NODE_ENV === 'production') return callback(null, true);
+    const allowed = Array.isArray(cfg.CORS_ORIGIN) ? cfg.CORS_ORIGIN : [cfg.CORS_ORIGIN];
+    if (!origin || allowed.includes(origin)) return callback(null, true);
+    callback(new Error('CORS: origin not allowed — ' + origin));
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
@@ -438,7 +446,34 @@ app.get('/api/students/count', authMiddleware, async (req, res) => {
 });
 app.post('/api/students', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const stu = await M.Student.create(req.body);
+    const { username, password, ...stuData } = req.body;
+    const stu = await M.Student.create(stuData);
+
+    // Also create a User login account so the student can log in
+    if (username && password) {
+      const existing = await M.User.findOne({ username: username.toLowerCase() });
+      if (!existing) {
+        const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+        const userDoc = await M.User.create({
+          name:               stu.name,
+          username:           username.toLowerCase(),
+          password:           hash,
+          role:               'student',
+          regNo:              stu.regNo       || '',
+          deptName:           stu.deptName    || '',
+          class:              stu.className   || '',
+          section:            stu.section     || '',
+          branch:             stu.branch      || '',
+          academicYear:       stu.academicYear|| '',
+          email:              stu.email       || '',
+          mustChangePassword: true,
+          active:             true,
+        });
+        // Link the student record back to the user
+        await M.Student.findByIdAndUpdate(stu._id, { userId: userDoc._id });
+      }
+    }
+
     await logAction(req.user._id, req.user.name, req.user.role, 'Student Added', `${stu.name} (${stu.regNo})`, 'data', 'info', req.ip);
     res.status(201).json(stu);
   } catch (err) { res.status(400).json({ error: err.message }); }
@@ -505,14 +540,26 @@ app.get('/api/teachers', authMiddleware, async (req, res) => {
 });
 app.post('/api/teachers', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, empId, dept, desig, username, password, email, isHOD, isClassAdvisor, advisorClassId, advisorClassName, isWarden, isExamCoordinator, isPlacementCoord, qualifications, experience, joiningDate } = req.body;
+    const { name, firstName, lastName, empId, dept, desig, username, password, email, phone,
+      isHOD, hodDeptName, isClassAdvisor, advisorClassName, advisorClassId,
+      isTimeTableCoord, ttDeptName, isAdmin, adminRights,
+      isWarden, isExamCoordinator, isPlacementCoord, qualifications, experience, joiningDate } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: 'name, username, password required' });
     const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-
-    const teacher = await M.User.create({ name, empId, dept, desig, username: username.toLowerCase(), password: hash, role: 'teacher', email, mustChangePassword: true, isHOD: !!isHOD, isClassAdvisor: !!isClassAdvisor, advisorClassId: advisorClassId || '', advisorClassName: advisorClassName || '', isWarden: !!isWarden, isExamCoordinator: !!isExamCoordinator, isPlacementCoord: !!isPlacementCoord, qualifications: qualifications || '', experience: experience || '', joiningDate: joiningDate || '' });
+    const teacher = await M.User.create({
+      name, firstName: firstName||'', lastName: lastName||'',
+      empId, dept, desig, username: username.toLowerCase(), password: hash, role: 'teacher',
+      email, phone, mustChangePassword: true,
+      isHOD: !!isHOD, hodDeptName: hodDeptName||'',
+      isClassAdvisor: !!isClassAdvisor, advisorClassName: advisorClassName||'', advisorClassId: advisorClassId||'',
+      isTimeTableCoord: !!isTimeTableCoord, ttDeptName: ttDeptName||'',
+      isAdmin: !!isAdmin, adminRights: adminRights||[],
+      isWarden: !!isWarden, isExamCoordinator: !!isExamCoordinator, isPlacementCoord: !!isPlacementCoord,
+      qualifications: qualifications||'', experience: experience||'', joiningDate: joiningDate||''
+    });
     const { password: _, ...teacherData } = teacher.toObject();
     await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Added', `${name} (${username}) — initial password set`, 'data', 'info', req.ip);
-    res.status(201).json({ ...teacherData, _plainPassword: password }); // plaintext for admin UI display
+    res.status(201).json({ ...teacherData, _plainPassword: password });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 app.put('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
@@ -982,6 +1029,44 @@ app.delete('/api/users/:id', authMiddleware, adminOnly, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════
+//  ADMINS
+// ════════════════════════════════════════════════════════
+app.get('/api/admins', authMiddleware, adminOnly, async (req, res) => {
+  res.json(await M.User.find({ role: 'admin' }, '-password').sort({ name: 1 }));
+});
+app.post('/api/admins', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { name, firstName, lastName, username, password, email, phone } = req.body;
+    if (!name || !username || !password) return res.status(400).json({ error: 'name, username, password required' });
+    const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+    const admin = await M.User.create({ name, firstName: firstName||'', lastName: lastName||'', username: username.toLowerCase(), password: hash, role: 'admin', email: email||'', phone: phone||'', mustChangePassword: true, active: true });
+    const { password: _, ...adminData } = admin.toObject();
+    await logAction(req.user._id, req.user.name, req.user.role, 'Admin Added', `${name} (${username})`, 'data', 'info', req.ip);
+    res.status(201).json(adminData);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+app.put('/api/admins/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { password, ...data } = req.body;
+    if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+    const admin = await M.User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password');
+    await logAction(req.user._id, req.user.name, req.user.role, 'Admin Updated', admin?.name, 'data', 'info', req.ip);
+    res.json(admin);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+app.delete('/api/admins/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const admin = await M.User.findById(req.params.id).lean();
+    if (!admin) return res.status(404).json({ error: 'Admin not found' });
+    await M.UndoLog.create({ collectionName: 'admins', label: `Admin: ${admin.name} (@${admin.username})`,
+      snapshot: admin, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.User.findByIdAndDelete(req.params.id);
+    await logAction(req.user._id, req.user.name, req.user.role, 'Admin Deleted', admin.name, 'data', 'warning', req.ip);
+    res.json({ deleted: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
 //  DB STATS
 // ════════════════════════════════════════════════════════
 
@@ -1042,6 +1127,7 @@ app.get('/api/system/serverlogs', authMiddleware, adminOnly, (req, res) => {
 // ════════════════════════════════════════════════════════
 app.get('/api/system/health', authMiddleware, adminOnly, async (req, res) => {
   try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const dbState = mongoose.connection.readyState;
     const dbStateMap = { 0:'Disconnected', 1:'Connected', 2:'Connecting', 3:'Disconnecting' };
     const [errorCount, warnCount, totalUsers, activeTeachers] = await Promise.all([
@@ -1051,7 +1137,7 @@ app.get('/api/system/health', authMiddleware, adminOnly, async (req, res) => {
       M.User.countDocuments({ role: 'teacher', active: true }),
     ]);
     const recentErrors = await M.Log.find({ severity: { $in: ['critical','error','warning'] } })
-      .sort({ time: -1 }).limit(5).lean();
+      .sort({ time: -1 }).limit(limit).lean();
     res.json({
       dbStatus:      dbStateMap[dbState] || 'Unknown',
       dbConnected:   dbState === 1,
@@ -1175,9 +1261,42 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+// ── Delete individual log entry by ID ─────────────────
+app.delete('/api/logs/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const result = await M.Log.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: 'Log entry not found' });
+    res.json({ deleted: true, id: req.params.id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── 7-day auto-delete for error/warning/critical logs ─
+async function cleanupOldErrorLogs() {
+  try {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const result = await M.Log.deleteMany({
+      severity: { $in: ['warning', 'critical', 'error'] },
+      time: { $lt: cutoff }
+    });
+    if (result.deletedCount > 0) {
+      console.log(`🧹 Auto-cleanup: deleted ${result.deletedCount} error/warning log(s) older than 7 days`);
+    }
+  } catch (err) {
+    console.error('❌ Auto-cleanup error:', err.message);
+  }
+}
+
 // ── Start Server ──────────────────────────────────────
 const PORT = process.env.PORT || cfg.PORT;
 app.listen(PORT, () => {
   console.log(`1/3 : 🚀 EAMS API running → http://localhost:${PORT}`);
   console.log(`2/3 :    Environment: ${cfg.NODE_ENV}`);
+  // Schedule 7-day log cleanup: run 5s after start, then every 24h
+  setTimeout(() => {
+    cleanupOldErrorLogs();
+    setInterval(cleanupOldErrorLogs, 24 * 60 * 60 * 1000);
+  }, 5000);
 });
+// ── Delete individual log entry by ID ─────────────────
+// (placed after listen so it's clear it's an addition)

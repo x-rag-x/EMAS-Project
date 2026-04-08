@@ -6,31 +6,52 @@ const mongoose = require('mongoose');
 
 // ── Users (Admin + Teacher + Student login) ───────────
 const UserSchema = new mongoose.Schema({
+  // ── Common ──────────────────────────────────────────
   name:       { type: String, required: true, trim: true },
+  firstName:  { type: String, default: '', trim: true },
+  lastName:   { type: String, default: '', trim: true },
   username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:   { type: String, required: true },
   role:       { type: String, enum: ['admin','teacher','student'], required: true },
+  email:      { type: String, default: '', lowercase: true },
+  phone:      { type: String, default: '' },
+  active:             { type: Boolean, default: true },
+  mustChangePassword: { type: Boolean, default: false },
+
+  // ── Teacher fields ───────────────────────────────────
   empId:      { type: String, default: '' },
   dept:       { type: String, default: '' },
   desig:      { type: String, default: 'Assistant Professor' },
-  email:      { type: String, default: '', lowercase: true },
-  phone:      { type: String, default: '' },
-  regNo:      { type: String, default: '' },
-  deptName:   { type: String, default: '' },
-  active:             { type: Boolean, default: true },
-  mustChangePassword: { type: Boolean, default: false },
-  // Teacher-specific fields
-  isHOD:            { type: Boolean, default: false },
-  isClassAdvisor:   { type: Boolean, default: false },
-  advisorClassId:   { type: String, default: '' },
-  advisorClassName: { type: String, default: '' },
-  isWarden:         { type: Boolean, default: false },
-  isExamCoordinator:{ type: Boolean, default: false },
-  isPlacementCoord: { type: Boolean, default: false },
-  qualifications:   { type: String, default: '' },
-  experience:       { type: String, default: '' },
-  joiningDate:      { type: String, default: '' },
-  // Student-specific fields
+  // Roles
+  isHOD:              { type: Boolean, default: false },
+  hodDeptName:        { type: String, default: '' },
+  isClassAdvisor:     { type: Boolean, default: false },
+  advisorClassName:   { type: String, default: '' },
+  advisorClassId:     { type: String, default: '' },
+  isTimeTableCoord:   { type: Boolean, default: false },
+  ttDeptName:         { type: String, default: '' },
+  isAdmin:            { type: Boolean, default: false },
+  adminRights:        { type: [String], default: [] },
+  // Additional
+  isWarden:           { type: Boolean, default: false },
+  isExamCoordinator:  { type: Boolean, default: false },
+  isPlacementCoord:   { type: Boolean, default: false },
+  qualifications:     { type: String, default: '' },
+  experience:         { type: String, default: '' },
+  joiningDate:        { type: String, default: '' },
+
+  // ── Student fields ───────────────────────────────────
+  regNo:        { type: String, default: '' },
+  deptName:     { type: String, default: '' },
+  class:        { type: String, default: '' },
+  section:      { type: String, default: '' },
+  branch:       { type: String, default: '' },
+  course:       { type: String, default: '' },
+  department:   { type: String, default: '' },
+  year:         { type: String, default: '' },
+  academicYear: { type: String, default: '' },
+  isRep:        { type: Boolean, default: false },
+  // Legacy student fields kept for compatibility
   isClassRep:       { type: Boolean, default: false },
   isAssiClassRep:   { type: Boolean, default: false },
   isSportsRep:      { type: Boolean, default: false },
@@ -38,11 +59,12 @@ const UserSchema = new mongoose.Schema({
   bloodGroup:       { type: String, default: '' },
   parentContact:    { type: String, default: '' },
   address:          { type: String, default: '' },
-  // Session tracking
-  lastLogin:        { type: Date, default: null },
-  loginCount:       { type: Number, default: 0 },
-  failedLogins:     { type: Number, default: 0 },
-  lockedUntil:      { type: Date, default: null },
+
+  // ── Session tracking ─────────────────────────────────
+  lastLogin:    { type: Date, default: null },
+  loginCount:   { type: Number, default: 0 },
+  failedLogins: { type: Number, default: 0 },
+  lockedUntil:  { type: Date, default: null },
 }, { timestamps: true });
 
 // ── Session Tokens ─────────────────────────────────────
@@ -87,18 +109,30 @@ const ClassSchema = new mongoose.Schema({
 
 // ── Students ─────────────────────────────────────────
 const StudentSchema = new mongoose.Schema({
+  // Name fields
   name:         { type: String, required: true, trim: true },
+  firstName:    { type: String, default: '', trim: true },
+  lastName:     { type: String, default: '', trim: true },
+  // Academic identity
   regNo:        { type: String, required: true, unique: true, trim: true },
   academicYear: { type: String, default: '2025-26' },
-  courseType:   { type: String, enum: ['UG','PG','M.E','M.TECH','MBA','MCA','B.E','B.TECH'], default: 'UG' },
+  courseType:   { type: String, enum: ['UG','PG','M.E','M.TECH','MBA','MCA'], default: 'UG' },
+  course:       { type: String, default: '' },
   branch:       { type: String, default: '' },
+  class:        { type: String, default: '' },
+  section:      { type: String, default: 'A' },
+  year:         { type: String, default: '' },
+  // Department / Class refs
   deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
   deptName:     { type: String, default: '' },
+  department:   { type: String, default: '' },
   classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
   className:    { type: String, default: '' },
-  year:         { type: String, default: '' },
-  section:      { type: String, default: 'A' },
+  // Contact
   email:        { type: String, default: '', lowercase: true },
+  // Roles
+  isRep:        { type: Boolean, default: false },
+  // User link
   userId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 

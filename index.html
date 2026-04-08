@@ -302,6 +302,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <div class="lc">
@@ -475,11 +476,11 @@
           sessionStorage.setItem('eams_sessionId', data.sessionId || '');
           sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
           if (selectedRole === 'student') {
-            window.location.href = 'student.html';
+            window.location.href = 'student/student.html';
           } else if (selectedRole === 'teacher') {
-            window.location.href = 'teacher.html';
+            window.location.href = 'teacher/teacher.html';
           } else {
-            window.location.href = 'admin.html';
+            window.location.href = 'admin/admin.html';
           }
         })
         .catch(function () {
@@ -537,7 +538,7 @@
 
     const ctx = canvas.getContext('2d');
     let width, height;
-    
+
     // Grid settings
     let spacing = 50; // distance between box centers
     let boxes = [];
@@ -545,12 +546,12 @@
     // Mouse tracking
     let mouse = { x: -1000, y: -1000, radius: 160 };
 
-    window.addEventListener('mousemove', function(e) {
+    window.addEventListener('mousemove', function (e) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
     });
 
-    window.addEventListener('mouseout', function() {
+    window.addEventListener('mouseout', function () {
       mouse.x = -1000;
       mouse.y = -1000;
     });
@@ -561,7 +562,7 @@
         this.baseY = y;
         this.x = x;
         this.y = y;
-        this.baseSize = 10; 
+        this.baseSize = 10;
         this.size = this.baseSize;
         this.targetSize = this.baseSize;
         this.angle = 0;
@@ -569,23 +570,23 @@
         this.baseColor = 'rgba(27, 94, 32, 0.18)'; // faint dark green outline
         this.colorAlpha = 0;
       }
-      
+
       update() {
         const dx = this.baseX - mouse.x;
         const dy = this.baseY - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (dist < mouse.radius) {
           // Inside radius - playfully react
           const force = (mouse.radius - dist) / mouse.radius;
           this.targetSize = this.baseSize + (force * 30);
           this.targetAngle = force * Math.PI; // Spin
-          
+
           // Push away slightly
           const pushAngle = Math.atan2(dy, dx);
           this.x = this.baseX + Math.cos(pushAngle) * force * 15;
           this.y = this.baseY + Math.sin(pushAngle) * force * 15;
-          
+
           this.colorAlpha = force;
         } else {
           // Return to normal
@@ -596,27 +597,27 @@
           this.colorAlpha -= 0.05;
           if (this.colorAlpha < 0) this.colorAlpha = 0;
         }
-        
+
         // Ease size and angle
         this.size += (this.targetSize - this.size) * 0.15;
         this.angle += (this.targetAngle - this.angle) * 0.15;
       }
-      
+
       draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        
+
         ctx.beginPath();
         // Draw centered box, with a little roundness if we were using arcs, but rect is fine
         ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
-        
+
         // Fill color based on hover proximity
         if (this.colorAlpha > 0) {
           ctx.fillStyle = `rgba(76, 175, 80, ${this.colorAlpha})`; // Bright green fill
           ctx.fill();
         }
-        
+
         ctx.strokeStyle = this.baseColor;
         ctx.lineWidth = 1.5;
         ctx.stroke();
@@ -628,17 +629,17 @@
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
       boxes = [];
-      
+
       const cols = Math.ceil(width / spacing) + 1;
       const rows = Math.ceil(height / spacing) + 1;
-      
+
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
           boxes.push(new Box(i * spacing, j * spacing));
         }
       }
     }
-    
+
     window.addEventListener('resize', initGrid);
     initGrid();
 
@@ -653,4 +654,5 @@
     animate();
   </script>
 </body>
+
 </html>

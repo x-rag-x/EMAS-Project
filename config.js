@@ -16,9 +16,9 @@ module.exports = {
 
   // ── Auth ─────────────────────────────────────────────
   JWT_SECRET:        process.env.JWT_SECRET        || 'eams_jwt_secret_change_in_production',
-  JWT_EXPIRES_IN:    process.env.JWT_EXPIRES_IN    || '8h',
+  JWT_EXPIRES_IN:    process.env.JWT_EXPIRES_IN    || '1h',
   BCRYPT_ROUNDS:     parseInt(process.env.BCRYPT_ROUNDS || '10'),
 
   // ── CORS ─────────────────────────────────────────────
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5500',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
 };

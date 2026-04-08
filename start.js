@@ -217,12 +217,27 @@ async function setupStudent() {
 async function addMoreUsers() {
   while (true) {
     head('➕  ADD MORE USERS');
-    console.log(`  ${C.dim}1) Add another Teacher`);
-    console.log(`  2) Add another Student`);
-    console.log(`  3) Done${C.reset}\n`);
-    const choice = await ask('Choice', '3');
+    console.log(`  ${C.dim}1) Add another Admin`);
+    console.log(`  2) Add another Teacher`);
+    console.log(`  3) Add another Student`);
+    console.log(`  4) Done${C.reset}\n`);
+    const choice = await ask('Choice', '4');
 
     if (choice === '1') {
+      const name = await ask('Full name', '');
+      if (!name) { warn('Name cannot be empty.'); continue; }
+      const username = await ask('Username', '');
+      if (!username) { warn('Username cannot be empty.'); continue; }
+      if (await M.User.findOne({ username: username.toLowerCase() })) { warn(`Username "${username}" is already taken.`); continue; }
+      const pw    = await askPassword('Password', 'admin123');
+      const email = await ask('Email', '');
+      const hash  = await bcrypt.hash(pw, cfg.BCRYPT_ROUNDS);
+      const user  = await M.User.create({ name, username: username.toLowerCase(), password: hash, role: 'admin', email, mustChangePassword: true, active: true });
+      plainPasswords[user.username] = pw;
+      await logSetup('Extra Admin Created', `Username: ${user.username} | via start.js`);
+      ok(`Admin "${user.username}" added!`);
+
+    } else if (choice === '2') {
       const name = await ask('Full name', '');
       if (!name) { warn('Name cannot be empty.'); continue; }
       const username = await ask('Username', '');
@@ -239,7 +254,7 @@ async function addMoreUsers() {
       await logSetup('Extra Teacher Created', `Username: ${user.username} | via start.js`);
       ok(`Teacher "${user.username}" added!`);
 
-    } else if (choice === '2') {
+    } else if (choice === '3') {
       const name = await ask('Full name', '');
       if (!name) { warn('Name cannot be empty.'); continue; }
       const username = await ask('Username', '');
@@ -269,28 +284,120 @@ async function addMoreUsers() {
 // ── Summary table ─────────────────────────────────────
 async function printSummary(showPasswords = false) {
   head('📋  CURRENT USERS IN DATABASE');
-  const users = await M.User.find({}, 'name username role empId regNo active').lean();
+  const users = await M.User.find({}, 'name username role empId regNo dept desig deptName year section email active').lean();
   if (!users.length) { info('No users found.'); return; }
 
   const col = (s, w) => String(s ?? '').padEnd(w);
-  const header = `  ${col('NAME',20)}${col('USERNAME',14)}${col('ROLE',10)}${col('ID/REG',12)}${col('ACTIVE',8)}${showPasswords ? 'PASSWORD' : ''}`;
-  console.log(`\n${C.dim}${header}${C.reset}`);
-  console.log(`  ${'─'.repeat(showPasswords ? 78 : 64)}`);
 
   for (const u of users) {
     const roleColor = u.role === 'admin' ? C.red : u.role === 'teacher' ? C.cyan : C.green;
-    const id  = u.role === 'teacher' ? (u.empId || '—') : u.role === 'student' ? (u.regNo || '—') : '—';
-    const pw  = showPasswords ? (plainPasswords[u.username] || `${C.dim}(unchanged)${C.reset}`) : '';
-    const pwCol = showPasswords ? `  ${C.yellow}${pw}${C.reset}` : '';
+    const pwLine    = showPasswords
+      ? `\n      ${C.dim}Password :${C.reset} ${C.yellow}${plainPasswords[u.username] || `${C.dim}(unchanged)${C.reset}`}${C.reset}`
+      : '';
+
     console.log(
-      `  ${col(u.name,20)}${col(u.username,14)}` +
-      `${roleColor}${col(u.role,10)}${C.reset}` +
-      `${col(id,12)}` +
-      `${u.active ? C.green + col('✓',8) + C.reset : C.red + col('✗',8) + C.reset}` +
-      pwCol
+      `\n  ${roleColor}${C.bold}[${u.role.toUpperCase()}]${C.reset}  ` +
+      `${C.white}${C.bold}${u.name}${C.reset}  ${C.dim}(${u.username})${C.reset}  ` +
+      `${u.active ? C.green + '● active' : C.red + '● inactive'}${C.reset}`
     );
+
+    if (u.role === 'admin') {
+      console.log(`      ${C.dim}Email    :${C.reset} ${u.email || '—'}`);
+    } else if (u.role === 'teacher') {
+      console.log(`      ${C.dim}Emp ID   :${C.reset} ${u.empId    || '—'}`);
+      console.log(`      ${C.dim}Dept     :${C.reset} ${u.dept     || '—'}`);
+      console.log(`      ${C.dim}Desig    :${C.reset} ${u.desig    || '—'}`);
+      console.log(`      ${C.dim}Email    :${C.reset} ${u.email    || '—'}`);
+    } else if (u.role === 'student') {
+      console.log(`      ${C.dim}Reg No   :${C.reset} ${u.regNo    || '—'}`);
+      console.log(`      ${C.dim}Dept     :${C.reset} ${u.deptName || '—'}`);
+      console.log(`      ${C.dim}Year     :${C.reset} ${u.year     || '—'}`);
+      console.log(`      ${C.dim}Section  :${C.reset} ${u.section  || '—'}`);
+      console.log(`      ${C.dim}Email    :${C.reset} ${u.email    || '—'}`);
+    }
+    console.log(pwLine);
   }
   console.log('');
+}
+
+// ══════════════════════════════════════════════════════
+//  CLEAR LOCAL STORAGE (MongoDB collections)
+// ══════════════════════════════════════════════════════
+async function clearStorage() {
+  while (true) {
+    head('🗑️   CLEAR LOCAL STORAGE');
+    console.log(`  ${C.dim}Select what to clear from the database:\n`);
+    console.log(`  1) Users only        ${C.red}(admins, teachers, students)${C.reset}`);
+    console.log(`  2) Students only     ${C.red}(student records / enrolments)${C.reset}`);
+    console.log(`  3) Assignments only  ${C.red}(attendance records)${C.reset}`);
+    console.log(`  4) Logs only         ${C.red}(activity / system logs)${C.reset}`);
+    console.log(`  5) ${C.bold}${C.red}FULL RESET${C.reset}${C.dim}       (wipe ALL collections)${C.reset}`);
+    console.log(`  6) Back\n`);
+
+    const choice = await ask('Choice', '6');
+
+    if (choice === '1') {
+      warn('This will DELETE all users (admin, teacher, student) from the database.');
+      if (await askYN('Are you sure?', false)) {
+        const r = await M.User.deleteMany({});
+        Object.keys(plainPasswords).forEach(k => delete plainPasswords[k]);
+        await logSetup('Users Cleared', `${r.deletedCount} user(s) deleted via start.js`);
+        ok(`Cleared ${r.deletedCount} user(s) from Users collection.`);
+      } else {
+        info('Cancelled.');
+      }
+
+    } else if (choice === '2') {
+      warn('This will DELETE all student enrolment records from the database.');
+      if (await askYN('Are you sure?', false)) {
+        const r = await M.Student.deleteMany({});
+        await logSetup('Students Cleared', `${r.deletedCount} student record(s) deleted via start.js`);
+        ok(`Cleared ${r.deletedCount} student record(s) from Students collection.`);
+      } else {
+        info('Cancelled.');
+      }
+
+    } else if (choice === '3') {
+      warn('This will DELETE all attendance assignment records from the database.');
+      if (await askYN('Are you sure?', false)) {
+        const r = await M.Assignment.deleteMany({});
+        await logSetup('Assignments Cleared', `${r.deletedCount} record(s) deleted via start.js`);
+        ok(`Cleared ${r.deletedCount} assignment record(s) from Assignments collection.`);
+      } else {
+        info('Cancelled.');
+      }
+
+    } else if (choice === '4') {
+      warn('This will DELETE all activity and system logs from the database.');
+      if (await askYN('Are you sure?', false)) {
+        const r = await M.Log.deleteMany({});
+        ok(`Cleared ${r.deletedCount} log entry(ies) from Logs collection.`);
+      } else {
+        info('Cancelled.');
+      }
+
+    } else if (choice === '5') {
+      warn(`${C.bold}FULL RESET: This will wipe Users, Students, Assignments, and Logs.`);
+      warn('Settings will be preserved. This CANNOT be undone.');
+      const confirm = await ask('Type  CONFIRM  to proceed (or press ENTER to cancel)', '');
+      if (confirm === 'CONFIRM') {
+        const [u, s, a, l] = await Promise.all([
+          M.User.deleteMany({}),
+          M.Student.deleteMany({}),
+          M.Assignment.deleteMany({}),
+          M.Log.deleteMany({}),
+        ]);
+        Object.keys(plainPasswords).forEach(k => delete plainPasswords[k]);
+        await logSetup('Full Storage Reset', `Users:${u.deletedCount} Students:${s.deletedCount} Assignments:${a.deletedCount} Logs:${l.deletedCount} via start.js`);
+        ok(`Full reset done → Users:${u.deletedCount}  Students:${s.deletedCount}  Assignments:${a.deletedCount}  Logs:${l.deletedCount}`);
+      } else {
+        info('Full reset cancelled — no data was deleted.');
+      }
+
+    } else {
+      break;
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -329,7 +436,9 @@ ${C.reset}`);
   if (await askYN('Set up Teacher user?', true)) await setupTeacher();
   if (await askYN('Set up Student user?', true)) await setupStudent();
 
-  if (await askYN('\nAdd more teachers / students?', false)) await addMoreUsers();
+  if (await askYN('\nAdd more admins / teachers / students?', false)) await addMoreUsers();
+
+  if (await askYN('\n🗑️  Clear local storage (wipe DB collections)?', false)) await clearStorage();
 
   // ── Final summary with passwords ──────────────────
   await printSummary(true);

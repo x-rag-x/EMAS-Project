@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ══ SIDEBAR ══════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div>
+      <div class="sb-title">EAMS</div>
+      <div class="sb-subtitle">Student Portal</div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="nav-section-label">Main</div>
+    <button class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard',this)">
+      <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" id="nav-timetable" onclick="switchView('timetable',this)">
+      <span class="nav-icon">📆</span><span class="nav-label">Timetable</span>
+    </button>
+
+    <div class="nav-section-label" style="margin-top:8px;">Account</div>
+    <button class="nav-item" onclick="openChangePw()">
+      <span class="nav-icon">🔐</span><span class="nav-label">Change Password</span>
+    </button>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user" onclick="openChangePw()" title="Change Password">
+      <div class="sb-av" id="sb-initials">S</div>
+      <div>
+        <div class="sb-uname" id="sb-name">Loading…</div>
+        <div class="sb-urole">Student</div>
+      </div>
+    </div>
+    <button class="sb-logout" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</aside>
+
+<!-- ══ PAGE WRAP ═════════════════════════════════════ -->
+<div class="page-wrap">
+
+  <!-- slim topbar -->
+  <div class="topbar">
+    <div class="tb-page-title" id="tb-page-title">Dashboard</div>
+    <div class="tb-right">
+      <div id="tb-live-dot" style="display:none;">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#86198f;background:#fdf4ff;border:1px solid #f0abfc;border-radius:20px;padding:3px 10px;">
+          <span style="width:7px;height:7px;background:#d946ef;border-radius:50%;animation:pulse-dot 1.2s infinite;display:inline-block;"></span> Live Class
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── LOADING ── -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="spinner"></div>
+      <div style="font-size:13px;color:var(--tmu);">Loading your data…</div>
+    </div>
+
+    <!-- ── DASHBOARD VIEW ── -->
+    <div id="view-dashboard" style="display:none;"></div>
+
+    <!-- ── TIMETABLE VIEW ── -->
+    <div id="view-timetable" style="display:none;">
+      <div style="margin-bottom:18px;">
+        <div style="font-size:18px;font-weight:800;color:var(--td);margin-bottom:4px;">📆 Class Timetable</div>
+        <div style="font-size:12px;color:var(--tmu);" id="tt-subtitle">Loading…</div>
+      </div>
+      <div class="tt-legend" id="tt-legend"></div>
+      <div class="tt-wrap">
+        <div id="tt-container" class="tt-loading">
+          <div class="spinner"></div>&nbsp;Loading timetable…
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /page-wrap -->
+</div><!-- /shell -->
+
+<!-- ── Change Password Modal ── -->
+<div class="modal-bg" id="m-chpw">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">🔐 Change Password</div>
+      <div class="modal-close" onclick="closeModal('m-chpw')">✕</div>
+    </div>
+    <div id="chpw-err" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:14px;"></div>
+    <div class="fg">
+      <label class="fl">Current Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-old" placeholder="Current password"><button type="button" class="pw-eye" onclick="togglePw('chpw-old',this)">👁</button></div>
+    </div>
+    <div class="fg">
+      <label class="fl">New Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-new" placeholder="Min. 6 characters"><button type="button" class="pw-eye" onclick="togglePw('chpw-new',this)">👁</button></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Confirm New Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password"><button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button></div>
+    </div>
+    <button class="btn-pri" onclick="doChangePw()">Update Password</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════
+var TOKEN = sessionStorage.getItem('eams_token');
+var USER  = null;
+try { USER = JSON.parse(sessionStorage.getItem('eams_user')); } catch(e) {}
+if (!TOKEN || !USER) { window.location.href = '../index.html'; }
+if (USER && USER.role !== 'student') { window.location.href = '../index.html'; }
+if (USER) {
+  var _ini = (USER.name||'S').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  document.getElementById('sb-initials').textContent = _ini;
+  document.getElementById('sb-name').textContent = USER.name || 'Student';
+}
+
+// ══════════════════════════════════════════════════════
+//  API HELPER
+// ══════════════════════════════════════════════════════
+function api(url, opts, skipLogout) {
+  opts = opts || {};
+  opts.headers = Object.assign({'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'}, opts.headers||{});
+  return fetch(url, opts).then(function(r) {
+    if (r.status===401 && !skipLogout) { doLogout(); throw new Error('Session expired'); }
+    if (r.status===503) {
+      return r.text().then(function(txt) {
+        var d; try{d=JSON.parse(txt);}catch(e){throw new Error('Server error (503)');}
+        if (d.maintenance){sessionStorage.setItem('maint_data',JSON.stringify(d));window.location.href='maintenance.html';}
+        throw new Error(d.error||'Service unavailable');
+      });
+    }
+    return r.text().then(function(txt) {
+      if (!txt||!txt.trim()) return {};
+      if (txt.trim().charAt(0)==='<') throw new Error('Server returned an unexpected response (HTTP '+r.status+'). Check that the API server is running.');
+      try{return JSON.parse(txt);}catch(e){throw new Error('Invalid response from server.');}
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════
+var _ttLoaded = false;
+var _data = null;
+
+function switchView(view, btn) {
+  document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  document.getElementById('view-dashboard').style.display = 'none';
+  document.getElementById('view-timetable').style.display = 'none';
+  var el = document.getElementById('view-'+view);
+  if (el) el.style.display = 'block';
+  var titles = {dashboard:'Dashboard', timetable:'📆 Timetable'};
+  document.getElementById('tb-page-title').textContent = titles[view]||view;
+  if (view==='timetable' && !_ttLoaded) loadTimetable();
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST / MODAL / LOGOUT
+// ══════════════════════════════════════════════════════
+function toast(msg,type) {
+  var el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast'+(type==='error'?' error':'')+' show';
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.className='toast';},3200);
+}
+function doLogout(){sessionStorage.clear();window.location.href='../index.html';}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openChangePw(){openModal('m-chpw');}
+function togglePw(id,btn){
+  var inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'👁':'🙈';
+}
+
+// ══════════════════════════════════════════════════════
+//  CHANGE PASSWORD
+// ══════════════════════════════════════════════════════
+function doChangePw() {
+  var oldPw=document.getElementById('chpw-old').value;
+  var newPw=document.getElementById('chpw-new').value;
+  var cfm=document.getElementById('chpw-confirm').value;
+  var errEl=document.getElementById('chpw-err');
+  errEl.style.display='none';
+  if (!oldPw||!newPw||!cfm){errEl.textContent='All fields required.';errEl.style.display='block';return;}
+  if (newPw.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
+  if (newPw!==cfm){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
+  api('/api/auth/change-password',{method:'POST',body:JSON.stringify({currentPassword:oldPw,newPassword:newPw})},true)
+  .then(function(d){
+    if (d.error){errEl.textContent=d.error;errEl.style.display='block';return;}
+    sessionStorage.removeItem('eams_mustChangePw');
+    closeModal('m-chpw');
+    toast('✅ Password updated successfully!');
+    document.getElementById('chpw-old').value='';
+    document.getElementById('chpw-new').value='';
+    document.getElementById('chpw-confirm').value='';
+    var banner=document.querySelector('.must-change-banner');
+    if (banner) banner.style.display='none';
+  })
+  .catch(function(e){errEl.textContent=e.message;errEl.style.display='block';});
+}
+
+// ══════════════════════════════════════════════════════
+//  DASHBOARD HELPERS
+// ══════════════════════════════════════════════════════
+function getClass(pct,minReq){if(pct>=minReq)return 'ok';if(pct>=minReq-10)return 'warn';return 'danger';}
+function fmtDate(str){if(!str)return '—';return new Date(str).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function calcShortage(present,total,minReq){
+  if(total===0)return 0;
+  if((present/total)*100>=minReq)return 0;
+  return Math.max(0,Math.ceil((minReq*total-100*present)/(100-minReq)));
+}
+function buildGaugeSVG(pct,cls){
+  var r=52,cx=65,cy=65,circ=2*Math.PI*r;
+  var fc=cls==='ok'?'#4caf50':cls==='warn'?'#f59e0b':'#ef4444';
+  var dl=(pct/100)*circ;
+  return '<svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="#e5e7eb" stroke-width="10"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+fc+'" stroke-width="10" stroke-dasharray="'+dl+' '+circ+'" stroke-linecap="round" style="transition:stroke-dasharray .8s ease;"/>'
+    +'</svg>';
+}
+function gaugeRow(label,val,total,color){
+  var pct=total>0?Math.round(val/total*100):0;
+  return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;">'
+    +'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'
+    +'<span style="color:var(--tmu);flex:1;">'+label+'</span>'
+    +'<span style="font-weight:700;color:'+color+';">'+val+'</span>'
+    +'<span style="color:var(--tdi);font-size:10px;">('+pct+'%)</span></div>';
+}
+function pRow(label,val){
+  return '<div class="prow"><div class="plabel">'+label+'</div><div class="pval">'+val+'</div></div>';
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderPortal(d) {
+  _data=d;
+  var stu=d.student,att=d.attendance,usr=d.user;
+  var minR=att.minRequired,oPct=att.overall,oCls=getClass(oPct,minR);
+  var mustChange=sessionStorage.getItem('eams_mustChangePw')==='1';
+  var html='';
+
+  if (mustChange) {
+    html+='<div class="must-change-banner" style="background:#fff3cd;border:1.5px solid #f59e0b;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+      +'<span style="font-size:20px;">🔐</span>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#92400e;">Password Change Required</div><div style="font-size:11.5px;color:#b45309;margin-top:2px;">Please change your default password before proceeding.</div></div>'
+      +'<button onclick="openChangePw()" style="padding:8px 16px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif;">Change Now →</button>'
+      +'</div>';
+  }
+
+  html+='<div id="live-session-container"></div>';
+
+  var inits=stu.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  var bCls=oCls==='ok'?'badge-ok':oCls==='warn'?'badge-warn':'badge-danger';
+  var bTxt=oCls==='ok'?'✅ On Track':oCls==='warn'?'⚠️ Below Threshold':'🚨 Critical';
+  html+='<div class="hero">'
+    +'<div class="hero-av">'+inits+'</div>'
+    +'<div class="hero-info">'
+    +'<div class="hero-greeting">Welcome back,</div>'
+    +'<div class="hero-name">'+stu.name+'</div>'
+    +'<div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:2px;">'+stu.regNo+' &nbsp;·&nbsp; '+(stu.deptName||'—')+'</div>'
+    +'<div class="hero-pills">'
+    +'<span class="hero-pill">🏫 '+(stu.className||'—')+'</span>'
+    +'<span class="hero-pill">📅 '+(stu.academicYear||'—')+'</span>'
+    +(stu.isClassRep?'<span class="hero-pill">⭐ Class Rep</span>':'')
+    +(stu.isSportsRep?'<span class="hero-pill">🏆 Sports Rep</span>':'')
+    +'</div></div>'
+    +'<div class="hero-right"><div class="hero-pct-wrap">'
+    +'<div class="hero-pct">'+oPct+'%</div>'
+    +'<div class="hero-pct-label">Overall Attendance</div>'
+    +'<span class="hero-pct-badge '+bCls+'">'+bTxt+'</span>'
+    +'</div></div></div>';
+
+  var shortage=calcShortage(att.totalPresent,att.totalClasses,minR);
+  html+='<div class="stats-row">'
+    +'<div class="stat-card"><div class="sc-icon">📚</div><div class="sc-val">'+att.totalClasses+'</div><div class="sc-label">Total Classes</div><div class="sc-sub">Across all subjects</div></div>'
+    +'<div class="stat-card"><div class="sc-icon">✅</div><div class="sc-val" style="color:var(--gK);">'+att.totalPresent+'</div><div class="sc-label">Present</div><div class="sc-sub">Classes attended</div></div>'
+    +'<div class="stat-card"><div class="sc-icon">❌</div><div class="sc-val" style="color:#ef4444;">'+att.totalAbsent+'</div><div class="sc-label">Absent</div><div class="sc-sub">Classes missed</div></div>'
+    +'<div class="stat-card"><div class="sc-icon">'+(shortage>0?'⚠️':'🎯')+'</div><div class="sc-val" style="color:'+(shortage>0?'#f59e0b':'var(--gK)')+';">'+(shortage>0?shortage:'—')+'</div><div class="sc-label">'+(shortage>0?'Classes Needed':'Requirement Met')+'</div><div class="sc-sub">To reach '+minR+'% threshold</div></div>'
+    +'</div>';
+
+  var gaugeSVG=buildGaugeSVG(oPct,oCls);
+  var gaugeColor=oCls==='ok'?'var(--gK)':oCls==='warn'?'#b45309':'#dc2626';
+  html+='<div class="two-col">';
+  html+='<div class="card">'
+    +'<div class="card-hd"><div class="card-title">📊 Attendance Overview</div></div>'
+    +'<div class="card-body" style="display:flex;flex-direction:column;align-items:center;padding:20px;">'
+    +'<div class="gauge-outer">'+gaugeSVG
+    +'<div class="gauge-center"><div class="gauge-pct-txt" style="color:'+gaugeColor+';">'+oPct+'%</div><div class="gauge-lbl-txt">Overall</div></div>'
+    +'</div>'
+    +'<div style="margin-top:18px;width:100%;display:flex;flex-direction:column;gap:8px;">'
+    +gaugeRow('Present',att.totalPresent,att.totalClasses,'var(--gK)')
+    +gaugeRow('Absent',att.totalAbsent,att.totalClasses,'#ef4444')
+    +'<div style="padding:10px 0 0;border-top:1px solid var(--brl);text-align:center;font-size:11.5px;color:var(--tmu);">Min required: <b style="color:'+gaugeColor+';">'+minR+'%</b>'
+    +(shortage>0?' &nbsp;·&nbsp; Need <b style="color:#dc2626;">'+shortage+'</b> more':' &nbsp;·&nbsp; <b style="color:var(--gK);">On track 🎉</b>')
+    +'</div></div></div></div>';
+
+  html+='<div class="card">'
+    +'<div class="card-hd"><div class="card-title">👤 Student Profile</div>'
+    +'<button onclick="openChangePw()" style="font-size:11px;padding:4px 12px;border-radius:12px;border:1.5px solid var(--br);background:var(--gP);color:var(--tmu);cursor:pointer;font-family:Poppins,sans-serif;">🔐 Change Password</button>'
+    +'</div>'
+    +'<div class="card-body"><div class="profile-grid">'
+    +pRow('Register No.',stu.regNo)
+    +pRow('Department',stu.deptName||'—')
+    +pRow('Class',stu.className||'—')
+    +pRow('Year',stu.year||'—')
+    +pRow('Section',stu.section||'—')
+    +pRow('Course',stu.courseType||'—')
+    +pRow('Branch',stu.branch||'—')
+    +pRow('Academic Year',stu.academicYear||'—')
+    +pRow('Email',stu.email||usr.email||'—')
+    +pRow('Blood Group',stu.bloodGroup||'—')
+    +pRow('Parent Contact',stu.parentContact||'—')
+    +pRow('Last Login',usr.lastLogin?fmtDate(usr.lastLogin):'First login')
+    +'</div></div></div>';
+  html+='</div>';
+
+  html+='<div class="card" style="margin-bottom:18px;">'
+    +'<div class="card-hd"><div class="card-title">📖 Subject-wise Attendance</div>'
+    +'<span style="font-size:11px;color:var(--tdi);">Click a row to expand date details</span></div>'
+    +'<div style="overflow-x:auto;">'
+    +'<table class="sub-table"><thead><tr>'
+    +'<th>Subject</th><th>Teacher</th><th>Present</th><th>Absent</th><th>Total</th><th style="min-width:140px;">Attendance</th><th>Status</th>'
+    +'</tr></thead><tbody id="sub-tbody"></tbody></table></div></div>';
+
+  html+='<div class="card">'
+    +'<div class="card-hd"><div class="card-title">📅 Recent Attendance Log</div></div>'
+    +'<div class="card-body">'
+    +'<div class="tabs-row" id="sub-tabs"></div>'
+    +'<div id="sub-cal"></div>'
+    +'</div></div>';
+
+  document.getElementById('view-dashboard').innerHTML=html;
+  renderSubjectTable(att.subjects,minR);
+  renderSubjectTabs(att.subjects);
+}
+
+function renderSubjectTable(subjects,minR) {
+  if (!subjects||!subjects.length) {
+    document.getElementById('sub-tbody').innerHTML='<tr><td colspan="7"><div class="empty-state"><span class="ei">📭</span><p>No attendance data yet.</p></div></td></tr>';
+    return;
+  }
+  var html='';
+  subjects.forEach(function(s,idx){
+    var cls=getClass(s.percentage,minR);
+    var shortage=calcShortage(s.present,s.total,minR);
+    var statusHtml=shortage>0
+      ?'<span class="shortage-badge">Need '+shortage+' more</span>'
+      :'<span class="ok-badge">✅ On Track</span>';
+    html+='<tr style="cursor:pointer;" onclick="toggleSubDetail('+idx+')">'
+      +'<td class="b">📘 '+(s.subjectName||'—')+'</td>'
+      +'<td>'+(s.teacherName||'—')+'</td>'
+      +'<td style="color:var(--gK);font-weight:600;">'+s.present+'</td>'
+      +'<td style="color:#ef4444;font-weight:600;">'+s.absent+'</td>'
+      +'<td>'+s.total+'</td>'
+      +'<td><div class="prog-wrap prog-'+cls+'"><div class="prog-bar"><div class="prog-fill" style="width:'+s.percentage+'%;"></div></div><div class="prog-pct">'+s.percentage+'%</div></div></td>'
+      +'<td>'+statusHtml+'</td>'
+      +'</tr>'
+      +'<tr><td colspan="7" style="padding:0;"><div class="sub-detail-row" id="sub-detail-'+idx+'">'
+      +renderDateChips(s.dates)
+      +'</div></td></tr>';
+  });
+  document.getElementById('sub-tbody').innerHTML=html;
+}
+function renderDateChips(dates) {
+  if (!dates||!dates.length) return '<div style="font-size:12px;color:var(--tdi);padding:4px;">No records yet.</div>';
+  return '<div style="display:flex;flex-wrap:wrap;gap:2px;">'
+    +dates.slice().reverse().map(function(d){
+      return '<span class="att-chip '+d.status+'">'+d.date+' '+(d.status==='present'?'✅':'❌')+'</span>';
+    }).join('')+'</div>';
+}
+function toggleSubDetail(idx) {
+  var el=document.getElementById('sub-detail-'+idx);
+  if (!el) return;
+  if (el.classList.contains('open')){el.classList.remove('open');}
+  else{
+    document.querySelectorAll('.sub-detail-row.open').forEach(function(e){e.classList.remove('open');});
+    el.classList.add('open');
+  }
+}
+function renderSubjectTabs(subjects) {
+  if (!subjects||!subjects.length){
+    document.getElementById('sub-tabs').innerHTML='';
+    document.getElementById('sub-cal').innerHTML='<div class="empty-state"><span class="ei">📭</span><p>No subjects found.</p></div>';
+    return;
+  }
+  document.getElementById('sub-tabs').innerHTML=subjects.map(function(s,idx){
+    return '<button class="tab-btn'+(idx===0?' act':'')+'" onclick="switchSubjectCal('+idx+',this)">'+(s.subjectName||'Subject '+(idx+1))+'</button>';
+  }).join('');
+  renderCalendar(subjects[0]);
+}
+function switchSubjectCal(idx,btn){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('act');});
+  btn.classList.add('act');
+  renderCalendar(_data.attendance.subjects[idx]);
+}
+function renderCalendar(subject){
+  var dates=subject?subject.dates:[];
+  var calEl=document.getElementById('sub-cal');
+  if (!dates||!dates.length){calEl.innerHTML='<div class="empty-state"><span class="ei">📅</span><p>No attendance records yet.</p></div>';return;}
+  var map={};
+  dates.forEach(function(d){map[d.date]=d.status;});
+  var today=new Date(),calStart=new Date(today);
+  calStart.setDate(today.getDate()-today.getDay()-28);
+  var html='<div style="font-size:12px;font-weight:600;color:var(--tmu);margin-bottom:10px;">Last 5 weeks — '+subject.subjectName+'</div>';
+  html+='<div class="cal-grid">';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d){html+='<div class="cal-day-hdr">'+d+'</div>';});
+  for (var i=0;i<35;i++){
+    var d=new Date(calStart);d.setDate(calStart.getDate()+i);
+    var iso=d.toISOString().split('T')[0];
+    var status=map[iso],cls='empty',txt=d.getDate();
+    if (status==='present')cls='present';else if(status==='absent')cls='absent';
+    var isToday=iso===new Date().toISOString().split('T')[0];
+    html+='<div class="cal-day '+cls+(isToday?' today':'')+'" title="'+iso+(status?' — '+status:'')+'">'
+      +(status?(status==='present'?'✅':'❌'):'<span style="opacity:.4;">'+txt+'</span>')+'</div>';
+  }
+  html+='</div><div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;">'
+    +'<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:rgba(76,175,80,.15);"></div>Present</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:rgba(239,68,68,.1);"></div>Absent</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tmu);"><div style="width:14px;height:14px;border-radius:4px;background:#e5e7eb;"></div>No class</div>'
+    +'</div>';
+  calEl.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════
+//  TIMETABLE
+// ══════════════════════════════════════════════════════
+// 13-column period structure:
+// P1 P2 | Break | P3 P4 P5 | Lunch | P6 P7 | Break | P8 P9
+var PERIODS = [
+  {key:'p1', label:'Period 1', time:'8:00–8:50',   type:'period'},
+  {key:'p2', label:'Period 2', time:'8:50–9:40',   type:'period'},
+  {key:'br1',label:'Break',    time:'9:40–9:50',   type:'break'},
+  {key:'p3', label:'Period 3', time:'9:50–10:40',  type:'period'},
+  {key:'p4', label:'Period 4', time:'10:40–11:30', type:'period'},
+  {key:'p5', label:'Period 5', time:'11:30–12:20', type:'period'},
+  {key:'lu', label:'Lunch',    time:'12:20–1:00',  type:'lunch'},
+  {key:'p6', label:'Period 6', time:'1:00–1:50',   type:'period'},
+  {key:'p7', label:'Period 7', time:'1:50–2:40',   type:'period'},
+  {key:'br2',label:'Break',    time:'2:40–2:50',   type:'break'},
+  {key:'p8', label:'Period 8', time:'2:50–3:40',   type:'period'},
+  {key:'p9', label:'Period 9', time:'3:40–4:30',   type:'period'},
+];
+var DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+var SC   = ['sc0','sc1','sc2','sc3','sc4','sc5','sc6','sc7','sc8','sc9'];
+var SC_BG= {sc0:'#e3f2fd',sc1:'#fce4ec',sc2:'#e8f5e9',sc3:'#fff3e0',sc4:'#f3e5f5',sc5:'#e0f7fa',sc6:'#fff8e1',sc7:'#fbe9e7',sc8:'#e8eaf6',sc9:'#e0f2f1'};
+
+function loadTimetable() {
+  if (!_data||!_data.student){return;}
+  var classId=_data.student.classId;
+  document.getElementById('tt-subtitle').textContent='Class: '+(_data.student.className||'—');
+  if (!classId){
+    document.getElementById('tt-container').innerHTML='<div class="empty-state" style="padding:40px;"><span class="ei">🏫</span><p>No class assigned to your account.</p></div>';
+    _ttLoaded=true; return;
+  }
+  api('/api/timetable?classId='+classId)
+  .then(function(slots){
+    _ttLoaded=true;
+    renderTimetable(Array.isArray(slots)?slots:[]);
+  })
+  .catch(function(e){
+    document.getElementById('tt-container').innerHTML='<div class="empty-state" style="padding:40px;"><span class="ei">⚠️</span><p>'+e.message+'</p></div>';
+    _ttLoaded=true;
+  });
+}
+
+function findPeriodKey(startTime) {
+  if (!startTime) return null;
+  // Normalize "08:00" → "8:00"
+  var t=startTime.replace(/^0/,'');
+  for (var i=0;i<PERIODS.length;i++){
+    if (PERIODS[i].type==='period' && PERIODS[i].time.split('–')[0]===t) return PERIODS[i].key;
+  }
+  // Fuzzy: try stripping leading zero from stored time too
+  for (var j=0;j<PERIODS.length;j++){
+    if (PERIODS[j].type==='period'){
+      var pt=PERIODS[j].time.split('–')[0];
+      if (pt===startTime||'0'+pt===startTime||pt==='0'+startTime) return PERIODS[j].key;
+    }
+  }
+  return null;
+}
+
+function renderTimetable(slots) {
+  // Build subject → colour map
+  var scMap={};var ci=0;
+  slots.forEach(function(s){
+    var sid=String(s.subjectId||s.subjectName);
+    if (!scMap[sid]){scMap[sid]=SC[ci%SC.length];ci++;}
+  });
+
+  // Build lookup: "Mon_p1" → slot
+  var lookup={};
+  slots.forEach(function(s){
+    var pk=findPeriodKey(s.start);
+    if (pk&&s.day) lookup[s.day+'_'+pk]=s;
+  });
+
+  // Legend
+  var legendItems={};
+  slots.forEach(function(s){
+    var sid=String(s.subjectId||s.subjectName);
+    if (!legendItems[sid]) legendItems[sid]={name:s.subjectName,color:scMap[sid]};
+  });
+  var legendHtml='';
+  Object.values(legendItems).forEach(function(item){
+    legendHtml+='<div class="tt-legend-item"><div class="tt-legend-dot" style="background:'+(SC_BG[item.color]||'#eee')+'"></div>'+item.name+'</div>';
+  });
+  document.getElementById('tt-legend').innerHTML=legendHtml||'<span style="font-size:12px;color:var(--tdi);">No timetable entries for your class yet.</span>';
+
+  if (!slots.length){
+    document.getElementById('tt-container').innerHTML='<div class="empty-state" style="padding:40px;"><span class="ei">📆</span><p>No timetable has been set for your class yet.<br><span style="font-size:11px;">Your Timetable Coordinator will add it soon.</span></p></div>';
+    return;
+  }
+
+  // Build table HTML
+  var html='<table class="tt-table"><thead><tr><th class="day-hdr">Day</th>';
+  PERIODS.forEach(function(p){
+    if (p.type==='break') html+='<th class="brk-hdr">Break<br><span style="font-size:8px;font-weight:400;">'+p.time+'</span></th>';
+    else if(p.type==='lunch') html+='<th class="lun-hdr">Lunch<br><span style="font-size:8px;font-weight:400;">'+p.time+'</span></th>';
+    else html+='<th class="per-hdr">'+p.label+'<br><span style="font-size:8px;font-weight:400;">'+p.time+'</span></th>';
+  });
+  html+='</tr></thead><tbody>';
+
+  DAYS.forEach(function(day){
+    html+='<tr><td class="day-cell">'+day+'</td>';
+    PERIODS.forEach(function(p){
+      if (p.type==='break'){html+='<td><div class="tt-break">☕</div></td>';return;}
+      if (p.type==='lunch'){html+='<td><div class="tt-lunch">🍱</div></td>';return;}
+      var slot=lookup[day+'_'+p.key];
+      if (slot){
+        var sid=String(slot.subjectId||slot.subjectName);
+        var cc=scMap[sid]||'sc0';
+        html+='<td><div class="tt-slot '+cc+'">'
+          +'<div class="tt-slot-name">'+slot.subjectName+'</div>'
+          +'<div class="tt-slot-teacher">'+slot.teacherName+'</div>'
+          +'</div></td>';
+      } else {
+        html+='<td><div class="tt-slot"><span class="tt-empty">—</span></div></td>';
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('tt-container').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════
+//  LIVE SESSION POLLING
+// ══════════════════════════════════════════════════════
+var activeLiveSessionId=null;
+function pollLiveSessionActive(){
+  fetch('/api/live-session/active',{headers:{'Authorization':'Bearer '+TOKEN}})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var cont=document.getElementById('live-session-container');
+    var dot=document.getElementById('tb-live-dot');
+    if (!cont) return;
+    if (d.active){
+      activeLiveSessionId=d.sessionId;
+      if (dot) dot.style.display='';
+      if (d.alreadyMarked){
+        cont.innerHTML='<div style="background:#f0fdfa;border:1.5px solid #5eead4;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">'
+          +'<span style="font-size:24px;">✅</span>'
+          +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#0f766e;">Attendance Marked</div>'
+          +'<div style="font-size:11.5px;color:#115e59;margin-top:2px;">You have marked attendance for '+d.subjectName+'.</div></div></div>';
+      } else {
+        cont.innerHTML='<div style="background:#fdf4ff;border:1.5px solid #f0abfc;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+          +'<span style="font-size:24px;">📡</span>'
+          +'<div style="flex:1;min-width:160px;"><div style="font-size:13px;font-weight:700;color:#86198f;">Live Class: '+d.subjectName+'</div>'
+          +'<div style="font-size:11.5px;color:#701a75;margin-top:2px;">Enter the passcode shown by your teacher.</div></div>'
+          +'<input type="text" id="live-passcode" placeholder="----" maxlength="4" style="width:70px;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;padding:8px;border:1px solid #f0abfc;border-radius:8px;">'
+          +'<button onclick="submitLiveSession()" style="padding:10px 16px;border-radius:10px;background:#d946ef;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">Mark</button>'
+          +'</div>';
+      }
+    } else {
+      activeLiveSessionId=null;
+      if (dot) dot.style.display='none';
+      cont.innerHTML='';
+    }
+  }).catch(function(){});
+}
+window.submitLiveSession=function(){
+  if (!activeLiveSessionId) return;
+  var code=document.getElementById('live-passcode').value;
+  if (!code||code.length<4){toast('Enter 4-digit passcode','warn');return;}
+  fetch('/api/live-session/mark',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+    body:JSON.stringify({sessionId:activeLiveSessionId,passcode:code})
+  }).then(function(r){return r.json();}).then(function(d){
+    if (d.error){toast(d.error,'error');return;}
+    toast('✅ Attendance marked!');
+    pollLiveSessionActive();
+  }).catch(function(){toast('Error submitting','error');});
+};
+setInterval(pollLiveSessionActive,10000);
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+api('/api/student/me').then(function(d){
+  document.getElementById('loading-screen').style.display='none';
+  if (d.error){toast(d.error,'error');return;}
+  document.getElementById('view-dashboard').style.display='block';
+  renderPortal(d);
+  if (sessionStorage.getItem('eams_mustChangePw')==='1') setTimeout(openChangePw,600);
+  setTimeout(pollLiveSessionActive,1500);
+}).catch(function(e){
+  document.getElementById('loading-screen').innerHTML=
+    '<span style="font-size:40px;">⚠️</span>'
+    +'<div style="font-size:14px;color:#dc2626;text-align:center;max-width:340px;">'+e.message+'</div>'
+    +'<a href="../index.html" style="color:var(--gK);font-size:13px;font-weight:600;text-decoration:none;">&larr; Back to Login</a>';
+});
+
+// Security
+document.addEventListener('contextmenu',function(e){e.preventDefault();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key))||(e.ctrlKey&&e.key==='U')){e.preventDefault();return false;}
+});
+</script>
+</body>
+</html>

@@ -185,6 +185,54 @@ select.form-input{cursor:pointer;}
 .progress-bar-bg{background:#e2e8f0;border-radius:8px;height:8px;overflow:hidden;}
 .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--gD),var(--gB));border-radius:8px;width:0%;transition:width .4s ease;}
 .progress-label{font-size:11px;color:var(--tmu);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+
+/* Error Log Card */
+.error-log {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fff8f0;
+  border-radius: 8px;
+  border-left: 3px solid var(--log-color);
+}
+
+/* Severity badge */
+.error-severity {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--log-color);
+}
+
+/* Content */
+.error-content {
+  flex: 1;
+}
+
+.error-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--td);
+}
+
+.error-meta {
+  font-size: 11px;
+  color: var(--tmu);
+}
+
+/* Delete button */
+.error-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #d97706;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
 </style>
 </head>
 <body>
@@ -211,7 +259,6 @@ select.form-input{cursor:pointer;}
     <div class="sb-section-label">Configuration</div>
     <button class="sb-item" onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Basic Settings</button>
     <button class="sb-item" onclick="nav('security')"><span class="sbi-ic">🔐</span>Security</button>
-    <button class="sb-item" onclick="nav('appearance')"><span class="sbi-ic">🎨</span>Appearance</button>
     <button class="sb-item" onclick="nav('advanced')"><span class="sbi-ic">🧪</span>Advanced</button>
   </div>
 
@@ -279,7 +326,8 @@ select.form-input{cursor:pointer;}
     <div id="health-errors-card" class="card" style="margin-bottom:16px;display:none;">
       <div class="card-hd">
         <div class="card-icon red">⚠️</div>
-        <div><div class="card-title">Recent Errors &amp; Warnings</div><div class="card-desc">Last 5 error-level log entries</div></div>
+        <div><div class="card-title">Recent Errors &amp; Warnings</div><div class="card-desc">Last 20 entries · auto-deleted after 7 days</div></div>
+        <button class="btn btn-danger btn-sm" onclick="clearErrorLogs()" style="margin-left:auto;">🗑 Clear All</button>
       </div>
       <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
@@ -292,30 +340,18 @@ select.form-input{cursor:pointer;}
       </div>
     </div>
 
-    <!-- DB Memory/Storage Cards -->
-    <div class="stats-strip">
-      <div class="stat-chip"><span class="stat-chip-ic">💾</span><div><div class="stat-chip-val" id="ov-data-size">—</div><div class="stat-chip-label">Data Size (MB)</div></div></div>
-      <div class="stat-chip"><span class="stat-chip-ic">🗜️</span><div><div class="stat-chip-val" id="ov-storage-size">—</div><div class="stat-chip-label">Storage Used (MB)</div></div></div>
-      <div class="stat-chip"><span class="stat-chip-ic">🗂️</span><div><div class="stat-chip-val" id="ov-index-size">—</div><div class="stat-chip-label">Index Size (MB)</div></div></div>
-      <div class="stat-chip"><span class="stat-chip-ic">📄</span><div><div class="stat-chip-val" id="ov-total-docs">—</div><div class="stat-chip-label">Total Documents</div></div></div>
-    </div>
+    <!-- Hidden dummy refs so loadOverview() doesn't crash -->
+    <span id="ov-data-size" style="display:none"></span>
+    <span id="ov-storage-size" style="display:none"></span>
+    <span id="ov-index-size" style="display:none"></span>
+    <span id="ov-total-docs" style="display:none"></span>
 
-    <!-- Storage Bar -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-hd">
-        <div class="card-icon blue">📊</div>
-        <div><div class="card-title">Storage Usage</div><div class="card-desc" id="ov-storage-desc">Fetching storage info…</div></div>
-        <button onclick="loadOverview()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
-      </div>
-      <div style="background:#f1f5f9;border-radius:8px;height:14px;overflow:hidden;margin-bottom:8px;">
-        <div id="ov-storage-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:8px;transition:width .6s ease;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tmu);font-family:'JetBrains Mono',monospace;">
-        <span id="ov-used-label">Used: —</span>
-        <span id="ov-free-label">Free: —</span>
-        <span id="ov-total-label">Total: —</span>
-      </div>
-    </div>
+    <!-- Hidden storage bar dummy refs so loadOverview() won't crash -->
+    <span id="ov-storage-desc" style="display:none"></span>
+    <span id="ov-storage-bar" style="display:none"></span>
+    <span id="ov-used-label" style="display:none"></span>
+    <span id="ov-free-label" style="display:none"></span>
+    <span id="ov-total-label" style="display:none"></span>
     <!-- DB Collection Breakdown -->
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd">
@@ -843,45 +879,6 @@ select.form-input{cursor:pointer;}
     </div>
   </div>
 
-  <!-- ══ APPEARANCE PAGE ══ -->
-  <div class="pg" id="pg-appearance">
-    <div class="page-hd">
-      <div class="page-title">🎨 Appearance</div>
-      <div class="page-sub">Customize the look and feel of EAMS</div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-icon purple">🎨</div>
-        <div><div class="card-title">Theme & Branding</div><div class="card-desc">Colors, logo, and display preferences</div></div>
-      </div>
-      <div class="settings-grid">
-        <div class="form-group">
-          <label class="form-label">Primary Color</label>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <input type="color" id="theme-color" value="#1b5e20" style="width:44px;height:36px;border:none;cursor:pointer;border-radius:8px;padding:2px;">
-            <input type="text" class="form-input" id="theme-color-hex" value="#1b5e20" placeholder="#1b5e20" style="flex:1;">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">App Title</label>
-          <input type="text" class="form-input" id="app-title" placeholder="EAMS – Admin Dashboard">
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Login Page Welcome Message</label>
-          <input type="text" class="form-input" id="login-msg" placeholder="Welcome to EAMS">
-        </div>
-      </div>
-      <div class="toggle-row" style="margin-top:10px;">
-        <div><div class="toggle-label">Show Logo in Sidebar</div><div class="toggle-hint">Display institution logo/icon next to app name.</div></div>
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="show-logo" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-          <span class="toggle-state on" id="show-logo-label">ON</span>
-        </div>
-      </div>
-      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('appearance')">💾 Save Appearance</button></div>
-    </div>
-  </div>
 
   <!-- ══ ADVANCED PAGE ══ -->
   <div class="pg" id="pg-advanced">
@@ -1021,9 +1018,9 @@ var MAINT_KEY     = 'eams_maintenance';
 // ── Guard ──────────────────────────────────────────────
 (function() {
   var storedUser = sessionStorage.getItem('eams_user');
-  if (!storedUser) { window.location.href = 'index.html'; return; }
-  try { currentUser = JSON.parse(storedUser); } catch(e) { window.location.href = 'index.html'; return; }
-  if (!currentUser || currentUser.role !== 'admin') { window.location.href = 'index.html'; return; }
+  if (!storedUser) { window.location.href = '../index.html'; return; }
+  try { currentUser = JSON.parse(storedUser); } catch(e) { window.location.href = '../index.html'; return; }
+  if (!currentUser || currentUser.role !== 'admin') { window.location.href = '../index.html'; return; }
   // Sync token (set by new login flow)
   TOKEN = sessionStorage.getItem('eams_token') || '';
   document.getElementById('sb-av').textContent   = (currentUser.name || 'A')[0].toUpperCase();
@@ -1045,7 +1042,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // ── Nav ───────────────────────────────────────────────
-var PAGE_NAMES = ['overview','data','backup','undo','maintenance','settings','security','appearance','advanced'];
+var PAGE_NAMES = ['overview','data','backup','undo','maintenance','settings','security','advanced'];
 
 function nav(page) {
   document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('act'); });
@@ -1532,7 +1529,7 @@ var _srvLogPollInterval = null;
 var _srvLogSince = null;
 
 function loadServerLogs() {
-  var url = '/system/serverlogs' + (_srvLogSince ? '?since=' + encodeURIComponent(_srvLogSince) : '');
+  var url = '/api/system/serverlogs' + (_srvLogSince ? '?since=' + encodeURIComponent(_srvLogSince) : '');
   api('GET', url).then(function(d) {
     if (!d) return;
 
@@ -1726,16 +1723,16 @@ function syncLabel(checkbox, labelId) {
   lbl.className   = 'toggle-state ' + (checkbox.checked ? 'on' : 'off');
 }
 // Wire security toggles
-['sec-forcepw','sec-strongpw','sec-timeout','show-logo'].forEach(function(id) {
+['sec-forcepw','sec-strongpw','sec-timeout'].forEach(function(id) {
   var el = document.getElementById(id);
   if (el) el.addEventListener('change', function() { syncLabel(this, id+'-label'); });
 });
 
-// ── Save settings ──────────────────────────────────────
+// ── Save settings — writes to MongoDB first, then caches ──
 function saveSettings(section) {
-  var saved = getSettings(SETTINGS_KEY) || {};
+  var payload = {};
   if (section === 'institution') {
-    saved.institution = {
+    payload = {
       name:  document.getElementById('inst-name').value,
       short: document.getElementById('inst-short').value,
       addr:  document.getElementById('inst-addr').value,
@@ -1743,7 +1740,7 @@ function saveSettings(section) {
       phone: document.getElementById('inst-phone').value,
     };
   } else if (section === 'academic') {
-    saved.academic = {
+    payload = {
       year:   document.getElementById('acad-year').value,
       sem:    document.getElementById('acad-sem').value,
       start:  document.getElementById('acad-start').value,
@@ -1752,63 +1749,80 @@ function saveSettings(section) {
       wdays:  document.getElementById('acad-wdays').value,
     };
   } else if (section === 'security') {
-    saved.security = {
+    payload = {
       forcePw:    document.getElementById('sec-forcepw').checked,
       strongPw:   document.getElementById('sec-strongpw').checked,
       timeout:    document.getElementById('sec-timeout').checked,
       timeoutMin: document.getElementById('sec-timeout-mins').value,
       maxLogin:   document.getElementById('sec-maxlogin').value,
     };
-  } else if (section === 'appearance') {
-    saved.appearance = {
-      color:    document.getElementById('theme-color').value,
-      title:    document.getElementById('app-title').value,
-      loginMsg: document.getElementById('login-msg').value,
-      showLogo: document.getElementById('show-logo').checked,
-    };
   }
-  setSettings(SETTINGS_KEY, saved);
-  logLine('Settings saved: ' + section, 'success');
-  showToast('💾 ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved');
+  showToast('⏳ Saving to MongoDB…');
+  api('PUT', '/settings/' + section, payload).then(function(d) {
+    if (d && d.error) { showToast('❌ Save failed: ' + d.error); return; }
+    // Cache locally as fallback
+    var cached = getSettings(SETTINGS_KEY) || {};
+    cached[section] = payload;
+    setSettings(SETTINGS_KEY, cached);
+    logLine('Settings saved to DB: ' + section, 'success');
+    showToast('✅ ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved to MongoDB');
+  }).catch(function(e) {
+    showToast('❌ Network error — settings NOT saved: ' + (e.message||''));
+    logLine('Settings save failed: ' + section + ' — ' + (e.message||'network error'), 'danger');
+  });
 }
 
-// ── Load settings into form ────────────────────────────
+// ── Load settings — DB-backed with localStorage fallback ──
+function applySettingsToForm(s) {
+  var inst = s.institution || {};
+  var acad = s.academic    || {};
+  var sec  = s.security    || {};
+  function val(id, v) { var el=document.getElementById(id); if(el && v !== undefined && v !== null && v !== '') el.value = v; }
+  function chk(id, v) { var el=document.getElementById(id); if(el && v !== undefined) { el.checked = !!v; syncLabel(el, id+'-label'); } }
+  val('inst-name',  inst.name);   val('inst-short', inst.short);
+  val('inst-addr',  inst.addr);   val('inst-email', inst.email);
+  val('inst-phone', inst.phone);
+  val('acad-year',  acad.year);   val('acad-sem',   acad.sem);
+  val('acad-start', acad.start);  val('acad-end',   acad.end);
+  val('acad-minatt',acad.minAtt); val('acad-wdays', acad.wdays);
+  chk('sec-forcepw',  sec.forcePw);   chk('sec-strongpw', sec.strongPw);
+  chk('sec-timeout',  sec.timeout);
+  val('sec-timeout-mins', sec.timeoutMin);
+  val('sec-maxlogin',     sec.maxLogin);
+}
+
+function showLoadingOverlay(show) {
+  var el = document.getElementById('page-loading-overlay');
+  if (!el) return;
+  if (show) { el.classList.remove('hidden'); }
+  else      { el.classList.add('hidden'); }
+}
+
 function loadAllSettings() {
-  var saved = getSettings(SETTINGS_KEY) || {};
-  var inst  = saved.institution || {};
-  var acad  = saved.academic    || {};
-  var sec   = saved.security    || {};
-  var app   = saved.appearance  || {};
-  if (inst.name)  document.getElementById('inst-name').value  = inst.name;
-  if (inst.short) document.getElementById('inst-short').value = inst.short;
-  if (inst.addr)  document.getElementById('inst-addr').value  = inst.addr;
-  if (inst.email) document.getElementById('inst-email').value = inst.email;
-  if (inst.phone) document.getElementById('inst-phone').value = inst.phone;
-  if (acad.year)  document.getElementById('acad-year').value  = acad.year;
-  if (acad.sem)   document.getElementById('acad-sem').value   = acad.sem;
-  if (acad.start) document.getElementById('acad-start').value = acad.start;
-  if (acad.end)   document.getElementById('acad-end').value   = acad.end;
-  if (acad.minAtt)document.getElementById('acad-minatt').value= acad.minAtt;
-  if (acad.wdays) document.getElementById('acad-wdays').value = acad.wdays;
-  if (sec.forcePw !== undefined) document.getElementById('sec-forcepw').checked = sec.forcePw;
-  if (sec.strongPw !== undefined)document.getElementById('sec-strongpw').checked= sec.strongPw;
-  if (sec.timeout !== undefined) document.getElementById('sec-timeout').checked  = sec.timeout;
-  if (sec.timeoutMin)document.getElementById('sec-timeout-mins').value = sec.timeoutMin;
-  if (sec.maxLogin)  document.getElementById('sec-maxlogin').value     = sec.maxLogin;
-  if (app.color) { document.getElementById('theme-color').value=app.color; document.getElementById('theme-color-hex').value=app.color; }
-  if (app.title)    document.getElementById('app-title').value    = app.title;
-  if (app.loginMsg) document.getElementById('login-msg').value    = app.loginMsg;
-  if (app.showLogo !== undefined) document.getElementById('show-logo').checked = app.showLogo;
+  showLoadingOverlay(true);
+  // Set placeholder text while loading
+  ['inst-name','inst-short','inst-addr','inst-email','inst-phone','acad-year'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.placeholder = 'Loading from DB…';
+  });
+  api('GET', '/settings').then(function(d) {
+    if (d && !d.error) {
+      applySettingsToForm(d);
+      setSettings(SETTINGS_KEY, d); // cache locally as fallback
+      logLine('Settings loaded from MongoDB', 'success');
+    } else {
+      // Fallback to localStorage cache
+      var cached = getSettings(SETTINGS_KEY);
+      if (cached) { applySettingsToForm(cached); logLine('Settings loaded from local cache (DB unavailable)', 'warn'); }
+    }
+  }).catch(function() {
+    var cached = getSettings(SETTINGS_KEY);
+    if (cached) { applySettingsToForm(cached); logLine('Settings loaded from local cache (network error)', 'warn'); }
+  }).finally(function() {
+    showLoadingOverlay(false);
+  });
 }
 loadAllSettings();
-
-// Sync color picker and hex input
-document.getElementById('theme-color').addEventListener('input', function() {
-  document.getElementById('theme-color-hex').value = this.value;
-});
-document.getElementById('theme-color-hex').addEventListener('input', function() {
-  document.getElementById('theme-color').value = this.value;
-});
 
 // ── Admin password reset ───────────────────────────────
 function resetAdminPassword() {
@@ -1861,13 +1875,38 @@ function executeAction() {
   if (input !== 'CONFIRM') { showToast('⚠️ Type CONFIRM to proceed', 'warn'); return; }
   document.getElementById('m-confirm-btn').disabled = true;
   showProgress('Processing…', 10);
+  if (currentAction === '__custom__' && typeof window._customConfirmFn === 'function') {
+    window._customConfirmFn();
+    return;
+  }
 
   if (currentAction === 'resetSettings') {
-    localStorage.removeItem(SETTINGS_KEY);
-    loadAllSettings();
-    closeConfirm();
-    logLine('All settings reset to defaults', 'warn');
-    showToast('↩ Settings reset to defaults');
+    var defaults = {
+      institution: { name:'', short:'', addr:'', email:'', phone:'' },
+      academic: { year:'', sem:'I', start:'', end:'', minAtt:'75', wdays:'6' },
+      security: { forcePw:true, strongPw:false, timeout:false, timeoutMin:'60', maxLogin:'5' }
+    };
+    showProgress('Resetting institution settings…', 20);
+    api('PUT', '/settings/institution', defaults.institution)
+      .then(function() {
+        showProgress('Resetting academic settings…', 50);
+        return api('PUT', '/settings/academic', defaults.academic);
+      })
+      .then(function() {
+        showProgress('Resetting security settings…', 80);
+        return api('PUT', '/settings/security', defaults.security);
+      })
+      .then(function() {
+        localStorage.removeItem(SETTINGS_KEY);
+        applySettingsToForm(defaults);
+        closeConfirm();
+        logLine('All settings reset to factory defaults (MongoDB + cache cleared)', 'warn');
+        showToast('↩ Settings reset to factory defaults');
+      })
+      .catch(function(e) {
+        closeConfirm();
+        showToast('❌ Reset failed: ' + (e.message||'network error'));
+      });
     return;
   }
 
@@ -1917,7 +1956,7 @@ function getDeleteSteps(action) {
     ];
   }
   if (action === 'logs') {
-    return [{ label:'Clearing logs…', fn: function() { return Promise.resolve({ok:true}); }}];
+    return [{ label:'Clearing logs from MongoDB…', fn: function() { return api('DELETE', '/logs'); }}];
   }
   if (action === 'clearall') {
     return [
@@ -2067,13 +2106,13 @@ function showToast(msg) {
 }
 
 // ── Navigation utils ───────────────────────────────────
-function goBack()    { window.location.href = 'admin.html'; }
-function doLogout()  { sessionStorage.clear(); window.location.href = 'index.html'; }
+function goBack()    { window.location.href = "./admin.html"; }
+function doLogout()  { sessionStorage.clear(); window.location.href = '../index.html'; }
 
 // ── Health stats (for Overview live strip) ─────────────
 function loadHealth() {
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  fetch('/api/system/health', { headers: { 'Authorization': 'Bearer ' + tok } })
+  fetch('/api/system/health?limit=20', { headers: { 'Authorization': 'Bearer ' + tok } })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var dbDot = document.getElementById('hc-db-dot');
@@ -2097,12 +2136,38 @@ function loadHealth() {
       var list = document.getElementById('health-errors-list');
       if (card && list && d.recentErrors && d.recentErrors.length) {
         card.style.display = 'block';
-        list.innerHTML = d.recentErrors.map(function(e) {
+        list.innerHTML = d.recentErrors.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); }).map(function(e) {
           var col = e.severity === 'critical' ? '#dc2626' : e.severity === 'warning' ? '#d97706' : '#64748b';
-          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:#fff8f0;border-radius:8px;border-left:3px solid '+col+';">'
-            + '<span style="font-size:12px;font-weight:700;color:'+col+';white-space:nowrap;">['+e.severity.toUpperCase()+']</span>'
-            + '<div><div style="font-size:12.5px;font-weight:600;color:var(--td);">'+e.action+' — '+e.details+'</div>'
-            + '<div style="font-size:11px;color:var(--tmu);">'+new Date(e.time).toLocaleString('en-IN')+'</div></div></div>';
+          var dt  = new Date(e.time);
+          var day = dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+          var tim = String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')+':'+String(dt.getSeconds()).padStart(2,'0');
+          var meta = day+' '+tim+(e.userName?' · '+e.userName:'')+(e.ip?' · '+e.ip:'');
+          return `
+            <div class="error-log" style="--log-color:${col}">
+              
+              <span class="error-severity">
+                [${e.severity.toUpperCase()}]
+              </span>
+
+              <div class="error-content">
+                <div class="error-title">
+                  ${e.action} — ${e.details}
+                </div>
+                <div class="error-meta">
+                  ${meta}
+                </div>
+              </div>
+
+              <button 
+                class="error-delete"
+                onclick="deleteSingleErrorLog('${e._id}', this)"
+                title="Delete"
+              >
+                ✕
+              </button>
+
+            </div>
+            `;
         }).join('');
       } else if (card) { card.style.display = 'none'; }
       logLine('Health: DB=' + d.dbStatus + ' Errors=' + d.errorCount + ' Mem=' + d.memoryMB + 'MB', 'success');
@@ -2113,6 +2178,69 @@ function loadHealth() {
       if (dbDot) dbDot.className = 'health-dot red';
       logLine('Health check failed: ' + (err.message || 'network error'), 'danger');
     });
+}
+
+// ── Clear all error/warning logs (from overview card) ────
+function clearErrorLogs() {
+  openConfirmEx({
+    icon: '🗑️',
+    title: 'Clear All Error Logs?',
+    body: 'This will permanently delete all warning, error, and critical log entries. System and info logs are preserved.',
+    btn: 'Clear Logs',
+    cls: 'btn-danger',
+    onConfirm: function() {
+      showProgress('Fetching error log IDs…', 20);
+      // Fetch all warning/critical/error logs then delete each by ID
+      api('GET', '/logs?severity=warning').then(function(warnLogs) {
+        return api('GET', '/logs?severity=critical').then(function(critLogs) {
+          return api('GET', '/logs?severity=error').then(function(errLogs) {
+            var all = (warnLogs||[]).concat(critLogs||[]).concat(errLogs||[]);
+            showProgress('Deleting ' + all.length + ' log entries…', 40);
+            return Promise.all(all.map(function(l) {
+              return api('DELETE', '/logs/' + l._id);
+            }));
+          });
+        });
+      }).then(function() {
+        closeConfirm();
+        logLine('All error/warning logs cleared', 'warn');
+        showToast('🗑 Error logs cleared');
+        loadHealth();
+      }).catch(function(e) {
+        closeConfirm();
+        showToast('❌ Clear failed: ' + (e.message||'network'));
+      });
+    }
+  });
+}
+
+function deleteSingleErrorLog(id, btn) {
+  if (btn) btn.disabled = true;
+  api('DELETE', '/logs/' + id).then(function(d) {
+    if (d && d.deleted) {
+      showToast('🗑 Log entry deleted');
+      loadHealth();
+    } else {
+      showToast('❌ Delete failed');
+      if (btn) btn.disabled = false;
+    }
+  }).catch(function() { showToast('❌ Delete failed'); if (btn) btn.disabled = false; });
+}
+
+// Extended confirm — supports custom onConfirm callback
+function openConfirmEx(cfg) {
+  currentAction = '__custom__';
+  window._customConfirmFn = cfg.onConfirm;
+  document.getElementById('m-icon').textContent  = cfg.icon  || '⚠️';
+  document.getElementById('m-title').textContent = cfg.title || 'Are you sure?';
+  document.getElementById('m-body').textContent  = cfg.body  || 'This cannot be undone.';
+  document.getElementById('m-input').value = '';
+  document.getElementById('m-progress').style.display = 'none';
+  var btn = document.getElementById('m-confirm-btn');
+  btn.textContent = cfg.btn || 'Confirm';
+  btn.className   = 'btn ' + (cfg.cls || 'btn-danger');
+  btn.disabled = false;
+  document.getElementById('confirm-modal').classList.add('open');
 }
 
 // ── Backup page ────────────────────────────────────────
@@ -2252,25 +2380,61 @@ function renderUndoList() {
 }
 
 function doUndo(id, btn) {
-  if (!confirm('Restore this deleted record back to the database?')) return;
-  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  if (btn) btn.disabled = true;
-  fetch('/api/undo/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok } })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.error) { showToast('❌ Restore failed: ' + d.error, 'danger'); if (btn) btn.disabled = false; return; }
-      showToast('✅ Restored: ' + d.label);
-      logLine('Undo restore: ' + d.label, 'success');
-      loadUndoPage();
-    }).catch(function(err) { showToast('❌ Error: ' + (err.message || 'network'), 'danger'); if (btn) btn.disabled = false; });
+  openConfirmEx({
+    icon: '↩️',
+    title: 'Restore Record?',
+    body: 'This will re-insert the deleted record back into the database with a fresh ID. All fields will be restored.',
+    btn: '↩️ Restore',
+    cls: 'btn-pri',
+    onConfirm: function() {
+      if (btn) btn.disabled = true;
+      showProgress('Restoring record…', 30);
+      var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+      fetch('/api/undo/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          showProgress('Done!', 100);
+          setTimeout(function() {
+            closeConfirm();
+            if (d.error) { showToast('❌ Restore failed: ' + d.error); if (btn) btn.disabled = false; return; }
+            showToast('✅ Restored: ' + d.label);
+            logLine('Undo restore: ' + d.label, 'success');
+            loadUndoPage();
+          }, 400);
+        }).catch(function(err) {
+          closeConfirm();
+          showToast('❌ Error: ' + (err.message || 'network'));
+          if (btn) btn.disabled = false;
+        });
+    }
+  });
 }
 
 function dismissUndo(id, btn) {
-  if (!confirm('Permanently discard this undo entry? This cannot be recovered.')) return;
-  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  fetch('/api/undo/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + tok } })
-    .then(function() { showToast('🗑 Undo entry discarded'); loadUndoPage(); })
-    .catch(function() { showToast('❌ Failed to discard'); });
+  openConfirmEx({
+    icon: '🗑️',
+    title: 'Discard Undo Entry?',
+    body: 'This will permanently delete the undo entry. The record cannot be recovered once discarded.',
+    btn: '🗑️ Discard',
+    cls: 'btn-danger',
+    onConfirm: function() {
+      showProgress('Discarding entry…', 50);
+      var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+      fetch('/api/undo/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + tok } })
+        .then(function() {
+          showProgress('Done!', 100);
+          setTimeout(function() {
+            closeConfirm();
+            showToast('🗑 Undo entry discarded');
+            loadUndoPage();
+          }, 400);
+        })
+        .catch(function() {
+          closeConfirm();
+          showToast('❌ Failed to discard');
+        });
+    }
+  });
 }
 
 // ── Legacy saveBackup stub (runSteps calls this — no-op now) ───────────
