@@ -356,6 +356,14 @@ select.form-input{cursor:pointer;}
 
         <div class="danger-row">
           <div>
+            <div class="danger-label">🗑️ Clear Cache</div>
+            <div class="danger-hint">Removes all cache memory from your browser</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="openClearStorageModal()">Clear Cache</button>
+        </div>
+
+        <div class="danger-row">
+          <div>
             <div class="danger-label">🗑️ Delete All Teachers</div>
             <div class="danger-hint">Removes all teacher accounts and their assignments. Admin account is preserved.</div>
           </div>
@@ -1008,7 +1016,49 @@ select.form-input{cursor:pointer;}
 </div>
 
 <!-- ══ TOAST ══ -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">
+  <div class="modal-bg" id="m-clear-storage">
+    <div class="modal modal-sm" style="text-align:center;">
+      <div class="modal-hd" style="justify-content:center;">
+        <div class="modal-title">🗑️ Clear Browser Cache</div>
+      </div>
+      <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>browser storage</strong>.</div>
+      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from MongoDB on next sync.</div>
+
+      <!-- Select All + localStorage collections -->
+      <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">localStorage (synced data)</div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="clr-all" onchange="toggleClearAll(this)" style="accent-color:#ef4444;width:15px;height:15px;">
+          <span style="color:#ef4444;">Select All</span>
+        </label>
+        <hr style="border:none;border-top:1px solid var(--br);margin:0;">
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="depts"         style="accent-color:var(--p);width:14px;height:14px;"> 🏛️ Departments</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="classes"       style="accent-color:var(--p);width:14px;height:14px;"> 🏫 Classes</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="subjects"      style="accent-color:var(--p);width:14px;height:14px;"> 📚 Subjects</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="students"      style="accent-color:var(--p);width:14px;height:14px;"> 👨‍🎓 Students</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="users"         style="accent-color:var(--p);width:14px;height:14px;"> 👩‍🏫 Users / Teachers</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="assignments"   style="accent-color:var(--p);width:14px;height:14px;"> 📋 Assignments</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="attendance"    style="accent-color:var(--p);width:14px;height:14px;"> 📅 Attendance Records</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="notifications" style="accent-color:var(--p);width:14px;height:14px;"> 🔔 Notifications</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="logs"          style="accent-color:var(--p);width:14px;height:14px;"> 📋 Activity Logs</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="settings"      style="accent-color:var(--p);width:14px;height:14px;"> ⚙️ Cached Settings</label>
+      </div>
+
+      <!-- sessionStorage section -->
+      <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">sessionStorage (session data)</div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-clear-storage')">Cancel</button>
+        <button class="btn-form-pri" style="background:#ef4444;border-color:#ef4444;" onclick="confirmClearStorage()">🗑️ Clear Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── State ──────────────────────────────────────────────
@@ -2198,6 +2248,71 @@ function createBackup() {
       showToast('❌ Backup error: ' + (err.message || 'network'), 'danger');
       if (btn) btn.disabled = false;
     });
+}
+
+function openClearStorageModal() {
+      document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = false; });
+      document.getElementById('clr-all').checked = false;
+      openModal_('m-clear-storage');
+    }
+
+function toggleClearAll(master) {
+  document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = master.checked; });
+}
+
+function confirmClearStorage() {
+  var checked = Array.from(document.querySelectorAll('.clr-chk:checked')).map(function (c) { return c.value; });
+  if (!checked.length) {
+    dbToast('Nothing selected', 'error', 'Tick at least one item to clear.');
+    return;
+  }
+
+  var cleared   = [];
+  var loggedOut = false;
+
+  checked.forEach(function (key) {
+    if (key === 'settings') {
+      // Remove eams_settings + all eams_setting_* keys
+      var toRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && (k === 'eams_settings' || k.startsWith('eams_setting_'))) toRemove.push(k);
+      }
+      toRemove.forEach(function (k) { localStorage.removeItem(k); });
+      cleared.push('Settings');
+
+    } else if (key === 'session_token') {
+      sessionStorage.removeItem('eams_token');
+      cleared.push('Auth Token');
+      loggedOut = true;
+
+    } else if (key === 'session_user') {
+      sessionStorage.removeItem('eams_user');
+      cleared.push('Session User');
+
+    } else {
+      // All ss3_* collections: depts, classes, subjects, students,
+      // users, assignments, attendance, notifications, logs
+      localStorage.removeItem('ss3_' + key);
+      cleared.push(key.charAt(0).toUpperCase() + key.slice(1));
+    }
+  });
+
+  closeModalBg('m-clear-storage');
+  dbToast('Browser cache cleared', 'success', cleared.join(' · ') + ' removed.');
+
+  if (loggedOut) {
+    // Token cleared — force re-login after a short delay
+    setTimeout(function () { doLogout(); }, 1200);
+    return;
+  }
+
+  // If all main localStorage collections were cleared, auto-resync from MongoDB
+  var allMain = ['depts','classes','subjects','students','users','assignments','attendance','notifications','logs'];
+  var clearedAllMain = allMain.every(function (k) { return checked.indexOf(k) !== -1; });
+  if (clearedAllMain) {
+    setTimeout(function () { syncAllFromDB(); }, 600);
+  }
 }
 
 // ── Undo page ──────────────────────────────────────────

@@ -192,834 +192,853 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 </head>
 <body>
 
-<!-- Overlay -->
-<div id="bulk-overlay" onclick="closeBulkDrawer()"></div>
+  <!-- APP SHELL -->
+  <div id="app-shell" class="vis">
+    <div class="sb-overlay" id="sb-overlay" onclick="toggleBulkSidebar()"></div>
 
-<!-- Drawer -->
-<div id="bulk-drawer">
+    <!-- ── SIDEBAR TOGGLE BUTTON ───────────────────── -->
+    <button class="sb-toggle-btn" id="sbtoggle" onclick="toggleBulkSidebar()" title="Toggle menu">✖</button>
 
-  <!-- Header -->
-  <div class="bulk-hd">
-    <div class="bulk-hd-title">📤 Bulk Upload Manager</div>
-    <button class="bulk-close" onclick="closeBulkDrawer()">✕</button>
+    <!-- ── SIDEBAR ───────────────────────────────────────────── -->
+    <nav class="sb">
+      <div class="sb-logo">
+        <div class="sb-brand">EAMS Admin</div>
+      </div>
+
+      <div class="nav-section" style="flex:1;overflow-y:auto;padding:6px 0;">
+        <!-- FIX #1: Dashboard button should not call bulkTab – it navigates away -->
+        <button class="sb-item" onclick="goBack()"><span class="sbi-ic">📊</span>Dashboard</button>
+
+        <div class="sb-section-label">Add</div>
+        <!-- FIX #2: Added 'bulk-tab' class to all tab buttons so bulkTab()'s querySelectorAll('.bulk-tab') 
+             correctly finds and toggles the 'act' class on them. -->
+        <button class="sb-item bulk-tab act" onclick="bulkTab(this,'dept')" id="wz-tab-dept"><span
+            class="sbi-ic">🏛️</span>Department</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'teacher')" id="wz-tab-teacher"><span
+            class="sbi-ic">👩‍🏫</span>Teacher</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'class')" id="wz-tab-class"><span
+            class="sbi-ic">🏫</span>Class</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'subject')" id="wz-tab-subject"><span
+            class="sbi-ic">📚</span>Subject</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'student')" id="wz-tab-student"><span
+            class="sbi-ic">👨‍🎓</span>Students</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'admin')" id="wz-tab-admin"><span
+            class="sbi-ic">👤</span>Admins</button>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-user">
+          <div class="sb-uav" id="sb-av">A</div>
+          <div>
+            <div class="sb-uname" id="sb-name">Administrator</div>
+            <div class="sb-urole">Admin</div>
+          </div>
+        </div>
+        <button class="sb-back-btn" onclick="goBack()">← Back to Dashboard</button>
+        <button class="sb-logout-btn" onclick="doLogout()">🚪 Logout</button>
+      </div>
+    </nav>
+
+    <!-- ── MAIN CONTENT ──────────────────────────────────────── -->
+    <div class="mc">
+
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div class="topbar-left" style="display: flex;align-items: center;gap: 10px;">
+          <div style="width:32px;"></div>
+          <div class="topbar-title"
+            style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--td);">
+            📤 Bulk Upload
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span id="wizard-badge"
+            style="display:none;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;animation:badge-pulse 2s infinite;">🧙
+            Setup Wizard Active</span>
+        </div>
+      </div>
+
+      <div class="main" style="max-width:860px;margin:0 auto;padding:24px 20px 56px;">
+
+        <!-- WIZARD BANNER -->
+        <div class="wizard-banner" id="wizard-banner" style="display:none;">
+          <div class="wiz-top">
+            <div style="font-size:40px;position:relative;z-index:1;">🧙‍♂️</div>
+            <div style="flex:1;position:relative;z-index:1;">
+              <div style="font-size:17px;font-weight:800;margin-bottom:3px;">Welcome! Let's set up your institution.
+              </div>
+              <div style="font-size:12.5px;opacity:.85;line-height:1.6;">Database is empty. Follow the wizard in order —
+                complete each step to unlock the next. All 6 steps required.</div>
+            </div>
+            <button class="wiz-dismiss" onclick="dismissWizard()">Dismiss</button>
+          </div>
+          <div class="wiz-steps" id="wiz-steps-row"></div>
+          <div class="wiz-progress">
+            <div class="wiz-bar-bg">
+              <div class="wiz-bar-fill" id="wiz-bar-fill"></div>
+            </div>
+            <div class="wiz-bar-lbl" id="wiz-bar-lbl">Step 0 of 6 complete</div>
+          </div>
+        </div>
+
+        <!-- DEPT -->
+        <div id="bulk-dept" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Department</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('dept')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('depts')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> DeptName | Code | Icon (optional)
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-dept').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'dept')">
+                <input type="file" id="uf-dept" accept=".xlsx,.xls,.csv" onchange="hu(this,'dept')">
+                <span class="uz-icon">🏛️</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="dept-up" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEACHERS -->
+        <div id="bulk-teacher" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Teacher</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('teacher')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('users','teacher')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> Name | EmployeeID | Department | Designation | Username | Password
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-tc').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'teachers')">
+                <input type="file" id="uf-tc" accept=".xlsx,.xls,.csv" onchange="hu(this,'teachers')">
+                <span class="uz-icon">👩‍🏫</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="tcup" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASSES -->
+        <div id="bulk-class" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Class</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('class')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('classes')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> Department | HallNo | Year | Semester | Section — ClassName auto-generated as DEPTCODE-SEM-SECTION
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-cls').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'struct')">
+                <input type="file" id="uf-cls" accept=".xlsx,.xls,.csv" onchange="hu(this,'struct')">
+                <span class="uz-icon">🏫</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="sup" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBJECTS -->
+        <div id="bulk-subject" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Subject</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('subject')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('subjects')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> Name | Code | Department | Credits | Type | Teacher (optional)
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-subj').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'subjects')">
+                <input type="file" id="uf-subj" accept=".xlsx,.xls,.csv" onchange="hu(this,'subjects')">
+                <span class="uz-icon">📚</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="subup" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STUDENTS -->
+        <div id="bulk-student" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Student</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('student')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('students')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> FullName | RegisterNo | AcademicYear | CourseType | Branch | Department | Year | Class | Section | Email | Username | Password
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-t').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'students')">
+                <input type="file" id="uf-t" accept=".xlsx,.xls,.csv" onchange="hu(this,'students')">
+                <span class="uz-icon">👨‍🎓</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="tup" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADMINS -->
+        <div id="bulk-admin" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl"><span class="sdo"></span>Add Admin</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-out" onclick="dlTemplate('admin')">⬇ Template</button>
+              <button class="btn-out" onclick="dlUploaded('users','admin')">⬇ Exported</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <div class="card-body">
+              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
+                <b>Required Columns:</b> Name | Department | Email | Username | Password
+              </div>
+              <div class="uz" onclick="document.getElementById('uf-adm').click()"
+                ondragover="event.preventDefault();this.classList.add('dg')"
+                ondragleave="this.classList.remove('dg')"
+                ondrop="hd(event,'admins')">
+                <input type="file" id="uf-adm" accept=".xlsx,.xls,.csv" onchange="hu(this,'admins')">
+                <span class="uz-icon">👤</span>
+                <div class="uz-title">Click or drag &amp; drop your file here</div>
+                <div class="uz-sub">.xlsx · .xls · .csv</div>
+              </div>
+              <div id="admup" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
 
-  <!-- Setup Banner -->
-  <div id="setup-banner">
-    <div class="setup-title">🚀 First Time Setup — No departments found</div>
-    <div class="setup-sub">Upload data in order to set up EAMS correctly. Click a step to begin.</div>
-    <div class="setup-steps" id="setup-steps-row"></div>
+  <!-- CONFLICT DIALOG -->
+  <div class="modal-overlay" id="bulk-conflict-overlay">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>⚠️ Data Conflict Found</h3>
+        <button class="modal-x" onclick="resolveConflict('cancel')">✕</button>
+      </div>
+      <div class="modal-sub" id="conflict-msg"></div>
+      <div class="compare-grid" id="conflict-compare-wrap" style="display:none;">
+        <div class="cmp-col db">
+          <div class="cmp-title">📦 Data in Database</div>
+          <div id="conflict-db-data"></div>
+        </div>
+        <div class="cmp-col up">
+          <div class="cmp-title">📄 Uploaded Data</div>
+          <div id="conflict-upload-data"></div>
+        </div>
+      </div>
+      <div class="diff-summary" id="conflict-diff-list" style="display:none;"></div>
+      <div class="apply-row">
+        <label class="apply-label">
+          <input type="checkbox" id="conflict-apply-all" style="accent-color:var(--gD);width:14px;height:14px;">
+          Apply this choice to all remaining conflicts in this upload
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-skip" onclick="resolveConflict('skip')">⏭ Skip — Keep Existing</button>
+        <button class="btn-replace" onclick="resolveConflict('replace')">🔄 Replace with Uploaded</button>
+        <button class="btn-cancel-up" onclick="resolveConflict('cancel')">✕ Cancel Upload</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="bulk-tabs">
-    <button class="btab act" onclick="bTab(this,'setup')">🚀 Setup</button>
-    <button class="btab" onclick="bTab(this,'dept')">🏛️ Departments</button>
-    <button class="btab" onclick="bTab(this,'teacher')">👩‍🏫 Teachers</button>
-    <button class="btab" onclick="bTab(this,'class')">🏫 Classes</button>
-    <button class="btab" onclick="bTab(this,'subject')">📚 Subjects</button>
-    <button class="btab" onclick="bTab(this,'student')">👨‍🎓 Students</button>
-    <button class="btab" onclick="bTab(this,'admin')">👤 Admins</button>
-  </div>
+  <div class="toast" id="toast"></div>
 
-  <!-- Body -->
-  <div class="bulk-body">
+  <script>
 
-    <!-- ══ SETUP PANEL ══ -->
-    <div id="bpanel-setup" class="bpanel act">
-      <div style="font-size:13px;color:var(--tmu);margin-bottom:14px;">Complete each step in order. Click a step to go to that upload tab.</div>
-      <div class="setup-progress" id="setup-list"></div>
-    </div>
+    // ── SIDEBAR TOGGLE ───────────────────────────────────────────────────────────
+    function toggleBulkSidebar() {
+      var sidebar = document.querySelector('#app-shell .sb');
+      var mainContent = document.querySelector('.mc');
+      var toggleButton = document.getElementById('sbtoggle');
+      var overlay = document.getElementById('sb-overlay');
+      var isMobile = window.innerWidth <= 768;
 
-    <!-- ══ DEPT PANEL ══ -->
-    <div id="bpanel-dept" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('dept')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('depts')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-dept').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'dept')">
-        <input type="file" id="uf-dept" accept=".xlsx,.xls,.csv" onchange="hup(this,'dept')">
-        <span class="uz-icon">🏛️</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">DeptName</span>
-          <span class="col-badge">Code</span>
-          <span class="col-badge">Icon (optional)</span>
-        </div>
-        <div class="col-note">Example: Computer Science Engineering | CSE | 💻</div>
-      </div>
-      <div id="rpt-dept" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-dept">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-dept-fill"></div></div>
-        <div class="prog-label" id="prog-dept-label">Processing…</div>
-      </div>
-    </div>
-
-    <!-- ══ TEACHER PANEL ══ -->
-    <div id="bpanel-teacher" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('teacher')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('users','teacher')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-tc2').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'teachers')">
-        <input type="file" id="uf-tc2" accept=".xlsx,.xls,.csv" onchange="hup(this,'teachers')">
-        <span class="uz-icon">👩‍🏫</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">Name</span>
-          <span class="col-badge">EmployeeID</span>
-          <span class="col-badge">Department</span>
-          <span class="col-badge">Designation</span>
-          <span class="col-badge">Username</span>
-          <span class="col-badge">Password</span>
-        </div>
-        <div class="col-note">Designation: Assistant Professor / Associate Professor / Professor / HOD</div>
-      </div>
-      <div id="rpt-teacher" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-teacher">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-teacher-fill"></div></div>
-        <div class="prog-label" id="prog-teacher-label">Processing…</div>
-      </div>
-    </div>
-
-    <!-- ══ CLASS PANEL ══ -->
-    <div id="bpanel-class" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('class')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('classes')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-cls2').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'struct')">
-        <input type="file" id="uf-cls2" accept=".xlsx,.xls,.csv" onchange="hup(this,'struct')">
-        <span class="uz-icon">🏫</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">Department</span>
-          <span class="col-badge">HallNo</span>
-          <span class="col-badge">Year</span>
-          <span class="col-badge">Semester</span>
-          <span class="col-badge">Section</span>
-        </div>
-        <div class="col-note">ClassName is auto-generated as DEPTCODE-SEM-SECTION (e.g. CSE-I-A)</div>
-      </div>
-      <div id="rpt-class" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-class">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-class-fill"></div></div>
-        <div class="prog-label" id="prog-class-label">Processing…</div>
-      </div>
-    </div>
-
-    <!-- ══ SUBJECT PANEL ══ -->
-    <div id="bpanel-subject" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('subject')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('subjects')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-subj2').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'subjects')">
-        <input type="file" id="uf-subj2" accept=".xlsx,.xls,.csv" onchange="hup(this,'subjects')">
-        <span class="uz-icon">📚</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">Name</span>
-          <span class="col-badge">Code</span>
-          <span class="col-badge">Department</span>
-          <span class="col-badge">Credits</span>
-          <span class="col-badge">Type</span>
-          <span class="col-badge">Teacher (optional)</span>
-        </div>
-        <div class="col-note">Type: Theory / Lab / Elective</div>
-      </div>
-      <div id="rpt-subject" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-subject">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-subject-fill"></div></div>
-        <div class="prog-label" id="prog-subject-label">Processing…</div>
-      </div>
-    </div>
-
-    <!-- ══ STUDENT PANEL ══ -->
-    <div id="bpanel-student" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('student')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('students')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-stu2').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'students')">
-        <input type="file" id="uf-stu2" accept=".xlsx,.xls,.csv" onchange="hup(this,'students')">
-        <span class="uz-icon">👨‍🎓</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">FullName</span>
-          <span class="col-badge">RegisterNo</span>
-          <span class="col-badge">AcademicYear</span>
-          <span class="col-badge">CourseType</span>
-          <span class="col-badge">Branch</span>
-          <span class="col-badge">Department</span>
-          <span class="col-badge">Year</span>
-          <span class="col-badge">Class</span>
-          <span class="col-badge">Section</span>
-          <span class="col-badge">Email</span>
-          <span class="col-badge">Username</span>
-          <span class="col-badge">Password</span>
-        </div>
-        <div class="col-note">CourseType: UG or PG · Branch: B.E / B.Tech / M.E etc.</div>
-      </div>
-      <div id="rpt-student" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-student">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-student-fill"></div></div>
-        <div class="prog-label" id="prog-student-label">Processing…</div>
-      </div>
-    </div>
-
-    <!-- ══ ADMIN PANEL ══ -->
-    <div id="bpanel-admin" class="bpanel">
-      <div class="bulk-actions">
-        <button class="btn-b btn-b-out" onclick="dlTemplate('admin')">⬇ Download Template</button>
-        <button class="btn-b btn-b-out" onclick="dlUploaded('users','admin')">⬇ Download Uploaded</button>
-      </div>
-      <div class="uz" onclick="document.getElementById('uf-adm2').click()"
-        ondragover="event.preventDefault();this.classList.add('dg')"
-        ondragleave="this.classList.remove('dg')"
-        ondrop="hdrop(event,'admins')">
-        <input type="file" id="uf-adm2" accept=".xlsx,.xls,.csv" onchange="hup(this,'admins')">
-        <span class="uz-icon">👤</span>
-        <div class="uz-title">Click or drag & drop</div>
-        <div class="uz-sub">.xlsx .xls .csv</div>
-      </div>
-      <div class="bcard">
-        <div class="bcard-title">Required Columns</div>
-        <div class="col-badges">
-          <span class="col-badge">Name</span>
-          <span class="col-badge">Department</span>
-          <span class="col-badge">Email</span>
-          <span class="col-badge">Username</span>
-          <span class="col-badge">Password</span>
-        </div>
-      </div>
-      <div id="rpt-admin" class="rpt-box"></div>
-      <div class="upload-progress" id="prog-admin">
-        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-admin-fill"></div></div>
-        <div class="prog-label" id="prog-admin-label">Processing…</div>
-      </div>
-    </div>
-
-  </div><!-- /bulk-body -->
-</div><!-- /bulk-drawer -->
-
-<!-- Conflict Dialog -->
-<div id="conflict-box">
-  <div class="conflict-card">
-    <div class="conflict-title">⚠️ Duplicate Found</div>
-    <div class="conflict-body" id="c-body">A record with the same key already exists.</div>
-    <div class="conflict-diff" id="c-diff"></div>
-    <label class="conflict-apply">
-      <input type="checkbox" id="c-apply-all">
-      <span>Apply this choice to all remaining conflicts in this upload</span>
-    </label>
-    <div class="conflict-btns">
-      <button class="cb-skip" onclick="resolveConflict('skip')">Skip (Keep Existing)</button>
-      <button class="cb-replace" onclick="resolveConflict('replace')">Replace (Overwrite)</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div id="bulk-toast"></div>
-
-<script>
-// ── DB bridge: reads from parent window localStorage ───────────────────────
-var DB = (function() {
-  var win = window.parent !== window ? window.parent : window;
-  function _get(col) {
-    try { return JSON.parse(win.localStorage.getItem('ss3_' + col) || '[]'); }
-    catch(e) { return []; }
-  }
-  function _set(col, data) {
-    win.localStorage.setItem('ss3_' + col, JSON.stringify(data));
-  }
-  function _makeId() { return '_' + Math.random().toString(36).slice(2, 11); }
-  return {
-    get: _get,
-    insert: function(col, doc) {
-      var rows = _get(col);
-      doc._id = _makeId();
-      rows.push(doc);
-      _set(col, rows);
-      return doc;
-    },
-    update: function(col, id, updates) {
-      var rows = _get(col).map(function(r) { return r._id === id ? Object.assign({}, r, updates) : r; });
-      _set(col, rows);
-    },
-    one: function(col, filter) {
-      return _get(col).find(function(r) {
-        return Object.keys(filter).every(function(k) { return r[k] === filter[k]; });
-      });
-    }
-  };
-})();
-
-// ── Bulk log accumulator — collected during upload, sent to DB at end ──────
-var _bulkLog = [];       // { type, name, action } — 'added'|'skipped'|'replaced'|'error'
-var _bulkType = '';      // current upload type label
-var _bulkStartTime = null;
-
-function bulkLogStart(type) {
-  _bulkLog = [];
-  _bulkType = type;
-  _bulkStartTime = new Date();
-}
-
-function bulkLogAdd(action, name, detail) {
-  _bulkLog.push({ action: action, name: name, detail: detail || '' });
-}
-
-function bulkLogFlush(added, skipped) {
-  // Build a detailed log summary and send to server
-  var win = window.parent !== window ? window.parent : window;
-  var tok = win.sessionStorage ? win.sessionStorage.getItem('eams_token') : null;
-  if (!tok) return;
-  var duration = _bulkStartTime ? ((new Date() - _bulkStartTime) / 1000).toFixed(1) + 's' : '';
-  var addedItems  = _bulkLog.filter(function(l){ return l.action === 'added'; }).map(function(l){ return l.name; });
-  var skipItems   = _bulkLog.filter(function(l){ return l.action === 'skipped'; }).map(function(l){ return l.name; });
-  var replaceItems= _bulkLog.filter(function(l){ return l.action === 'replaced'; }).map(function(l){ return l.name; });
-  var details = 'Bulk ' + _bulkType + ' upload — ' + added + ' added, ' + skipped + ' skipped (' + duration + ')';
-  if (addedItems.length)   details += ' | Added: ' + addedItems.slice(0,10).join(', ') + (addedItems.length > 10 ? '…+' + (addedItems.length-10) : '');
-  if (replaceItems.length) details += ' | Replaced: ' + replaceItems.slice(0,5).join(', ');
-  if (skipItems.length)    details += ' | Skipped: ' + skipItems.slice(0,5).join(', ');
-
-  fetch('/api/logs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-    body: JSON.stringify({
-      action: 'Bulk Upload — ' + _bulkType,
-      details: details,
-      category: 'data',
-      severity: skipped > added ? 'warning' : 'info'
-    })
-  }).catch(function(){});
-}
-
-// ── Conflict system ────────────────────────────────────────────────────────
-var _conflictCb     = null;
-var _conflictChoice = null; // null | 'skip' | 'replace'
-
-function showConflict(bodyMsg, diffHtml, cb) {
-  document.getElementById('c-body').textContent  = bodyMsg;
-  document.getElementById('c-diff').innerHTML    = diffHtml;
-  document.getElementById('c-apply-all').checked = false;
-  document.getElementById('conflict-box').classList.add('open');
-  _conflictCb = cb;
-}
-
-function resolveConflict(choice) {
-  if (document.getElementById('c-apply-all').checked) _conflictChoice = choice;
-  document.getElementById('conflict-box').classList.remove('open');
-  if (_conflictCb) { _conflictCb(choice); _conflictCb = null; }
-}
-
-function checkConflict(existing, incoming, label, onDecide) {
-  // Check if records are identical (ignore _id, timestamps)
-  var keys = Object.keys(incoming).filter(function(k) { return k !== '_id' && k !== 'createdAt' && k !== 'updatedAt'; });
-  var isSame = keys.every(function(k) { return !incoming[k] || existing[k] === incoming[k]; });
-  if (isSame) { onDecide('skip'); return; }
-  if (_conflictChoice) { onDecide(_conflictChoice); return; }
-  var diffs = keys
-    .filter(function(k) { return incoming[k] && existing[k] !== incoming[k]; })
-    .map(function(k) {
-      return '<div class="conflict-diff-row"><b>' + k + ':</b> "' + (existing[k] || '—') + '" → "' + incoming[k] + '"</div>';
-    }).join('');
-  showConflict(
-    '"' + label + '" already exists with differences:',
-    diffs || '<div style="color:var(--tmu)">Minor differences detected</div>',
-    onDecide
-  );
-}
-
-// ── Tab switcher ───────────────────────────────────────────────────────────
-function bTab(btn, id) {
-  document.querySelectorAll('.btab').forEach(function(b) { b.classList.remove('act'); });
-  btn.classList.add('act');
-  document.querySelectorAll('.bpanel').forEach(function(p) { p.classList.remove('act'); });
-  var panel = document.getElementById('bpanel-' + id);
-  if (panel) panel.classList.add('act');
-}
-
-function goToTab(id) {
-  var btn = document.querySelector('.btab[onclick*="\'' + id + '\'"]');
-  if (btn) bTab(btn, id);
-}
-
-// ── Drawer open/close ──────────────────────────────────────────────────────
-function openBulkDrawer() {
-  document.getElementById('bulk-overlay').classList.add('open');
-  document.getElementById('bulk-drawer').classList.add('open');
-  _conflictChoice = null;
-  refreshSetup();
-}
-
-function closeBulkDrawer() {
-  document.getElementById('bulk-overlay').classList.remove('open');
-  document.getElementById('bulk-drawer').classList.remove('open');
-}
-
-// ── Setup wizard ───────────────────────────────────────────────────────────
-var SETUP_STEPS = [
-  { id:'dept',    label:'Departments', icon:'🏛️', col:'depts', hint:'Upload department names and codes first' },
-  { id:'teacher', label:'Teachers',   icon:'👩‍🏫', col:'users', role:'teacher', hint:'Upload teacher accounts' },
-  { id:'class',   label:'Classes',    icon:'🏫', col:'classes', hint:'Classes auto-named from dept+sem+section' },
-  { id:'subject', label:'Subjects',   icon:'📚', col:'subjects', hint:'Upload subjects for each department' },
-  { id:'student', label:'Students',   icon:'👨‍🎓', col:'students', hint:'Upload student records last' },
-  { id:'admin',   label:'Admins',     icon:'👤', col:'users', role:'admin', hint:'Additional admin accounts' },
-];
-
-function getCount(step) {
-  var data = DB.get(step.col);
-  if (step.role) data = data.filter(function(r) { return r.role === step.role; });
-  return data.length;
-}
-
-function refreshSetup() {
-  var hasDepts = DB.get('depts').length > 0;
-  var banner   = document.getElementById('setup-banner');
-  if (!hasDepts) {
-    banner.style.display = 'block';
-    var steps = SETUP_STEPS.map(function(s, i) {
-      var done = getCount(s) > 0;
-      return '<button class="setup-step-btn ' + (done ? 'done' : (i === 0 ? 'active' : '')) + '" onclick="goToTab(\'' + s.id + '\')">'
-        + (done ? '✅ ' : (i + 1) + '. ') + s.label + '</button>';
-    }).join('');
-    document.getElementById('setup-steps-row').innerHTML = steps;
-  } else {
-    banner.style.display = 'none';
-  }
-
-  // Render setup panel list
-  var listEl = document.getElementById('setup-list');
-  listEl.innerHTML = SETUP_STEPS.map(function(s, i) {
-    var count  = getCount(s);
-    var done   = count > 0;
-    var locked = i > 0 && getCount(SETUP_STEPS[i-1]) === 0;
-    return '<div class="setup-item ' + (done ? 'done' : '') + '" onclick="goToTab(\'' + s.id + '\')">'
-      + '<span class="si-icon">' + s.icon + '</span>'
-      + '<div><div class="si-label">' + (i+1) + '. ' + s.label + '</div>'
-      + '<div class="si-hint">' + s.hint + (count ? ' — <b>' + count + ' records</b>' : '') + '</div></div>'
-      + '<span class="si-status ' + (done ? 'done' : locked ? 'locked' : 'pending') + '">'
-      + (done ? '✅ Done' : locked ? '🔒 Locked' : '⏳ Pending') + '</span>'
-      + '</div>';
-  }).join('');
-}
-
-// ── File handlers ──────────────────────────────────────────────────────────
-function hdrop(event, type) {
-  event.preventDefault();
-  event.currentTarget.classList.remove('dg');
-  var file = event.dataTransfer.files[0];
-  if (file) processUpload(file, type);
-}
-
-function hup(input, type) {
-  var file = input.files[0];
-  if (file) processUpload(file, type);
-  input.value = ''; // reset so same file can be re-uploaded
-}
-
-function processUpload(file, type) {
-  _conflictChoice = null;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-      var ws   = wb.Sheets[wb.SheetNames[0]];
-      var rows = XLSX.utils.sheet_to_json(ws);
-      if (!rows.length) { bToast('No data found in file', 'warn'); return; }
-      if      (type === 'dept')     parseDepts(rows);
-      else if (type === 'struct')   parseClasses(rows);
-      else if (type === 'subjects') parseSubjects(rows);
-      else if (type === 'students') parseStudents(rows);
-      else if (type === 'teachers') parseTeachers(rows);
-      else if (type === 'admins')   parseAdmins(rows);
-    } catch(err) {
-      bToast('Error reading file: ' + err.message, 'warn');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ── Column value helper ────────────────────────────────────────────────────
-function cv(row, aliases) {
-  var keys = Object.keys(row);
-  for (var i = 0; i < aliases.length; i++) {
-    var m = keys.find(function(k) { return k.toLowerCase().replace(/[^a-z]/g,'').includes(aliases[i].toLowerCase()); });
-    if (m) return String(row[m]).trim();
-  }
-  return '';
-}
-
-// ── Progress helpers ───────────────────────────────────────────────────────
-function showProgress(id, pct, label) {
-  var wrap = document.getElementById('prog-' + id);
-  if (!wrap) return;
-  wrap.style.display = 'block';
-  document.getElementById('prog-' + id + '-fill').style.width  = pct + '%';
-  document.getElementById('prog-' + id + '-label').textContent = label;
-}
-
-function hideProgress(id) {
-  var wrap = document.getElementById('prog-' + id);
-  if (wrap) wrap.style.display = 'none';
-}
-
-// ── Report helper ──────────────────────────────────────────────────────────
-function showReport(id, added, skipped, errors) {
-  var el = document.getElementById('rpt-' + id);
-  if (!el) return;
-  var errHtml = (errors || []).slice(0,8).map(function(e) {
-    return '<div class="rpt-err-row"><b>Row ' + (e.row||'?') + ':</b> ' + (e.name||'') + ' — <span style="color:#b45309;">' + (e.issues||[e.msg]).join('; ') + '</span></div>';
-  }).join('');
-  el.innerHTML =
-    '<div class="rpt-nums">'
-    + '<span>✅ <b style="color:var(--gD);">' + added + '</b> Added</span>'
-    + '<span>⚠️ <b style="color:#b45309;">' + skipped + '</b> Skipped</span>'
-    + ((errors && errors.length > 8) ? '<span style="color:var(--tdi);font-size:11px;">+' + (errors.length-8) + ' more</span>' : '')
-    + '</div>'
-    + (errHtml ? '<div style="background:#fff;border-radius:7px;padding:8px;max-height:150px;overflow-y:auto;">' + errHtml + '</div>' : '');
-  el.classList.add('show');
-  refreshSetup();
-}
-
-// ══ PARSERS ════════════════════════════════════════════════════════════════
-
-// ── DEPARTMENTS ────────────────────────────────────────────────────────────
-function parseDepts(rows) {
-  var added = 0, skipped = 0, pending = rows.slice(), errors = [];
-  bulkLogStart('Departments');
-  showProgress('dept', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('dept', 100, 'Done!');
-      setTimeout(function(){ hideProgress('dept'); }, 800);
-      showReport('dept', added, skipped, errors);
-      bToast('Departments: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
-    }
-    showProgress('dept', Math.round((i/pending.length)*90)+5, 'Processing row ' + (i+1) + '/' + pending.length + '…');
-    var row  = pending[i];
-    var name = cv(row, ['deptname','name','dept','department']);
-    var code = cv(row, ['code','deptcode']);
-    var icon = cv(row, ['icon','emoji']) || '🏛️';
-    if (!name || !code) { errors.push({row:i+2,name:name||'(blank)',issues:['DeptName or Code missing']}); skipped++; next(i+1); return; }
-    var existing = DB.get('depts').find(function(d) {
-      return d.code.toUpperCase() === code.toUpperCase() || d.name.toLowerCase() === name.toLowerCase();
-    });
-    if (existing) {
-      checkConflict(existing, {name:name, code:code.toUpperCase(), icon:icon}, name, function(choice) {
-        if (choice === 'replace') { DB.update('depts', existing._id, {name:name,code:code.toUpperCase(),icon:icon}); bulkLogAdd('replaced',name); added++; }
-        else { bulkLogAdd('skipped',name,'duplicate'); skipped++; }
-        next(i+1);
-      });
-    } else {
-      DB.insert('depts', {name:name, code:code.toUpperCase(), icon:icon});
-      bulkLogAdd('added', name); added++; next(i+1);
-    }
-  }
-  next(0);
-}
-
-// ── CLASSES ────────────────────────────────────────────────────────────────
-function parseClasses(rows) {
-  var added = 0, skipped = 0, errors = [], pending = rows.slice();
-  bulkLogStart('Classes');
-  showProgress('class', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('class', 100, 'Done!');
-      setTimeout(function(){ hideProgress('class'); }, 800);
-      showReport('class', added, skipped, errors);
-      bToast('Classes: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
-    }
-    showProgress('class', Math.round((i/pending.length)*90)+5, 'Processing row ' + (i+1) + '/' + pending.length + '…');
-    var row     = pending[i];
-    var dname   = cv(row, ['dept','department','deptname']);
-    var dcode   = cv(row, ['code','deptcode']);
-    var sem     = cv(row, ['sem','semester']);
-    var section = cv(row, ['section','sec']) || 'A';
-    var year    = cv(row, ['year','studyyear']) || 'I Year';
-    var hallNo  = cv(row, ['hallno','hall','room']) || '';
-    if (!dname && !dcode) { errors.push({row:i+2,name:'Row '+(i+2),issues:['Department missing']}); skipped++; next(i+1); return; }
-    if (!sem)             { errors.push({row:i+2,name:dname,issues:['Semester missing']}); skipped++; next(i+1); return; }
-    var dept = DB.get('depts').find(function(d) {
-      return d.name.toLowerCase() === (dname||'').toLowerCase() || d.code.toLowerCase() === (dcode||dname||'').toLowerCase();
-    });
-    if (!dept) {
-      // Auto-create dept if code given
-      if (dcode) {
-        dept = DB.insert('depts', {name: dname||dcode, code: dcode.toUpperCase(), icon:'🏛️'});
+      if (isMobile) {
+        var isOpen = sidebar.classList.toggle('sb-mobile-open');
+        if (overlay) overlay.classList.toggle('visible', isOpen);
+        toggleButton.innerHTML = isOpen ? '✖' : '☰';
       } else {
-        errors.push({row:i+2,name:dname,issues:['Department "'+dname+'" not found']}); skipped++; next(i+1); return;
+        var isHidden = sidebar.classList.toggle('sb-hidden');
+        mainContent.classList.toggle('sb-expanded', isHidden);
+        toggleButton.classList.toggle('closed', isHidden);
+        toggleButton.innerHTML = isHidden ? '☰' : '✖';
       }
     }
-    var className = dept.code + '-' + sem + '-' + section;
-    var existing  = DB.get('classes').find(function(c) { return c.deptId===dept._id && c.sem===sem && c.section===section; });
-    if (existing) {
-      checkConflict(existing, {hallNo:hallNo, year:year}, className, function(choice) {
-        if (choice === 'replace') { DB.update('classes', existing._id, {hallNo:hallNo,year:year}); added++; }
-        else skipped++;
-        next(i+1);
-      });
-    } else {
-      DB.insert('classes', {deptId:dept._id,deptName:dept.name,deptCode:dept.code,year:year,sem:sem,section:section,hallNo:hallNo,name:className});
-      bulkLogAdd('added', className); added++; next(i+1);
-    }
-  }
-  next(0);
-}
 
-// ── SUBJECTS ───────────────────────────────────────────────────────────────
-function parseSubjects(rows) {
-  var added = 0, skipped = 0, errors = [], pending = rows.slice();
-  bulkLogStart('Subjects');
-  showProgress('subject', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('subject', 100, 'Done!');
-      setTimeout(function(){ hideProgress('subject'); }, 800);
-      showReport('subject', added, skipped, errors);
-      bToast('Subjects: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
+    function goBack() { window.location.href = "./admin.html"; }
+
+    function doLogout() {
+      sessionStorage.clear();
+      window.location.href = '../index.html';
     }
-    showProgress('subject', Math.round((i/pending.length)*90)+5, 'Row ' + (i+1) + '/' + pending.length);
-    var row     = pending[i];
-    var name    = cv(row, ['name','subject','subjectname']);
-    var code    = cv(row, ['code','subjectcode']);
-    var dname   = cv(row, ['dept','department','deptcode']);
-    var credits = parseInt(cv(row, ['credits','credit'])) || 3;
-    var type    = cv(row, ['type','subjecttype']) || 'Theory';
-    var tchName = cv(row, ['teacher','teachername']);
-    if (!name) { errors.push({row:i+2,name:'Row '+(i+2),issues:['Name missing']}); skipped++; next(i+1); return; }
-    var dept = DB.get('depts').find(function(d) {
-      return d.name.toLowerCase() === dname.toLowerCase() || d.code.toLowerCase() === dname.toLowerCase();
-    });
-    if (!dept) { errors.push({row:i+2,name:name,issues:['Dept "'+dname+'" not found']}); skipped++; next(i+1); return; }
-    var existing = DB.get('subjects').find(function(s) { return s.code === code && s.deptId === dept._id; });
-    if (existing) {
-      checkConflict(existing, {name:name,code:code,credits:credits,type:type}, name, function(choice) {
-        if (choice === 'replace') { DB.update('subjects', existing._id, {name:name,credits:credits,type:type}); added++; }
-        else skipped++;
-        next(i+1);
-      });
-    } else {
-      var newSubj = DB.insert('subjects', {name:name,code:code,credits:credits,type:type,deptId:dept._id,deptName:dept.name,deptCode:dept.code});
-      // Auto-assign teacher if provided
-      if (tchName) {
-        var tch = DB.get('users').find(function(u){ return u.role==='teacher' && u.name.toLowerCase().includes(tchName.toLowerCase()); });
-        if (tch) {
-          DB.get('classes').filter(function(c){ return c.deptId===dept._id; }).forEach(function(cls){
-            if (!DB.one('assignments',{classId:cls._id,subjectId:newSubj._id}))
-              DB.insert('assignments',{classId:cls._id,className:cls.name,subjectId:newSubj._id,subjectName:name,teacherId:tch._id,teacherName:tch.name,deptName:cls.deptName,deptCode:cls.deptCode});
+
+    // ── DB ──────────────────────────────────────────────────────────────────────
+    var DB = {
+      get: function (c) { try { return JSON.parse(localStorage.getItem('ss3_' + c) || '[]'); } catch (e) { return []; } },
+      set: function (c, d) { localStorage.setItem('ss3_' + c, JSON.stringify(d)); },
+      insert: function (c, doc) { var r = DB.get(c); doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); r.push(doc); DB.set(c, r); return doc; },
+      update: function (c, id, u) { var r = DB.get(c), i = r.findIndex(function (x) { return x._id === id; }); if (i >= 0) { r[i] = Object.assign({}, r[i], u); DB.set(c, r); } },
+      delete: function (c, id) { DB.set(c, DB.get(c).filter(function (x) { return x._id !== id; })); },
+      find: function (c, q) { q = q || {}; return DB.get(c).filter(function (d) { return Object.keys(q).every(function (k) { return d[k] === q[k]; }); }); },
+      one: function (c, q) { q = q || {}; return DB.get(c).find(function (d) { return Object.keys(q).every(function (k) { return d[k] === q[k]; }); }) || null; },
+    };
+
+    // ── TOAST ───────────────────────────────────────────────────────────────────
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (type === 'warn' ? ' warn' : '') + ' show';
+      clearTimeout(t._t);
+      t._t = setTimeout(function () { t.className = 'toast'; }, 3000);
+    }
+
+    // ── WIZARD ──────────────────────────────────────────────────────────────────
+    var WIZARD_STEPS = [
+      { key: 'dept',    icon: '🏛️',  label: 'Departments', tab: 'dept'    },
+      { key: 'teacher', icon: '👩‍🏫', label: 'Teachers',    tab: 'teacher' },
+      { key: 'class',   icon: '🏫',  label: 'Classes',     tab: 'class'   },
+      { key: 'subject', icon: '📚',  label: 'Subjects',    tab: 'subject' },
+      { key: 'student', icon: '👨‍🎓', label: 'Students',    tab: 'student' },
+      { key: 'admin',   icon: '👤',  label: 'Admins',      tab: 'admin'   },
+    ];
+    var _wizDone = {}, _wizActive = '';
+
+    function initWizard() {
+      // FIX #3: Load admin name from sessionStorage into sidebar
+      var adminName = sessionStorage.getItem('adminName') || sessionStorage.getItem('name') || 'Administrator';
+      var nameEl = document.getElementById('sb-name');
+      var avEl   = document.getElementById('sb-av');
+      if (nameEl) nameEl.textContent = adminName;
+      if (avEl)   avEl.textContent   = adminName.charAt(0).toUpperCase();
+
+      var isEmpty = DB.get('depts').length === 0 && DB.get('classes').length === 0;
+      document.getElementById('wizard-banner').style.display = isEmpty ? 'block' : 'none';
+      document.getElementById('wizard-badge').style.display  = isEmpty ? 'inline-flex' : 'none';
+      if (isEmpty) renderWizSteps();
+
+      // FIX #4: Show the default panel (dept) on load
+      var firstBtn = document.getElementById('wz-tab-dept');
+      if (firstBtn) bulkTab(firstBtn, 'dept');
+    }
+
+    function dismissWizard() {
+      document.getElementById('wizard-banner').style.display = 'none';
+      document.getElementById('wizard-badge').style.display  = 'none';
+    }
+
+    function renderWizSteps() {
+      var row = document.getElementById('wiz-steps-row');
+      if (!row) return;
+      row.innerHTML = WIZARD_STEPS.map(function (s, i) {
+        var done   = !!_wizDone[s.key];
+        var active = _wizActive === s.key;
+        var cls    = 'wiz-pill' + (done ? ' done' : '') + (active ? ' active' : '');
+        return '<div class="' + cls + '" onclick="wizGoTo(\'' + s.tab + '\')" id="wiz-step-' + s.key + '">'
+          + '<div class="wiz-pill-num">' + (done ? '✓' : (i + 1)) + '</div>'
+          + '<span style="font-size:16px;">' + s.icon + '</span>'
+          + '<span>' + s.label + '</span>'
+          + (done ? '<span style="font-size:10px;color:#4ade80;">✅</span>' : '')
+          + '</div>';
+      }).join('');
+      var done  = Object.keys(_wizDone).length;
+      var total = WIZARD_STEPS.length;
+      var pct   = Math.round(done / total * 100);
+      document.getElementById('wiz-bar-fill').style.width = pct + '%';
+      document.getElementById('wiz-bar-lbl').textContent  = 'Step ' + done + ' of ' + total + ' complete (' + pct + '%)';
+    }
+
+    // FIX #5: wizGoTo now uses the correct '#wz-tab-<tab>' selector instead of
+    // the broken '.bulk-tab[onclick*="\'tab\'"]' attribute selector that never matched.
+    function wizGoTo(tab) {
+      var btn = document.getElementById('wz-tab-' + tab);
+      if (btn) bulkTab(btn, tab);
+    }
+
+    function wizMarkDone(key) {
+      _wizDone[key] = true;
+      var t = document.getElementById('wz-tab-' + key);
+      if (t) t.classList.add('tab-done');
+      renderWizSteps();
+      var idx = WIZARD_STEPS.findIndex(function (s) { return s.key === key; });
+      if (idx >= 0 && idx < WIZARD_STEPS.length - 1) {
+        setTimeout(function () { wizGoTo(WIZARD_STEPS[idx + 1].tab); }, 700);
+      }
+      if (WIZARD_STEPS.every(function (s) { return _wizDone[s.key]; })) showWizComplete();
+    }
+
+    function showWizComplete() {
+      var b = document.getElementById('wizard-banner');
+      if (!b) return;
+      b.innerHTML = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+        + '<div style="font-size:44px;">🎉</div>'
+        + '<div style="flex:1;"><div style="font-size:17px;font-weight:800;margin-bottom:4px;">Setup Complete!</div>'
+        + '<div style="font-size:12.5px;opacity:.85;">All institution data imported. Your EAMS is ready.</div></div>'
+        + '<a href="admin.html" style="padding:10px 22px;border-radius:22px;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">Go to Dashboard →</a>'
+        + '</div>';
+    }
+
+    // ── TAB ─────────────────────────────────────────────────────────────────────
+    // FIX #6: Selector changed from '.bulk-tab' to '.sb-item.bulk-tab' which now
+    // correctly targets the sidebar navigation buttons (they have both classes).
+    function bulkTab(btn, tab) {
+      document.querySelectorAll('.sb-item.bulk-tab').forEach(function (b) { b.classList.remove('act'); });
+      btn.classList.add('act');
+      document.querySelectorAll('.bulk-panel').forEach(function (p) { p.style.display = 'none'; });
+      var p = document.getElementById('bulk-' + tab);
+      if (p) p.style.display = '';
+      _wizActive = tab;
+      renderWizSteps();
+    }
+
+    // ── CONFLICT ─────────────────────────────────────────────────────────────────
+    var _confCb = null, _confChoice = null;
+
+    function showConflictDialog(existing, incoming, keyLabel, cb) {
+      _confCb = cb;
+      document.getElementById('conflict-apply-all').checked = false;
+      document.getElementById('conflict-msg').innerHTML = '<b>' + esc(keyLabel) + '</b> already exists in the database with differences.';
+      var fields = Object.keys(incoming).filter(function (k) { return k !== '_id' && k !== 'createdAt'; });
+      document.getElementById('conflict-db-data').innerHTML = fields.map(function (k) {
+        return '<div class="frow"><span class="fkey">' + k + '</span><span class="fval">' + esc(existing[k] !== undefined ? existing[k] : '—') + '</span></div>';
+      }).join('');
+      document.getElementById('conflict-upload-data').innerHTML = fields.map(function (k) {
+        var diff = String(existing[k] || '') !== String(incoming[k] || '');
+        return '<div class="frow"><span class="fkey">' + k + (diff ? '<span class="chg-badge">changed</span>' : '') + '</span>'
+          + '<span class="fval' + (diff ? ' diff' : '') + '">' + esc(incoming[k] !== undefined ? incoming[k] : '—') + '</span></div>';
+      }).join('');
+      var diffs   = fields.filter(function (k) { return String(existing[k] || '') !== String(incoming[k] || ''); });
+      var diffEl  = document.getElementById('conflict-diff-list');
+      diffEl.style.display = diffs.length ? 'block' : 'none';
+      diffEl.innerHTML     = diffs.length
+        ? '⚡ <b>' + diffs.length + '</b> field' + (diffs.length > 1 ? 's' : '') + ' differ: ' + diffs.join(', ')
+        : '';
+      document.getElementById('conflict-compare-wrap').style.display = 'grid';
+      document.getElementById('bulk-conflict-overlay').classList.add('open');
+    }
+
+    function resolveConflict(choice) {
+      // FIX #7: On cancel, reset both _confCb AND _confChoice so a stale bulk-apply
+      // choice from a previous upload cannot leak into the next upload session.
+      if (choice === 'cancel') {
+        _confCb     = null;
+        _confChoice = null;          // ← was missing in the original
+        document.getElementById('bulk-conflict-overlay').classList.remove('open');
+        showToast('Upload cancelled', 'warn');
+        return;
+      }
+      if (document.getElementById('conflict-apply-all').checked) _confChoice = choice;
+      document.getElementById('bulk-conflict-overlay').classList.remove('open');
+      if (_confCb) { var cb = _confCb; _confCb = null; cb(choice); }
+    }
+
+    function checkConflict(existing, incoming, keyLabel, onDecide) {
+      var fields = Object.keys(incoming).filter(function (k) { return k !== '_id'; });
+      if (fields.every(function (k) { return String(existing[k] || '') === String(incoming[k] || ''); })) {
+        onDecide('skip');
+        return;
+      }
+      if (_confChoice) { onDecide(_confChoice); return; }
+      showConflictDialog(existing, incoming, keyLabel, onDecide);
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ── RESULT RENDERER ─────────────────────────────────────────────────────────
+    function showUploadPreview(elId, added, skipped, errors) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      errors = errors || [];
+      var errHtml = errors.slice(0, 8).map(function (e) {
+        return '<div class="up-err-row">Row <b>' + e.row + '</b> <span style="color:var(--tmu);">' + esc(e.name || '') + '</span> — <span class="issue">' + e.issues.join('; ') + '</span></div>';
+      }).join('');
+      var more = errors.length > 8
+        ? '<div style="font-size:11px;color:var(--tdi);padding:4px 0;">…and ' + (errors.length - 8) + ' more skipped</div>'
+        : '';
+      el.innerHTML = '<div class="up-result">'
+        + '<div class="up-stat-row">'
+        + '<div class="up-stat"><span class="v">' + added + '</span><span class="l">Added</span></div>'
+        + '<div class="up-stat"><span class="v" style="color:var(--amber);">' + skipped + '</span><span class="l">Skipped</span></div>'
+        + '<div class="up-stat"><span class="v" style="color:var(--blue);">' + (added + skipped) + '</span><span class="l">Total</span></div>'
+        + '</div>'
+        + (errHtml ? '<div class="up-errors">' + errHtml + more + '</div>' : '')
+        + '</div>';
+    }
+
+    // ── TEMPLATES & EXPORT ───────────────────────────────────────────────────────
+    function dlTemplate(type) {
+      var T = {
+        dept:    [['DeptName', 'Code', 'Icon'],                                                                                        ['Computer Science Engineering', 'CSE', '💻']],
+        teacher: [['Name', 'EmployeeID', 'Department', 'Designation', 'Username', 'Password'],                                         ['John Doe', 'EMP001', 'CSE', 'Assistant Professor', 'johndoe', 'teacher123']],
+        class:   [['Department', 'HallNo', 'Year', 'Semester', 'Section'],                                                             ['CSE', 'LH01', 'I Year', 'I', 'A']],
+        subject: [['Name', 'Code', 'Department', 'Credits', 'Type', 'Teacher'],                                                        ['Data Structures', 'CS201', 'CSE', '4', 'Theory', '']],
+        student: [['FullName', 'RegisterNo', 'AcademicYear', 'CourseType', 'Branch', 'Department', 'Year', 'Class', 'Section', 'Email', 'Username', 'Password'], ['Arun Kumar', '714025104000', '2025-26', 'UG', 'B.E', 'Computer Science Engineering', 'I Year', 'CSE-I-A', 'A', 'arun@eams.edu', 'arun25', 'Student@123']],
+        admin:   [['Name', 'Department', 'Email', 'Username', 'Password'],                                                             ['Admin User', 'Admin', 'admin@eams.edu', 'admin2', 'Admin@123']],
+      };
+      var data = T[type] || [['No template']];
+      var ws = XLSX.utils.aoa_to_sheet(data), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, type);
+      XLSX.writeFile(wb, 'EAMS_' + type + '_template.xlsx');
+    }
+
+    function dlUploaded(collection, roleFilter) {
+      var data = DB.get(collection);
+      if (roleFilter) data = data.filter(function (r) { return r.role === roleFilter; });
+      if (!data.length) { showToast('No data to download', 'warn'); return; }
+      var clean = data.map(function (r) { var c = Object.assign({}, r); delete c.password; delete c._id; return c; });
+      var ws = XLSX.utils.json_to_sheet(clean), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, collection);
+      XLSX.writeFile(wb, 'EAMS_' + collection + '_export.xlsx');
+    }
+
+    // ── FILE HANDLERS ────────────────────────────────────────────────────────────
+    function hd(event, type) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('dg');
+      var f = event.dataTransfer.files[0];
+      if (f) processFile(f, type);
+    }
+
+    function hu(input, type) {
+      var f = input.files[0];
+      if (f) processFile(f, type);
+      // FIX #8: Reset the file input so the same file can be re-uploaded if needed.
+      input.value = '';
+    }
+
+    function processFile(file, type) {
+      // FIX #9: Reset the bulk-apply conflict choice at the START of every new
+      // file processing run, not just inside individual parse functions.
+      // This prevents a "replace all" decision from a previous upload leaking in.
+      _confChoice = null;
+      var reader  = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+          if      (type === 'dept')     parseDeptRows(rows);
+          else if (type === 'struct')   parseStructureRows(rows);
+          else if (type === 'subjects') parseSubjectRows(rows);
+          else if (type === 'students') parseStudentRows(rows);
+          else if (type === 'teachers') parseTeacherRows(rows);
+          else if (type === 'admins')   parseAdminRows(rows);
+        } catch (err) {
+          showToast('Error reading file: ' + err.message, 'warn');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ── CELL HELPER ──────────────────────────────────────────────────────────────
+    function nk(k) { return k.toString().toLowerCase().replace(/[^a-z]/g, ''); }
+    function cv(row, aliases) {
+      var keys = Object.keys(row);
+      for (var i = 0; i < aliases.length; i++) {
+        var m = keys.find(function (k) { return nk(k).includes(nk(aliases[i])); });
+        if (m) return String(row[m]).trim();
+      }
+      return '';
+    }
+
+    // ── PARSE: DEPARTMENTS ───────────────────────────────────────────────────────
+    function parseDeptRows(rows) {
+      var added = 0, skipped = 0, pending = rows.slice();
+
+      function next() {
+        if (!pending.length) {
+          showUploadPreview('dept-up', added, skipped);
+          showToast('Departments: ' + added + ' added, ' + skipped + ' skipped');
+          if (added > 0) wizMarkDone('dept');
+          return;
+        }
+        var row  = pending.shift();
+        var name = cv(row, ['deptname', 'name', 'dept']);
+        var code = cv(row, ['code', 'deptcode']);
+        var icon = cv(row, ['icon']) || '🏛️';
+
+        if (!name || !code) { skipped++; next(); return; }
+
+        var ex = DB.get('depts').find(function (d) {
+          return d.code.toUpperCase() === code.toUpperCase() || d.name.toLowerCase() === name.toLowerCase();
+        });
+
+        if (ex) {
+          checkConflict(ex, { name: name, code: code.toUpperCase(), icon: icon }, 'Dept: ' + name, function (c) {
+            if (c === 'replace') {
+              DB.update('depts', ex._id, { name: name, code: code.toUpperCase(), icon: icon });
+              added++;
+            } else {
+              skipped++;
+            }
+            next();
           });
+        } else {
+          DB.insert('depts', { name: name, code: code.toUpperCase(), icon: icon });
+          added++;
+          next();
         }
       }
-      added++; next(i+1);
+      next();
     }
-  }
-  next(0);
-}
 
-// ── TEACHERS ───────────────────────────────────────────────────────────────
-function parseTeachers(rows) {
-  var added = 0, skipped = 0, errors = [], pending = rows.slice();
-  bulkLogStart('Teachers');
-  showProgress('teacher', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('teacher', 100, 'Done!');
-      setTimeout(function(){ hideProgress('teacher'); }, 800);
-      showReport('teacher', added, skipped, errors);
-      bToast('Teachers: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
-    }
-    showProgress('teacher', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
-    var row      = pending[i];
-    var name     = cv(row, ['name','fullname','teachername']);
-    var empId    = cv(row, ['empid','employeeid','employee']);
-    var dept     = cv(row, ['dept','department']);
-    var desig    = cv(row, ['desig','designation']) || 'Assistant Professor';
-    var username = cv(row, ['username','user','loginid']);
-    var password = cv(row, ['password','pass','pwd']) || 'teacher123';
-    if (!name || !username) { errors.push({row:i+2,name:name||'(blank)',issues:['Name or Username missing']}); skipped++; next(i+1); return; }
-    var existing = DB.one('users', {username: username.toLowerCase()});
-    if (existing) {
-      checkConflict(existing, {name:name,empId:empId,dept:dept,desig:desig}, name, function(choice) {
-        if (choice === 'replace') { DB.update('users', existing._id, {name:name,empId:empId,dept:dept,desig:desig}); added++; }
-        else skipped++;
-        next(i+1);
+    // ── PARSE: CLASSES ───────────────────────────────────────────────────────────
+    function parseStructureRows(rows) {
+      var added = 0, skipped = 0;
+      rows.forEach(function (row) {
+        var dn   = cv(row, ['dept', 'department']);
+        var dc   = cv(row, ['code', 'deptcode']);
+        var sem  = cv(row, ['sem', 'semester']);
+        var sec  = cv(row, ['sec', 'section']);
+        var yr   = cv(row, ['year']);
+        var hall = cv(row, ['hall', 'hallno']);
+
+        if (!dn) { skipped++; return; }
+
+        var dept = DB.get('depts').find(function (d) { return d.name === dn || d.code === dc; });
+        if (!dept) dept = DB.insert('depts', { name: dn, code: dc || dn.slice(0, 4).toUpperCase(), icon: '🏛️' });
+
+        // FIX #10: Duplicate-check now also compares year so classes that share
+        // dept/sem/section but differ by year are NOT incorrectly merged.
+        if (DB.one('classes', { deptId: dept._id, sem: sem, section: sec, year: yr || 'I Year' })) {
+          skipped++;
+          return;
+        }
+
+        DB.insert('classes', {
+          deptId:   dept._id,
+          deptName: dept.name,
+          deptCode: dept.code,
+          year:     yr || 'I Year',
+          sem:      sem || 'I',
+          section:  sec || 'A',
+          hallNo:   hall,
+          name:     dept.code + '-' + (sem || 'I') + '-' + (sec || 'A'),
+        });
+        added++;
       });
-    } else {
-      DB.insert('users', {name:name,empId:empId,dept:dept,desig:desig,username:username.toLowerCase(),password:password,role:'teacher',mustChangePassword:true});
-      bulkLogAdd('added', name, username); added++; next(i+1);
+      showUploadPreview('sup', added, skipped);
+      showToast('Classes: ' + added + ' added, ' + skipped + ' skipped');
+      if (added > 0) wizMarkDone('class');
     }
-  }
-  next(0);
-}
 
-// ── STUDENTS ───────────────────────────────────────────────────────────────
-function parseStudents(rows) {
-  var added = 0, skipped = 0, errors = [], pending = rows.slice();
-  var VALID = ['UG','PG','M.E','M.TECH','MBA','MCA','B.E','B.TECH','BE','BTECH'];
-  bulkLogStart('Students');
-  showProgress('student', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('student', 100, 'Done!');
-      setTimeout(function(){ hideProgress('student'); }, 800);
-      showReport('student', added, skipped, errors);
-      bToast('Students: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
-    }
-    showProgress('student', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
-    var row      = pending[i];
-    var name     = cv(row, ['fullname','name','studentname']);
-    var regNo    = cv(row, ['registerno','regno','rollno','roll']);
-    var acadYear = cv(row, ['academicyear','ay']) || '2025-26';
-    var ctype    = cv(row, ['coursetype','course']).toUpperCase() || 'UG';
-    var branch   = cv(row, ['branch']);
-    var dname    = cv(row, ['department','dept']);
-    var yearStr  = cv(row, ['year','studyyear','yr']);
-    var clsName  = cv(row, ['class','classname']);
-    var section  = cv(row, ['section','sec']) || 'A';
-    var email    = cv(row, ['email','mail']);
-    var username = cv(row, ['username','user']);
-    var password = cv(row, ['password','pass']) || 'Student@123';
-    var errs = [];
-    if (!name)  errs.push('FullName missing');
-    if (!regNo) errs.push('RegisterNo missing');
-    if (!dname) errs.push('Department missing');
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.push('Invalid email');
-    if (errs.length) { errors.push({row:i+2,name:name||'(blank)',issues:errs}); skipped++; next(i+1); return; }
-    var existing = DB.one('students', {regNo:regNo});
-    if (existing) {
-      checkConflict(existing, {name:name,email:email,deptName:dname,section:section}, name, function(choice) {
-        if (choice === 'replace') { DB.update('students', existing._id, {name:name,email:email,section:section}); added++; }
-        else skipped++;
-        next(i+1);
+    // ── PARSE: SUBJECTS ──────────────────────────────────────────────────────────
+    function parseSubjectRows(rows) {
+      var added = 0, skipped = 0;
+      rows.forEach(function (row) {
+        var name    = cv(row, ['name', 'subject']);
+        var code    = cv(row, ['code']);
+        var dc      = cv(row, ['dept', 'department', 'deptcode']);
+        var credits = parseInt(cv(row, ['credit', 'credits'])) || 3;
+        var type    = cv(row, ['type']) || 'Theory';
+
+        if (!name) { skipped++; return; }
+
+        var dept = DB.get('depts').find(function (d) { return d.code === dc || d.name === dc; });
+        if (!dept) { skipped++; return; }
+
+        if (DB.one('subjects', { code: code, deptId: dept._id })) { skipped++; return; }
+
+        DB.insert('subjects', {
+          name:     name,
+          code:     code,
+          credits:  credits,
+          type:     type,
+          deptId:   dept._id,
+          deptName: dept.name,
+          deptCode: dept.code,
+        });
+        added++;
       });
-    } else {
-      var dept = DB.get('depts').find(function(d){ return d.name.toLowerCase()===dname.toLowerCase()||d.code.toLowerCase()===dname.toLowerCase(); });
-      var cls  = DB.get('classes').find(function(c){ return c.name===clsName||(c.deptName.toLowerCase()===dname.toLowerCase()&&c.section===section); });
-      DB.insert('students', {name:name,regNo:regNo,academicYear:acadYear,courseType:ctype,branch:branch,deptId:dept?dept._id:'',deptName:dept?dept.name:dname,classId:cls?cls._id:'',className:cls?cls.name:clsName,year:yearStr,section:section,email:email});
-      if (username) DB.insert('users', {name:name,username:username.toLowerCase(),password:password,role:'student',regNo:regNo,deptName:dept?dept.name:dname,email:email});
-      bulkLogAdd('added', name, regNo); added++; next(i+1);
+      showUploadPreview('subup', added, skipped);
+      showToast('Subjects: ' + added + ' added, ' + skipped + ' skipped');
+      if (added > 0) wizMarkDone('subject');
     }
-  }
-  next(0);
-}
 
-// ── ADMINS ─────────────────────────────────────────────────────────────────
-function parseAdmins(rows) {
-  var added = 0, skipped = 0, errors = [], pending = rows.slice();
-  showProgress('admin', 5, 'Starting…');
-  function next(i) {
-    if (i >= pending.length) {
-      showProgress('admin', 100, 'Done!');
-      setTimeout(function(){ hideProgress('admin'); }, 800);
-      showReport('admin', added, skipped, errors);
-      bToast('Admins: ' + added + ' added, ' + skipped + ' skipped');
-      bulkLogFlush(added, skipped);
-      return;
+    // ── PARSE: STUDENTS ──────────────────────────────────────────────────────────
+    function parseStudentRows(rows) {
+      var added = 0, skipped = 0, errors = [];
+      var VALID = ['UG', 'PG', 'M.E', 'M.TECH', 'MBA', 'MCA', 'B.E', 'B.TECH', 'BE', 'BTECH'];
+
+      rows.forEach(function (row, ri) {
+        var rn     = ri + 2;
+        var name   = cv(row, ['fullname', 'name', 'studentname']);
+        var regNo  = cv(row, ['registerno', 'regno', 'registernum', 'rollno', 'roll']);
+        var ay     = cv(row, ['academicyear', 'academicyr', 'ay']) || '2025-26';
+        var ct     = cv(row, ['coursetype', 'course', 'type']).toUpperCase() || 'UG';
+        var branch = cv(row, ['branch', 'branchname']);
+        var dn     = cv(row, ['department', 'dept', 'deptname']);
+        var yr     = cv(row, ['year', 'studyyear', 'yr']);
+        var cn     = cv(row, ['class', 'classname', 'classid']);
+        var sec    = cv(row, ['section', 'sec']) || 'A';
+        var email  = cv(row, ['email', 'emailid', 'mail']);
+        var user   = cv(row, ['username', 'user', 'loginid']);
+        var pass   = cv(row, ['password', 'pass', 'pwd']) || 'Student@123';
+
+        var errs = [];
+        if (!name)  errs.push('FullName missing');
+        if (!regNo) errs.push('RegisterNo missing');
+        if (!dn)    errs.push('Department missing');
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.push('Invalid email');
+        if (ct && VALID.indexOf(ct) === -1)  errs.push('CourseType "' + ct + '" unknown');
+        if (regNo && DB.one('students', { regNo: regNo })) errs.push('RegisterNo ' + regNo + ' exists');
+        // FIX #11: Only flag duplicate username when a non-empty username was supplied.
+        if (user && DB.one('users', { username: user })) errs.push('Username "' + user + '" taken');
+
+        if (errs.length) {
+          skipped++;
+          errors.push({ row: rn, name: name || '(blank)', issues: errs });
+          return;
+        }
+
+        var dept = DB.get('depts').find(function (d) {
+          return d.name.toLowerCase() === dn.toLowerCase() || d.code.toLowerCase() === dn.toLowerCase();
+        });
+        var cls  = DB.get('classes').find(function (c) {
+          return c.name === cn || (c.deptName.toLowerCase() === dn.toLowerCase() && c.section === sec);
+        });
+
+        DB.insert('students', {
+          name:         name,
+          regNo:        regNo,
+          academicYear: ay,
+          courseType:   ct,
+          branch:       branch,
+          deptId:       dept ? dept._id   : '',
+          deptName:     dept ? dept.name  : dn,
+          classId:      cls  ? cls._id    : '',
+          className:    cls  ? cls.name   : cn,
+          year:         yr,
+          section:      sec,
+          email:        email,
+        });
+
+        if (user) {
+          DB.insert('users', {
+            name:     name,
+            username: user,
+            password: pass,
+            role:     'student',
+            regNo:    regNo,
+            deptName: dept ? dept.name : dn,
+            email:    email,
+          });
+        }
+        added++;
+      });
+
+      showUploadPreview('tup', added, skipped, errors);
+      showToast('Students: ' + added + ' added' + (skipped ? ', ' + skipped + ' skipped' : ''));
+      if (added > 0) wizMarkDone('student');
     }
-    showProgress('admin', Math.round((i/pending.length)*90)+5, 'Row '+(i+1)+'/'+pending.length);
-    var row      = pending[i];
-    var name     = cv(row, ['name','fullname']);
-    var dept     = cv(row, ['dept','department']);
-    var email    = cv(row, ['email','mail']);
-    var username = cv(row, ['username','user']);
-    var password = cv(row, ['password','pass']) || 'Admin@123';
-    if (!name || !username) { errors.push({row:i+2,name:name||'(blank)',issues:['Name or Username missing']}); skipped++; next(i+1); return; }
-    if (DB.one('users', {username:username.toLowerCase()})) { skipped++; next(i+1); return; }
-    DB.insert('users', {name:name,dept:dept,email:email,username:username.toLowerCase(),password:password,role:'admin',mustChangePassword:true});
-    added++; next(i+1);
-  }
-  next(0);
-}
 
-// ── TEMPLATES ──────────────────────────────────────────────────────────────
-function dlTemplate(type) {
-  var data = {
-    dept:    [['DeptName','Code','Icon'],['Computer Science Engineering','CSE','💻'],['Information Technology','IT','🖥️']],
-    teacher: [['Name','EmployeeID','Department','Designation','Username','Password'],['John Doe','EMP001','CSE','Assistant Professor','johndoe','teacher123']],
-    class:   [['Department','HallNo','Year','Semester','Section'],['CSE','LH01','I Year','I','A'],['CSE','LH02','I Year','I','B']],
-    subject: [['Name','Code','Department','Credits','Type','Teacher'],['Data Structures','CS201','CSE','4','Theory',''],['Operating Systems','CS301','CSE','3','Theory','']],
-    student: [['FullName','RegisterNo','AcademicYear','CourseType','Branch','Department','Year','Class','Section','Email','Username','Password'],['Arun Kumar','CSE25001','2025-26','UG','B.E','CSE','I Year','CSE-I-A','A','arun@eams.edu','arun25','Student@123']],
-    admin:   [['Name','Department','Email','Username','Password'],['Admin User','Admin','admin2@eams.edu','admin2','Admin@123']],
-  };
-  var rows = data[type] || [['No template']];
-  var ws   = XLSX.utils.aoa_to_sheet(rows);
-  var wb   = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, type);
-  XLSX.writeFile(wb, 'EAMS_' + type + '_template.xlsx');
-}
+    // ── PARSE: TEACHERS ──────────────────────────────────────────────────────────
+    function parseTeacherRows(rows) {
+      var added = 0, skipped = 0;
+      rows.forEach(function (row) {
+        var name  = cv(row, ['name']);
+        var empId = cv(row, ['empid', 'employeeid', 'employee']);
+        var dept  = cv(row, ['dept', 'department']);
+        var desig = cv(row, ['desig', 'designation']) || 'Assistant Professor';
+        var user  = cv(row, ['user', 'username']);
+        var pass  = cv(row, ['pass', 'password']) || 'teacher';
 
-function dlUploaded(collection, roleFilter) {
-  var rows = DB.get(collection);
-  if (roleFilter) rows = rows.filter(function(r){ return r.role === roleFilter; });
-  if (!rows.length) { bToast('No data to download', 'warn'); return; }
-  var clean = rows.map(function(r) { var c = Object.assign({},r); delete c._id; delete c.password; return c; });
-  var ws = XLSX.utils.json_to_sheet(clean);
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, collection);
-  XLSX.writeFile(wb, 'EAMS_' + collection + (roleFilter?'_'+roleFilter:'') + '_export.xlsx');
-}
+        if (!name || !user) { skipped++; return; }
+        if (DB.one('users', { username: user })) { skipped++; return; }
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-function bToast(msg) {
-  var el = document.getElementById('bulk-toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(function(){ el.classList.remove('show'); }, 3200);
-}
+        DB.insert('users', {
+          name:  name,
+          empId: empId,
+          dept:  dept,
+          desig: desig,
+          username: user,
+          password: pass,
+          role:  'teacher',
+        });
+        added++;
+      });
+      showUploadPreview('tcup', added, skipped);
+      showToast('Teachers: ' + added + ' added, ' + skipped + ' skipped');
+      if (added > 0) wizMarkDone('teacher');
+    }
 
-// ── Init ───────────────────────────────────────────────────────────────────
-refreshSetup();
-</script>
+    // ── PARSE: ADMINS ────────────────────────────────────────────────────────────
+    function parseAdminRows(rows) {
+      var added = 0, skipped = 0;
+      rows.forEach(function (row) {
+        var name  = cv(row, ['name']);
+        var dept  = cv(row, ['dept', 'department']);
+        var email = cv(row, ['email']);
+        var user  = cv(row, ['username', 'user']);
+        var pass  = cv(row, ['password', 'pass']) || 'Admin@123';
+
+        if (!name || !user) { skipped++; return; }
+        if (DB.one('users', { username: user })) { skipped++; return; }
+
+        DB.insert('users', {
+          name:     name,
+          dept:     dept,
+          email:    email,
+          username: user,
+          password: pass,
+          role:     'admin',
+        });
+        added++;
+      });
+      showUploadPreview('admup', added, skipped);
+      showToast('Admins: ' + added + ' added, ' + skipped + ' skipped');
+      if (added > 0) wizMarkDone('admin');
+    }
+
+    // ── BOOT ─────────────────────────────────────────────────────────────────────
+    initWizard();
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  </script>
 </body>
+
 </html>

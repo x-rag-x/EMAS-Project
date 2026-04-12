@@ -66,7 +66,7 @@ async function seedDefaults() {
   const defaults = [
     { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher','student'], endTime: null, startedAt: null } },
     { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SSIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
-    { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 5 } },
+    { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 6 } },
     { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
     { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
   ];

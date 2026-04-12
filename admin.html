@@ -502,6 +502,55 @@
       background: var(--gLt);
     }
 
+    .sp-btn-out {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+
+      height: 42px;
+      width: 90px;
+      padding: 0 22px;
+
+      background: #fff;
+      color: var(--td);
+      border: 1.5px solid #d0d7d0;
+      border-radius: 22px;
+
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+
+      cursor: pointer;
+      overflow: hidden;
+      transition: all .3s;
+    }
+
+    /* ICON */
+    .sp-btn-out svg {
+      width: 14px;
+      position: absolute;
+      right: 18px;
+      fill: var(--td);
+      transition: all .3s;
+    }
+
+    /* HOVER EFFECT */
+    .sp-btn-out:hover {
+      border-color: var(--gLr);
+      background: var(--gLt);
+      color: transparent; /* hide text */
+    }
+
+    .sp-btn-out:hover svg {
+      right: 45%; /* move icon to center */
+    }
+
+    /* CLICK EFFECT */
+    .sp-btn-out:active {
+      transform: translate(2px, 2px);
+    }
+
     .btn-sm {
       padding: 6px 14px;
       font-size: 12px;
@@ -2507,6 +2556,18 @@
       border-color: var(--gD) !important;
     }
 
+    .log-role-pill {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid var(--br); background: #fff; color: var(--tmu);
+      cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .18s;
+    }
+    .log-role-pill:hover { background: var(--gLt); color: var(--td); }
+    .act-pill { background:#778a00!important;color: #fff !important; border-color: var(--p) !important; }
+    #lrt-admin.act-pill   { background:#dc2626!important; border-color:#dc2626!important; color:#fff!important; }
+    #lrt-teacher.act-pill { background:#2563eb!important; border-color:#2563eb!important; color:#fff!important; }
+    #lrt-student.act-pill { background:#16a34a!important; border-color:#16a34a!important; color:#fff!important; }
+    #lrt-system.act-pill  { background:#7c3aed!important; border-color:#7c3aed!important; color:#fff!important; }
+
     /* ── DB UPDATE TOAST ── */
     #db-toast {
       position: fixed;
@@ -2660,8 +2721,9 @@
               <div class="page-sub">Plan, monitor, and manage your institution with ease.</div>
             </div>
             <div class="page-actions">
-              <button class="btn-pri" onclick="shiftToMenu('m-add-student', 'students')">+ Enroll Student</button>
-              <button class="btn-out" onclick="nav('bulk')">📤 Upload Data</button>
+              <button class="btn-pri" onclick="shiftToMenu('m-add-student', 'students')">+ Add Student</button>
+              <button class="btn-out" onclick="window.location.href='bulk.html'">📤 Upload Data</button>
+              <button class="btn-out" onclick="openClearStorageModal()" title="Clear cached data from browser storage" style="color:#ef4444;border-color:#ef4444;">🗑️ Clear Cache</button>
             </div>
           </div>
 
@@ -2908,7 +2970,7 @@
           <div id="sp-classes">
             <div class="shd">
               <div class="stl"><span class="sdo"></span>Classes</div>
-              <button class="btn-out" onclick="om('m-add-class-quick')">+ Add Class</button>
+              <button class="btn-pri" onclick="om('m-add-class-quick')">+ Add Class</button>
             </div>
             <div id="scg" class="egrd"></div>
           </div>
@@ -3436,35 +3498,45 @@
 
       <!-- ── LOGS PAGE ── -->
       <div class="pg" id="pg-logs">
-        <div class="shd">
-          <div class="stl"><span class="sdo"></span>Activity Logs</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-pri" onclick="elogs()">⬇️ Export</button>
-            <button class="btn bdan bsm" onclick="clrl()">🗑 Clear All</button>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-body-p">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
-              <div class="fg"><label class="fl">Role</label>
-                <select class="fc" id="lfr" onchange="rl()">
-                  <option value="">All Roles</option>
-                  <option value="admin">Admin</option>
-                  <option value="teacher">Teacher</option>
-                </select>
-              </div>
-              <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="lfd" onchange="rl()">
-              </div>
-              <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ltd" onchange="rl()"></div>
-              <div class="fg"><label class="fl">Search User</label><input type="text" class="fc" id="lsq"
-                  placeholder="Name…" oninput="rl()"></div>
+        <div class="page-wrap">
+
+          <!-- ── Header ── -->
+          <div class="page-hd">
+            <div>
+              <div class="page-title">Activity Logs</div>
+              <div class="page-sub">Full audit trail of every action across all roles.</div>
+            </div>
+            <div class="page-actions">
+              <button class="btn-pri" onclick="elogs()">⬇️ Export CSV</button>
+              <button class="btn-out" onclick="clrl()">🗑️ Clear All</button>
             </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="card-body-p" id="fll"></div>
-        </div>
-      </div>
+
+          <!-- ── Stat Cards ── -->
+          <div id="log-stat-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
+
+          <!-- ── Filters ── -->
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-body-p">
+              <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="log-role-tabs">
+                <button id="lrt-all"     class="log-role-pill act-pill" onclick="setLogRole('')">🗂️ All</button>
+                <button id="lrt-admin"   class="log-role-pill" onclick="setLogRole('admin')">👑 Admin</button>
+                <button id="lrt-teacher" class="log-role-pill" onclick="setLogRole('teacher')">👩‍🏫 Teacher</button>
+                <button id="lrt-student" class="log-role-pill" onclick="setLogRole('student')">🎓 Student</button>
+                <button id="lrt-system"  class="log-role-pill" onclick="setLogRole('system')">🤖 System</button>
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;">
+                <div class="fg" style="margin:0;position:relative;">
+                  <label class="fl">Search</label>
+                  <span style="position:absolute;left:11px;bottom:9px;color:var(--tdi);font-size:13px;">🔍</span>
+                  <input class="fc" id="lsq" placeholder="User name, action, details…" oninput="rl()" style="padding-left:34px;">
+                </div>
+                <div class="fg" style="margin:0;"><label class="fl">From</label><input type="date" class="fc" id="lfd" onchange="rl()"></div>
+                <div class="fg" style="margin:0;"><label class="fl">To</label><input type="date" class="fc" id="ltd" onchange="rl()"></div>
+              </div>
+            </div>
+          </div>
+      
 
       <!-- ══════════════════════ MAINTENANCE MODE PAGE ══════════════════════ -->
       <div class="pg" id="pg-maintenance">
@@ -3648,7 +3720,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">🏛️ Add Department</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-dept')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-dept')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="dn"
@@ -3669,13 +3741,13 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">✏️ Edit Department</div>
-        <div class="modal-close" onclick="closeModalBg('m-edit-dept')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-edit-dept')">✖</div>
       </div>
       <input type="hidden" id="ed-id">
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="ed-nm"></div>
         <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="ed-cd"></div>
-        <div class="fg"><label class="fl">Icon</label><input type="text" class="fc2" id="ed-ic" maxlength="4"></div>
+        <div class="fg"><label class="fl">Icon</label><input type="text" class="fc2" id="ed-ic" maxlength="1"></div>
       </div>
       <div class="form-actions"><button class="btn-form-ghost"
           onclick="closeModalBg('m-edit-dept')">Cancel</button><button class="btn-form-pri" onclick="saveEditDept()">💾
@@ -3688,7 +3760,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">🏫 Add Class</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-class-quick')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-class-quick')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Department</label>
@@ -3741,7 +3813,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">✏️ Edit Class</div>
-        <div class="modal-close" onclick="closeModalBg('m-edit-cls')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-edit-cls')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Class Name <span
@@ -3750,7 +3822,7 @@
         <div class="fg"><label class="fl">Section</label><input type="text" class="fc2" id="ec-sec" placeholder="A"
             oninput="ecAutoName()"></div>
         <div class="fg"><label class="fl">Hall Number</label><input type="text" class="fc2" id="ec-hall"
-            placeholder="e.g. 201"></div>
+            placeholder="e.g. LH01"></div>
         <div class="fg"><label class="fl">Year</label><input type="text" class="fc2" id="ec-yr" placeholder="I Year">
         </div>
       </div>
@@ -3770,7 +3842,7 @@
         </div>
         <div class="modal-actions">
           <button class="btn-out" onclick="editClsInline()">✏️ Edit</button>
-          <div class="modal-close" onclick="closeModalBg('m-cls-detail')">✕</div>
+          <div class="modal-close" onclick="closeModalBg('m-cls-detail')">✖</div>
         </div>
       </div>
       <div id="cd-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"></div>
@@ -3798,8 +3870,11 @@
           <div class="modal-sub" id="sd-sub"></div>
         </div>
         <div class="modal-actions">
-          <button class="btn-out" onclick="editSubjInline()">✏️ Edit</button>
-          <div class="modal-close" onclick="closeModalBg('m-subj-detail')">✕</div>
+          <button class="sp-btn-out" onclick="editSubjInline()">Edit<svg viewBox="0 0 512 512">
+              <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231z"></path>
+            </svg>
+          </button>
+          <div class="modal-close" onclick="closeModalBg('m-subj-detail')">✖</div>
         </div>
       </div>
       <div id="sd-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"></div>
@@ -3817,7 +3892,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">✏️ Edit Subject</div>
-        <div class="modal-close" onclick="closeModalBg('m-edit-subj')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-edit-subj')">✖</div>
       </div>
       <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2"
           id="es-nm"></div>
@@ -3842,7 +3917,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📚 Add Subject</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-subj-ctx')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-subj-ctx')">✖</div>
       </div>
       <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2"
           id="ns-nm" placeholder="e.g. Data Structures"></div>
@@ -3871,7 +3946,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📌 Assign Subject</div>
-        <div class="modal-close" onclick="closeModalBg('m-asgn-subj')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-asgn-subj')">✖</div>
       </div>
       <div class="fg" style="margin-bottom:12px;"><label class="fl">Class</label><input type="text" class="fc2"
           id="as-cls" disabled></div>
@@ -3890,7 +3965,7 @@
     <div class="modal modal-lg">
       <div class="modal-hd">
         <div class="modal-title">👨‍🎓 Add Student</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-student')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-student')">✖</div>
       </div>
       <div class="form-grid" style="grid-template-columns:1.2fr 0.8fr;">
         <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="s-nm"
@@ -3946,7 +4021,7 @@
           <div class="modal-title">👨‍🎓 Edit Student</div>
           <div class="modal-sub" id="se-subtitle"></div>
         </div>
-        <div class="modal-close" onclick="closeModalBg('m-stu-edit')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-stu-edit')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="se-nm"></div>
@@ -3988,7 +4063,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">👩‍🏫 Add Teacher</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-teacher')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-teacher')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
         <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="t-nm"
@@ -4048,7 +4123,7 @@
           <div class="modal-title" id="td-nm"></div>
           <div class="modal-sub" id="td-dp"></div>
         </div>
-        <div class="modal-close" onclick="closeModalBg('m-tch-detail')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-tch-detail')">✖</div>
       </div>
       <div style="background:var(--gLt);border:1px solid var(--br);border-radius:11px;padding:14px;margin-bottom:14px;">
         <div
@@ -4091,7 +4166,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📌 Add Class Assignment</div>
-        <div class="modal-close" onclick="closeModalBg('m-add-asgn-t')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-add-asgn-t')">✖</div>
       </div>
       <div class="fg" style="margin-bottom:12px;"><label class="fl">Department</label>
         <select class="fc2" id="at-dp" onchange="atdc()">
@@ -4119,7 +4194,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📤 Upload Classes Sheet</div>
-        <div class="modal-close" onclick="closeModalBg('m-upload-struct')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-upload-struct')">✖</div>
       </div>
       <div class="uz" onclick="document.getElementById('uf-s').click()"
         ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')"
@@ -4140,7 +4215,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📤 Upload Subjects Sheet</div>
-        <div class="modal-close" onclick="closeModalBg('m-upload-subj')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-upload-subj')">✖</div>
       </div>
       <div class="uz" onclick="document.getElementById('uf-sub').click()"
         ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')"
@@ -4167,7 +4242,7 @@
         <div class="modal-actions">
           <button class="btn-form-ghost" style="padding:6px 14px;font-size:12px;" onclick="clearAllNotifs()">Clear
             All</button>
-          <div class="modal-close" onclick="closeModalBg('m-notif-all')">✕</div>
+          <div class="modal-close" onclick="closeModalBg('m-notif-all')">✖</div>
         </div>
       </div>
       <div class="m-list" id="notif-all-list"></div>
@@ -4185,7 +4260,7 @@
         <div class="modal-actions">
           <button class="btn-form-ghost" style="padding:6px 14px;font-size:12px;" onclick="downloadDefaulters()">⬇️
             Export</button>
-          <div class="modal-close" onclick="closeModalBg('m-defaulters')">✕</div>
+          <div class="modal-close" onclick="closeModalBg('m-defaulters')">✖</div>
         </div>
       </div>
       <div class="m-list" id="def-full-list"></div>
@@ -4197,7 +4272,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📤 Bulk Upload</div>
-        <div class="modal-close" onclick="closeModalBg('m-bulk')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-bulk')">✖</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn-form-pri" onclick="closeModalBg('m-bulk');nav('bulk')">Go to Bulk Upload Page →</button>
@@ -4210,7 +4285,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">👤 My Profile</div>
-        <div class="modal-close" onclick="closeModalBg('m-profile')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-profile')">✖</div>
       </div>
       <div style="text-align:center;margin-bottom:20px;">
         <div
@@ -4266,7 +4341,7 @@
           <div class="modal-title">📢 Send Reminder</div>
           <div class="modal-sub" id="notify-sub">—</div>
         </div>
-        <div class="modal-close" onclick="closeModalBg('m-notify')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-notify')">✖</div>
       </div>
       <div class="fg" style="margin-bottom:12px;"><label class="fl">Message</label>
         <textarea class="fc2" id="notify-msg" rows="4" style="resize:none;border-radius:10px;"></textarea>
@@ -4290,7 +4365,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">⚠️ Confirm Action</div>
-        <div class="modal-close" onclick="closeModalBg('m-dc-confirm')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-dc-confirm')">✖</div>
       </div>
       <input type="hidden" id="dc-confirm-id">
       <div id="dc-confirm-msg" style="font-size:13px;color:var(--tmu);margin-bottom:22px;line-height:1.6;"></div>
@@ -4306,7 +4381,7 @@
     <div class="modal modal-sm">
       <div class="modal-hd">
         <div class="modal-title">📤 Upload Students Sheet</div>
-        <div class="modal-close" onclick="closeModalBg('m-upload-students')">✕</div>
+        <div class="modal-close" onclick="closeModalBg('m-upload-students')">✖</div>
       </div>
       <div class="uz" onclick="document.getElementById('uf-t2').click()"
         ondragover="event.preventDefault();this.classList.add('dg')" ondragleave="this.classList.remove('dg')"
@@ -4530,82 +4605,172 @@
     }
 
     // ─── ACTIVITY LOGS ───────────────────────────────────────────────────────────
+    var _logRoleFilter = '';
+
+    function setLogRole(role) {
+      _logRoleFilter = role;
+      ['all', 'admin', 'teacher', 'student', 'system'].forEach(function (r) {
+        var el = document.getElementById('lrt-' + r);
+        if (el) el.classList.toggle('act-pill', (r === 'all' && role === '') || r === role);
+      });
+      renderLogs();
+    }
+
+    function _logRelTime(ts) {
+      var diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+      if (diff < 60)    return 'just now';
+      if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      var d = new Date(ts), yest = new Date();
+      yest.setDate(yest.getDate() - 1);
+      if (d.toDateString() === yest.toDateString())
+        return 'Yesterday ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+        + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function _logDateLabel(ts) {
+      var d = new Date(ts), today = new Date(), yest = new Date();
+      yest.setDate(today.getDate() - 1);
+      if (d.toDateString() === today.toDateString()) return 'Today';
+      if (d.toDateString() === yest.toDateString())  return 'Yesterday';
+      return d.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
     function addLog(action, details) {
       if (!currentUser) return;
-      var lowerAction = action.toLowerCase();
+      var la = action.toLowerCase();
       var type = 'other';
-      if (lowerAction.includes('add') || lowerAction.includes('import')) type = 'add';
-      else if (lowerAction.includes('update') || lowerAction.includes('edit')
-        || lowerAction.includes('login')) type = 'update';
-      else if (lowerAction.includes('delete') || lowerAction.includes('clear')) type = 'delete';
-
-      DB.insert('logs', {
-        role: 'admin', userName: currentUser ? currentUser.name : 'Admin',
+      if (la.includes('add') || la.includes('import')) type = 'add';
+      else if (la.includes('update') || la.includes('edit') || la.includes('login') || la.includes('assign')) type = 'update';
+      else if (la.includes('delete') || la.includes('clear') || la.includes('remove')) type = 'delete';
+      var entry = {
+        role: 'admin', userName: currentUser.name || 'Admin',
         action: action, details: details || '', type: type,
         timestamp: new Date().toISOString()
-      });
+      };
+      DB.insert('logs', entry);
+      // Persist to server so student-side and admin logs share the same store
+      var tok = sessionStorage.getItem('eams_token');
+      if (tok) {
+        fetch('/api/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+          body: JSON.stringify(entry)
+        }).catch(function () {});
+      }
+    }
+
+    function renderLogStatCards(total, counts) {
+      var el = document.getElementById('log-stat-cards');
+      if (!el) return;
+      var cards = [
+        { label: 'Total Logs',       val: total,           icon: '📋', bg: 'var(-p)',  tc: '#fff',     mc: 'rgba(255,255,255,.75)' },
+        { label: 'Admin Actions',    val: counts.admin,    icon: '👑', bg: '#fef2f2',  tc: '#dc2626',  mc: 'var(--tmu)' },
+        { label: 'Teacher Actions',  val: counts.teacher,  icon: '👩‍🏫', bg: '#eff6ff',  tc: '#2563eb',  mc: 'var(--tmu)' },
+        { label: 'Student Actions',  val: counts.student,  icon: '🎓', bg: '#f0fdf4',  tc: '#16a34a',  mc: 'var(--tmu)' },
+      ];
+      el.innerHTML = cards.map(function (c) {
+        return '<div style="background:' + c.bg + ';border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;border:1px solid var(--br);box-shadow:0 1px 4px rgba(0,0,0,.04);">'
+          + '<div style="font-size:30px;line-height:1;">' + c.icon + '</div>'
+          + '<div><div style="font-size:26px;font-weight:800;color:' + c.tc + ';line-height:1.1;">' + c.val + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + c.mc + ';margin-top:2px;">' + c.label + '</div></div>'
+          + '</div>';
+      }).join('');
     }
 
     function renderLogs() {
-      var roleFilter = document.getElementById('lfr') ? document.getElementById('lfr').value : '';
       var fromDate = document.getElementById('lfd') ? document.getElementById('lfd').value : '';
-      var toDate = document.getElementById('ltd') ? document.getElementById('ltd').value : '';
-      var searchQuery = (document.getElementById('lsq') ? document.getElementById('lsq').value : '').toLowerCase();
+      var toDate   = document.getElementById('ltd') ? document.getElementById('ltd').value : '';
+      var searchQ  = (document.getElementById('lsq') ? document.getElementById('lsq').value : '').toLowerCase();
 
       var allLogs = DB.get('logs').slice().reverse();
 
-      if (roleFilter) allLogs = allLogs.filter(function (l) { return l.role === roleFilter; });
+      // Stat counts from unfiltered set
+      var counts = { admin: 0, teacher: 0, student: 0, system: 0 };
+      allLogs.forEach(function (l) { if (counts[l.role] !== undefined) counts[l.role]++; });
+      renderLogStatCards(allLogs.length, counts);
+
+      // Apply filters
+      if (_logRoleFilter) allLogs = allLogs.filter(function (l) { return l.role === _logRoleFilter; });
       if (fromDate) allLogs = allLogs.filter(function (l) { return l.timestamp.slice(0, 10) >= fromDate; });
-      if (toDate) allLogs = allLogs.filter(function (l) { return l.timestamp.slice(0, 10) <= toDate; });
-      if (searchQuery) allLogs = allLogs.filter(function (l) { return (l.userName || '').toLowerCase().includes(searchQuery); });
+      if (toDate)   allLogs = allLogs.filter(function (l) { return l.timestamp.slice(0, 10) <= toDate; });
+      if (searchQ)  allLogs = allLogs.filter(function (l) {
+        return (l.userName || '').toLowerCase().includes(searchQ)
+            || (l.action   || '').toLowerCase().includes(searchQ)
+            || (l.details  || '').toLowerCase().includes(searchQ);
+      });
 
       var container = document.getElementById('fll');
       if (!allLogs.length) {
-        container.innerHTML = '<div class="emst"><span class="emico">📋</span><div class="emtx">No logs yet</div></div>';
+        container.innerHTML = '<div class="emst"><span class="emico">📋</span><div class="emtx">No logs match your filters.</div></div>';
         return;
       }
 
-      var typeIcons = { add: '🟢', update: '🟡', delete: '🔴', other: '⚪' };
-      var catIcons = { login: '🔑', data: '📊', settings: '⚙️', security: '🛡️', attendance: '✅', general: '📝' };
-      var sevColors = { info: 'var(--gD)', warning: '#d97706', critical: '#dc2626' };
+      var roleStyle = {
+        admin:   { bg: '#fef2f2', color: '#dc2626', border: '#fca5a5', av: '#dc2626',  label: 'Admin'   },
+        teacher: { bg: '#eff6ff', color: '#2563eb', border: '#93c5fd', av: '#2563eb',  label: 'Teacher' },
+        student: { bg: '#f0fdf4', color: '#16a34a', border: '#86efac', av: '#16a34a',  label: 'Student' },
+        system:  { bg: '#f5f3ff', color: '#7c3aed', border: '#c4b5fd', av: '#7c3aed',  label: 'System'  },
+      };
+      var typeStyle = {
+        add:    { bg: '#dcfce7', color: '#16a34a', label: 'Added'   },
+        update: { bg: '#fef3c7', color: '#d97706', label: 'Updated' },
+        delete: { bg: '#fee2e2', color: '#dc2626', label: 'Deleted' },
+        other:  { bg: '#f3f4f6', color: '#6b7280', label: 'Action'  },
+      };
 
-      // Group logs by user name
-      var groupedByUser = {};
+      // Group by calendar date
+      var groups = {}, order = [];
       allLogs.forEach(function (log) {
-        if (!groupedByUser[log.userName]) {
-          groupedByUser[log.userName] = { role: log.role, entries: [] };
-        }
-        groupedByUser[log.userName].entries.push(log);
+        var key = new Date(log.timestamp).toDateString();
+        if (!groups[key]) { groups[key] = { label: _logDateLabel(log.timestamp), entries: [] }; order.push(key); }
+        groups[key].entries.push(log);
       });
 
       var html = '';
-      Object.entries(groupedByUser).forEach(function (entry) {
-        var userName = entry[0];
-        var group = entry[1];
-        var rowColor = group.role === 'admin' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)';
-        var textColor = group.role === 'admin' ? '#dc2626' : '#2563eb';
+      order.forEach(function (key) {
+        var g = groups[key];
+        // Date divider
+        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+          + '<span style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;">' + g.label + '</span>'
+          + '<span style="flex:1;height:1px;background:var(--brl);"></span>'
+          + '<span style="font-size:11px;color:var(--tdi);white-space:nowrap;">' + g.entries.length + ' action' + (g.entries.length !== 1 ? 's' : '') + '</span>'
+          + '</div>';
 
-        html += '<div style="margin-bottom:20px;">';
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0 6px;border-bottom:2px solid var(--brl);margin-bottom:8px;">';
-        html += '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;">' + (userName[0] || '?').toUpperCase() + '</div>';
-        html += '<div><div style="font-size:13px;font-weight:700;color:var(--td);">' + userName + '</div>';
-        html += '<span style="background:' + rowColor + ';color:' + textColor + ';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;">' + group.role + '</span></div>';
-        html += '<div style="margin-left:auto;font-size:11px;color:var(--tdi);">' + group.entries.length + ' actions</div></div>';
+        // Card wrapping all entries for this date
+        html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:18px;">';
+        g.entries.forEach(function (log, i) {
+          var rs = roleStyle[log.role] || roleStyle.system;
+          var ts = typeStyle[log.type]  || typeStyle.other;
+          var inits = (log.userName || '?').split(' ').map(function (w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase();
+          var exact = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        group.entries.forEach(function (log) {
-          var ts = new Date(log.timestamp);
-          var timeString = ts.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-            + ' ' + ts.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-          var dotColor = log.role === 'admin' ? 'var(--red)' : 'var(--blue)';
-          html += '<div class="logr" style="padding-left:44px;">';
-          html += '<div class="logd" style="background:' + dotColor + '"></div>';
-          var catLabel = log.category ? (catIcons[log.category] || '📝') + ' ' + log.category : '';
-          var sevStyle = log.severity ? 'color:' + (sevColors[log.severity] || 'var(--gD)') + ';' : '';
-          html += '<div class="logbd"><div class="loga" style="' + sevStyle + '">' + (typeIcons[log.type] || '⚪') + ' ' + log.action + (catLabel ? ' <span style="font-size:10px;opacity:.7;">(' + catLabel + ')</span>' : '') + '</div>';
-          if (log.details) html += '<div class="logm"><span style="color:var(--tdi)">— ' + log.details + '</span></div>';
-          html += '</div><div class="logtm">' + timeString + '</div></div>';
+          html += '<div style="display:flex;align-items:flex-start;gap:12px;padding:13px 18px;'
+            + (i < g.entries.length - 1 ? 'border-bottom:1px solid var(--brl);' : '')
+            + '" onmouseover="this.style.background=\'var(--gLt)\'" onmouseout="this.style.background=\'#fff\'">';
+          
+            // Avatar
+          html += '<div style="width:36px;height:36px;border-radius:50%;background:' + rs.av + ';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;">' + inits + '</div>';
+
+          // Body
+          html += '<div style="flex:1;min-width:0;">'
+            + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">'
+            +   '<span style="font-size:13px;font-weight:700;color:var(--td);">' + (log.userName || 'Unknown') + '</span>'
+            +   '<span style="background:' + rs.bg + ';color:' + rs.color + ';border:1px solid ' + rs.border + ';padding:1px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">' + rs.label + '</span>'
+            +   '<span style="background:' + ts.bg + ';color:' + ts.color + ';padding:1px 9px;border-radius:20px;font-size:10px;font-weight:600;">' + ts.label + '</span>'
+            + '</div>'
+            + '<div style="font-size:13px;font-weight:600;color:var(--td);margin-bottom:' + (log.details ? '2px' : '0') + ';">' + (log.action || '') + '</div>'
+            + (log.details ? '<div style="font-size:11.5px;color:var(--tmu);">' + log.details + '</div>' : '')
+            + '</div>';
+
+          // Timestamp
+          html += '<div style="flex-shrink:0;text-align:right;padding-top:1px;">'
+            + '<div style="font-size:11.5px;font-weight:600;color:var(--tdi);white-space:nowrap;" title="' + exact + '">' + _logRelTime(log.timestamp) + '</div>'
+            + '</div>';
+
+          html += '</div>';
         });
-
         html += '</div>';
       });
 
@@ -4624,7 +4789,6 @@
       };
       openModal_('m-dc-confirm');
     }
-    // alias the HTML calls
     var clrl = clearAllLogs;
 
     function exportLogs() {
@@ -4632,11 +4796,11 @@
       downloadCSV(
         [['Role', 'User', 'Action', 'Details', 'Timestamp']].concat(
           logs.map(function (l) { return [l.role, l.userName, l.action, l.details, l.timestamp]; })
-        ),
-        'Activity_Logs'
+        ), 'Activity_Logs'
       );
     }
     var elogs = exportLogs;
+    var rl    = renderLogs;
 
     // ─── DASHBOARD ───────────────────────────────────────────────────────────────
     function initDash() {
@@ -4648,7 +4812,7 @@
       renderDefaulters();
       renderSystemHealth();
       // Check maintenance badge
-      api('/api/settings/maintenance').then(function (d) {
+      apiCall('/api/settings/maintenance').then(function (d) {
         var badge = document.getElementById('sb-maint-badge');
         if (badge) badge.style.display = (d && d.active) ? 'inline-flex' : 'none';
       }).catch(function () { });
@@ -5582,7 +5746,7 @@
             + '<div class="anm">📚 ' + a.subjectName + '</div>'
             + '<div class="acls">👩‍🏫 ' + (a.teacherName || 'Unassigned') + '</div>'
             + '</div>'
-            + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'class\')">✕</button>'
+            + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'class\')">✖</button>'
             + '</div>';
         }).join('')
         : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No subjects assigned. Click "+ Assign Subject".</div>';
@@ -6160,7 +6324,7 @@
             + '<div class="anm">📚 ' + a.subjectName + '</div>'
             + '<div class="acls">🏫 ' + a.className + ' · ' + (a.deptName || '') + '</div>'
             + '</div>'
-            + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'teacher\')">✕</button>'
+            + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'teacher\')">✖</button>'
             + '</div>';
         }).join('')
         : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No assignments.</div>';
@@ -7004,58 +7168,107 @@
     //  DB SYNC LAYER — All data fetched from MongoDB
     // ═══════════════════════════════════════════════════════
 
-    // DB Update Toast
+        // DB Update Toast
     var _dbToastTimer = null;
+    var _dbToastDuration = 4000;
     function dbToast(msg, state, changes) {
-    // state: 'saving' | 'success' | 'error'
-    var el = document.getElementById('db-toast');
-    if (!el) return;
+      // state: 'saving' | 'success' | 'error'
+      var el = document.getElementById('db-toast');
+      if (!el) return;
 
-    clearTimeout(_dbToastTimer);
-    el.className = 'show ' + (state || 'saving');
-
-    var icon = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
-    var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
-    var changesHtml = changes
-      ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>'
-      : '';
-
-    // ✅ Added close button
-    var closeBtn = '<span id="db-toast-close" style="position:absolute;top:6px;right:8px;cursor:pointer;font-size:10px;">✕</span>';
-
-    el.innerHTML =
-      closeBtn +
-      spinHtml +
-      '<div><div>' + icon + ' ' + msg + '</div>' + changesHtml + '</div>';
-
-    // ✅ Close on click
-    var closeEl = document.getElementById('db-toast-close');
-    if (closeEl) {
-      closeEl.onclick = function () {
-        el.classList.remove('show');
-        clearTimeout(_dbToastTimer);
-      };
-    }
-
-    // ✅ Hover pause logic
-    el.onmouseenter = function () {
       clearTimeout(_dbToastTimer);
-    };
+      el.className = 'show ' + (state || 'saving');
 
-    el.onmouseleave = function () {
+      var icon      = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
+      var spinHtml  = state === 'saving'  ? '<div class="db-spin"></div>' : '';
+      var changesHtml = changes
+        ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>'
+        : '';
+
+      var closeBtn = '<span id="db-toast-close" style="position:absolute;top:6px;right:8px;cursor:pointer;font-size:10px;">✖</span>';
+
+      // Progress bar — only rendered when there is a countdown
+      var progressBar = state !== 'saving'
+        ? '<div id="db-toast-bar" style="position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.85);border-radius:4px 0 0 0;transform-origin:left center;"></div>'
+        : '';
+
+      el.innerHTML =
+        progressBar +
+        closeBtn +
+        spinHtml +
+        '<div style="display:flex;flex-direction:column;gap:4px;">' +
+
+          '<div style="font-size:13px;font-weight:700;">' +
+            icon + ' ' + msg +
+          '</div>' +
+
+          (changes
+            ? '<div style="font-size:12.5px;font-weight:600;opacity:.95;">' + changes + '</div>'
+            : ''
+          ) +
+
+        '</div>';
+
+      // Kick off bar animation (scaleX 1 → 0 over _dbToastDuration ms)
+      var barEl = document.getElementById('db-toast-bar');
+      var _remainingMs = _dbToastDuration;
+      var _pausedAt    = null;
+
+      function startBar(durationMs) {
+        if (!barEl) return;
+        barEl.style.transition = 'none';
+        barEl.style.transform  = 'scaleX(1)';
+        barEl.getBoundingClientRect(); // force reflow
+        barEl.style.transition = 'transform ' + durationMs + 'ms linear';
+        barEl.style.transform  = 'scaleX(0)';
+      }
+
+      function pauseBar() {
+        if (!barEl) return;
+        var computed = window.getComputedStyle(barEl).transform;
+        barEl.style.transition = 'none';
+        barEl.style.transform  = computed;
+        // Derive remaining time from current scaleX value
+        var scaleX = 1;
+        if (computed && computed !== 'none') {
+          var m = computed.match(/matrix\(([^,]+)/);
+          if (m) scaleX = parseFloat(m[1]);
+        }
+        _remainingMs = Math.max(0, Math.round(scaleX * _dbToastDuration));
+      }
+
+      if (state !== 'saving') startBar(_remainingMs);
+
+      // Close button
+      var closeEl = document.getElementById('db-toast-close');
+      if (closeEl) {
+        closeEl.onclick = function () {
+          el.classList.remove('show');
+          clearTimeout(_dbToastTimer);
+        };
+      }
+
+      // Hover: freeze bar + pause countdown
+      el.onmouseenter = function () {
+        clearTimeout(_dbToastTimer);
+        if (state !== 'saving') pauseBar();
+      };
+
+      el.onmouseleave = function () {
+        if (state !== 'saving') {
+          startBar(_remainingMs);
+          _dbToastTimer = setTimeout(function () {
+            el.classList.remove('show');
+          }, _remainingMs);
+        }
+      };
+
+      // Auto hide
       if (state !== 'saving') {
         _dbToastTimer = setTimeout(function () {
           el.classList.remove('show');
-        }, 5000);
+        }, _dbToastDuration);
       }
-    };
-
-    // ✅ Auto hide
-    if (state !== 'saving') {
-      _dbToastTimer = setTimeout(function () {
-        el.classList.remove('show');
-      }, 5000);
-    }
     }
 
     // API helper
@@ -7347,9 +7560,117 @@
         openModal_('m-dc-confirm');
       });
     }
+
+    function openClearStorageModal() {
+      document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = false; });
+      document.getElementById('clr-all').checked = false;
+      openModal_('m-clear-storage');
+    }
+
+    function toggleClearAll(master) {
+      document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = master.checked; });
+    }
+
+    function confirmClearStorage() {
+      var checked = Array.from(document.querySelectorAll('.clr-chk:checked')).map(function (c) { return c.value; });
+      if (!checked.length) {
+        dbToast('Nothing selected', 'error', 'Tick at least one item to clear.');
+        return;
+      }
+
+      var cleared   = [];
+      var loggedOut = false;
+
+      checked.forEach(function (key) {
+        if (key === 'settings') {
+          // Remove eams_settings + all eams_setting_* keys
+          var toRemove = [];
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && (k === 'eams_settings' || k.startsWith('eams_setting_'))) toRemove.push(k);
+          }
+          toRemove.forEach(function (k) { localStorage.removeItem(k); });
+          cleared.push('Settings');
+
+        } else if (key === 'session_token') {
+          sessionStorage.removeItem('eams_token');
+          cleared.push('Auth Token');
+          loggedOut = true;
+
+        } else if (key === 'session_user') {
+          sessionStorage.removeItem('eams_user');
+          cleared.push('Session User');
+
+        } else {
+          // All ss3_* collections: depts, classes, subjects, students,
+          // users, assignments, attendance, notifications, logs
+          localStorage.removeItem('ss3_' + key);
+          cleared.push(key.charAt(0).toUpperCase() + key.slice(1));
+        }
+      });
+
+      closeModalBg('m-clear-storage');
+      dbToast('Browser cache cleared', 'success', cleared.join(' · ') + ' removed.');
+
+      if (loggedOut) {
+        // Token cleared — force re-login after a short delay
+        setTimeout(function () { doLogout(); }, 1200);
+        return;
+      }
+
+      // If all main localStorage collections were cleared, auto-resync from MongoDB
+      var allMain = ['depts','classes','subjects','students','users','assignments','attendance','notifications','logs'];
+      var clearedAllMain = allMain.every(function (k) { return checked.indexOf(k) !== -1; });
+      if (clearedAllMain) {
+        setTimeout(function () { syncAllFromDB(); }, 600);
+      }
+    }
   </script>
 
   <div id="db-toast"></div>
+  <!-- ── CLEAR BROWSER STORAGE MODAL ─────────────────── -->
+  <div class="modal-bg" id="m-clear-storage">
+    <div class="modal modal-sm" style="text-align:center;">
+      <div class="modal-hd">
+        <div class="modal-title">🗑️ Clear Browser Cache</div>
+        <div class="modal-close" onclick="closeModalBg('m-clear-storage')">✖</div>
+      </div>
+      <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>browser storage</strong>.</div>
+      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from MongoDB on next sync.</div>
+
+      <!-- Select All + localStorage collections -->
+      <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">localStorage (synced data)</div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="clr-all" onchange="toggleClearAll(this)" style="accent-color:#ef4444;width:15px;height:15px;">
+          <span style="color:#ef4444;">Select All</span>
+        </label>
+        <hr style="border:none;border-top:1px solid var(--br);margin:0;">
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="depts"         style="accent-color:var(--p);width:14px;height:14px;"> 🏛️ Departments</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="classes"       style="accent-color:var(--p);width:14px;height:14px;"> 🏫 Classes</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="subjects"      style="accent-color:var(--p);width:14px;height:14px;"> 📚 Subjects</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="students"      style="accent-color:var(--p);width:14px;height:14px;"> 👨‍🎓 Students</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="users"         style="accent-color:var(--p);width:14px;height:14px;"> 👩‍🏫 Users / Teachers</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="assignments"   style="accent-color:var(--p);width:14px;height:14px;"> 📋 Assignments</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="attendance"    style="accent-color:var(--p);width:14px;height:14px;"> 📅 Attendance Records</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="notifications" style="accent-color:var(--p);width:14px;height:14px;"> 🔔 Notifications</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="logs"          style="accent-color:var(--p);width:14px;height:14px;"> 📋 Activity Logs</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="settings"      style="accent-color:var(--p);width:14px;height:14px;"> ⚙️ Cached Settings</label>
+      </div>
+
+      <!-- sessionStorage section -->
+      <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">sessionStorage (session data)</div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-clear-storage')">Cancel</button>
+        <button class="btn-form-pri" style="background:#ef4444;border-color:#ef4444;" onclick="confirmClearStorage()">🗑️ Clear Selected</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Special Delete Password Modal -->
   <div class="modal-bg" id="m-special-pw">
