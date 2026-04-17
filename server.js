@@ -213,9 +213,10 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    // Reset failed logins
-
-    await M.User.findByIdAndUpdate(user._id, { failedLogins: 0, lockedUntil: null, lastLogin: new Date(), $inc: { loginCount: 1 } });
+    // Reset failed logins — stamp firstLogin only on very first successful login
+    const _loginUpd = { failedLogins: 0, lockedUntil: null, lastLogin: new Date(), $inc: { loginCount: 1 } };
+    if (!user.firstLogin) _loginUpd.firstLogin = new Date();
+    await M.User.findByIdAndUpdate(user._id, _loginUpd);
 
     const token = jwt.sign(
       { _id: user._id, name: user.name, username: user.username, role: user.role, dept: user.dept, empId: user.empId, desig: user.desig },
@@ -232,13 +233,23 @@ app.post('/api/auth/login', async (req, res) => {
 
     await logAction(user._id, user.name, role, 'Login', `${role} logged in from ${req.ip}`, 'login', 'info', req.ip, sessionId);
 
+    // Re-fetch user to get updated firstLogin value
+    const freshUser = await M.User.findById(user._id).lean();
     res.json({
       token, sessionId,
-      mustChangePassword: user.mustChangePassword,
+      mustChangePassword: freshUser.mustChangePassword,
       user: {
-        _id: user._id, name: user.name, role: user.role,
-        dept: user.dept, empId: user.empId, desig: user.desig, email: user.email,
-        isHOD: user.isHOD, isClassAdvisor: user.isClassAdvisor, advisorClassName: user.advisorClassName,
+        _id: freshUser._id, name: freshUser.name, role: freshUser.role,
+        dept: freshUser.dept, empId: freshUser.empId, desig: freshUser.desig,
+        email: freshUser.email, username: freshUser.username,
+        isHOD: freshUser.isHOD, HoddeptName: freshUser.HoddeptName,
+        isClassAdvisor: freshUser.isClassAdvisor, advisorClassName: freshUser.advisorClassName,
+        isTimeTableCoordinator: freshUser.isTimeTableCoordinator, TTdeptName: freshUser.TTdeptName,
+        isAdmin: freshUser.isAdmin, adminRights: freshUser.adminRights,
+        isClassRep: freshUser.isClassRep, regNo: freshUser.regNo, deptName: freshUser.deptName,
+        loginCount: freshUser.loginCount, lastLogin: freshUser.lastLogin,
+        firstLogin: freshUser.firstLogin || null,
+        active: freshUser.active,
       }
     });
   } catch (err) {
@@ -842,6 +853,8 @@ app.delete('/api/timetable/:id', authMiddleware, async (req, res) => {
   res.json({ deleted: true });
 });
 
+
+
 // ════════════════════════════════════════════════════════
 //  ACTIVITY LOGS
 // ════════════════════════════════════════════════════════
@@ -960,20 +973,238 @@ app.delete('/api/assignments/:id', authMiddleware, adminOnly, async (req, res) =
 });
 
 // ════════════════════════════════════════════════════════
+//  PROFILE  — own-profile GET / PUT (any authenticated role)
+// ════════════════════════════════════════════════════════
+
+// ── GET /api/profile/me — full own user document (no password) ──
+app.get('/api/profile/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await M.User.findById(req.user._id).select('-password').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Build role-shaped profile view so frontends know exactly what to show
+    const base = {
+      _id:        user._id,
+      role:       user.role,
+      name:       user.name,
+      username:   user.username,
+      email:      user.email      || '',
+      active:     user.active,
+      // Session stats
+      loginCount:  user.loginCount  || 0,
+      lastLogin:   user.lastLogin   || null,
+      firstLogin:  user.firstLogin  || null,
+      mustChangePassword: user.mustChangePassword || false,
+      createdAt:  user.createdAt,
+      updatedAt:  user.updatedAt,
+    };
+
+    if (user.role === 'admin') {
+      Object.assign(base, {
+        // AdminSchema fields mapped from legacy UserSchema
+        fullName:    user.name,
+        firstName:   user.name.split(' ')[0]  || '',
+        lastName:    user.name.split(' ').slice(1).join(' ') || '',
+        employeeNo:  user.empId       || '',
+        department:  user.dept        || '',
+        isAdmin:     user.isAdmin !== false ? true : false,
+        adminRights: user.adminRights || 'all',
+      });
+    } else if (user.role === 'teacher') {
+      Object.assign(base, {
+        // TeacherSchema fields
+        fullName:    user.name,
+        firstName:   user.name.split(' ')[0]  || '',
+        lastName:    user.name.split(' ').slice(1).join(' ') || '',
+        employeeNo:  user.empId       || '',
+        department:  user.dept        || '',
+        designation: user.desig       || 'Assistant Professor',
+        // Display-only role flags
+        isHod:       user.isHOD       || false,
+        HoddeptName: user.HoddeptName || '',
+        isClassAdvisor:  user.isClassAdvisor  || false,
+        className:       user.advisorClassName || '',
+        isTimeTableCoordinator: user.isTimeTableCoordinator || false,
+        TTdeptName:      user.TTdeptName || '',
+        isAdmin:         user.isAdmin   || false,
+        adminRights:     user.adminRights || 'all',
+      });
+    } else if (user.role === 'student') {
+      // Also pull Student record for academic fields
+      const studentRec = await M.Student.findOne({ userId: user._id }).lean()
+        || await M.Student.findOne({ regNo: user.regNo }).lean()
+        || null;
+      Object.assign(base, {
+        // StudentUserSchema fields
+        fullName:     user.name,
+        firstName:    user.name.split(' ')[0]  || '',
+        lastName:     user.name.split(' ').slice(1).join(' ') || '',
+        registerNo:   user.regNo           || studentRec?.regNo  || '',
+        class:        studentRec?.className || '',
+        section:      studentRec?.section   || '',
+        branch:       studentRec?.branch    || '',
+        course:       studentRec?.courseType|| '',
+        department:   studentRec?.deptName  || user.deptName || '',
+        currentYear:  studentRec?.year      || '',
+        academicYear: studentRec?.academicYear || '',
+        // Display-only
+        isRep:        user.isClassRep || false,
+      });
+    }
+
+    res.json(base);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── PUT /api/profile/me — update own editable fields ──
+//    Protected / display-only fields are stripped server-side
+app.put('/api/profile/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await M.User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Fields users can NEVER self-edit (role flags, auth state, etc.)
+    const ALWAYS_PROTECTED = [
+      'role','isAdmin','adminRights',
+      'isHOD','HoddeptName','isClassAdvisor','advisorClassName','advisorClassId',
+      'isTimeTableCoordinator','TTdeptName',
+      'isWarden','isExamCoordinator','isPlacementCoord',
+      'isClassRep','isAssiClassRep','isSportsRep','isCulturalRep',
+      'active','failedLogins','lockedUntil','loginCount','firstLogin',
+      'lastLogin','mustChangePassword','password','username',
+    ];
+
+    const updates = { ...req.body };
+    ALWAYS_PROTECTED.forEach(k => delete updates[k]);
+
+    // Map friendly field names → UserSchema field names
+    if (updates.fullName)    { updates.name    = updates.fullName;   delete updates.fullName; }
+    if (updates.firstName || updates.lastName) {
+      const fn = updates.firstName || user.name.split(' ')[0];
+      const ln = updates.lastName  || user.name.split(' ').slice(1).join(' ');
+      updates.name = (fn + ' ' + ln).trim();
+      delete updates.firstName; delete updates.lastName;
+    }
+    if (updates.employeeNo)  { updates.empId   = updates.employeeNo; delete updates.employeeNo; }
+    if (updates.department)  { updates.dept    = updates.department;  delete updates.department; }
+    if (updates.designation) { updates.desig   = updates.designation; delete updates.designation; }
+
+    Object.assign(user, updates);
+    await user.save();
+
+    await logAction(user._id, user.name, user.role, 'Profile Updated', 'Own profile self-edited', 'data', 'info', req.ip);
+    const { password: _pw, ...safe } = user.toObject();
+    res.json(safe);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── GET /api/profile/users — admin or Manage User right: list all users ──
+app.get('/api/profile/users', authMiddleware, async (req, res) => {
+  try {
+    const reqUser = await M.User.findById(req.user._id).lean();
+    const rights  = reqUser?.adminRights;
+    const canManage = req.user.role === 'admin'
+      || rights === 'all'
+      || (Array.isArray(rights) && rights.includes('Manage User'));
+
+    if (!canManage) return res.status(403).json({ error: 'Manage User right required' });
+
+    const filter = {};
+    if (req.query.role)   filter.role = req.query.role;
+    if (req.query.search) {
+      const re = new RegExp(req.query.search, 'i');
+      filter.$or = [{ name: re }, { username: re }, { empId: re }, { email: re }, { regNo: re }, { dept: re }];
+    }
+    const users = await M.User.find(filter, '-password').sort({ role: 1, name: 1 }).lean();
+
+    // For each user, attach firstLogin if available
+    res.json(users.map(u => ({
+      ...u,
+      firstLogin: u.firstLogin || null,
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── PUT /api/profile/users/:id — Manage User: edit any user ──
+app.put('/api/profile/users/:id', authMiddleware, async (req, res) => {
+  try {
+    const reqUser = await M.User.findById(req.user._id).lean();
+    const rights  = reqUser?.adminRights;
+    const canManage = req.user.role === 'admin'
+      || rights === 'all'
+      || (Array.isArray(rights) && rights.includes('Manage User'));
+
+    if (!canManage) return res.status(403).json({ error: 'Manage User right required' });
+
+    const { password, ...data } = req.body;
+    if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+
+    // Map friendly names back to schema fields
+    if (data.fullName)    { data.name  = data.fullName;   delete data.fullName; }
+    if (data.employeeNo)  { data.empId = data.employeeNo; delete data.employeeNo; }
+    if (data.department)  { data.dept  = data.department; delete data.department; }
+    if (data.designation) { data.desig = data.designation; delete data.designation; }
+    if (data.firstName || data.lastName) {
+      const target = await M.User.findById(req.params.id).lean();
+      const fn = data.firstName || (target?.name || '').split(' ')[0];
+      const ln = data.lastName  || (target?.name || '').split(' ').slice(1).join(' ');
+      data.name = (fn + ' ' + ln).trim();
+      delete data.firstName; delete data.lastName;
+    }
+
+    const user = await M.User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    await logAction(req.user._id, req.user.name, req.user.role, 'User Updated (Manage User)',
+      `${user.name} (@${user.username})`, 'data', 'info', req.ip);
+    res.json(user);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// ════════════════════════════════════════════════════════
 //  USERS
 // ════════════════════════════════════════════════════════
 
 app.get('/api/users', authMiddleware, adminOnly, async (req, res) => {
   const filter = {};
   if (req.query.role) filter.role = req.query.role;
-  res.json(await M.User.find(filter, '-password').sort({ name: 1 }));
+  if (req.query.search) {
+    const re = new RegExp(req.query.search, 'i');
+    filter.$or = [{ name: re }, { username: re }, { empId: re }, { email: re }, { regNo: re }, { dept: re }];
+  }
+  res.json(await M.User.find(filter, '-password').sort({ role: 1, name: 1 }));
 });
-app.put('/api/users/:id', authMiddleware, adminOnly, async (req, res) => {
-  const { password, ...data } = req.body;
-  if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-  const user = await M.User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password');
-  await logAction(req.user._id, req.user.name, req.user.role, 'User Updated', user?.name, 'data', 'info', req.ip);
-  res.json(user);
+app.put('/api/users/:id', authMiddleware, async (req, res) => {
+  try {
+    const isSelf   = String(req.user._id) === String(req.params.id);
+    const isAdmin  = req.user.role === 'admin';
+    // Check Manage User right for non-primary-admin teachers with adminRights
+    const reqUser  = await M.User.findById(req.user._id).lean();
+    const rights   = reqUser?.adminRights;
+    const hasManageUser = rights === 'all' || (Array.isArray(rights) && rights.includes('Manage User'));
+    const canEditOthers = isAdmin || hasManageUser;
+
+    if (!isSelf && !canEditOthers) {
+      return res.status(403).json({ error: 'Forbidden: cannot edit other users' });
+    }
+
+    const { password, ...data } = req.body;
+
+    // Non-admins editing self: strip protected fields
+    if (!canEditOthers && isSelf) {
+      const PROTECTED = ['role','isAdmin','adminRights','isHOD','isClassAdvisor','isTimeTableCoordinator',
+        'isClassRep','isAssiClassRep','isSportsRep','isCulturalRep','active','failedLogins','lockedUntil',
+        'loginCount','firstLogin','lastLogin','mustChangePassword'];
+      PROTECTED.forEach(k => delete data[k]);
+    }
+
+    if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+    const user = await M.User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password');
+    await logAction(req.user._id, req.user.name, req.user.role,
+      isSelf ? 'Profile Updated' : 'User Updated', user?.name, 'data', 'info', req.ip);
+    res.json(user);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.delete('/api/users/:id', authMiddleware, adminOnly, async (req, res) => {
   const user = await M.User.findByIdAndUpdate(req.params.id, { active: false }, { new: true });

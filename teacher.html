@@ -30,8 +30,52 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .ss.act{color:var(--gD);font-weight:700;background:rgba(76,175,80,.06);}
 .navs{flex:1;overflow-y:auto;padding:8px 0;}
 .sb-bot{padding:12px;border-top:1px solid var(--brl);}
-.logoutbtn{width:100%;padding:9px;border:1.5px solid rgba(239,68,68,.22);border-radius:10px;background:rgba(239,68,68,.04);color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;}
-.logoutbtn:hover{background:rgba(239,68,68,.10);}
+/* ── ANIMATED LOGOUT BUTTON ─────────────────────── */
+.sb-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: width .3s ease, border-radius .3s ease;
+  box-shadow: 2px 2px 10px rgba(239, 68, 68, .25);
+  background-color: #ff4141;
+  margin: 0 auto;
+  padding: 0;
+  flex-shrink: 0;
+}
+.sb-logout-btn .logout-sign {
+  width: 100%;
+  transition: width .3s, padding .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sb-logout-btn .logout-sign svg { width: 17px; flex-shrink: 0; }
+.sb-logout-btn .logout-sign svg path { fill: white; }
+.sb-logout-btn .logout-text {
+  position: absolute;
+  right: 0;
+  width: 0;
+  opacity: 0;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity .3s, width .3s, padding .3s;
+  white-space: nowrap;
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+}
+.sb-logout-btn:hover { width: 130px; border-radius: 40px; }
+.sb-logout-btn:hover .logout-sign { width: 35%; padding-left: 18px; }
+.sb-logout-btn:hover .logout-text { opacity: 1; width: 65%; padding-right: 12px; }
+.sb-logout-btn:active { transform: translate(2px, 2px); }
 .mc{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
 #app{display:none;width:100%;}#app.vis{display:flex;}
 .topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
@@ -228,6 +272,50 @@ textarea.finp{resize:vertical;min-height:80px;}
 .est{text-align:center;padding:28px 16px;color:var(--tdi);}
 .est .ei{font-size:32px;display:block;margin-bottom:8px;}
 
+/* ══════════════════════════════════════════
+   MY PROFILE PAGE STYLES
+══════════════════════════════════════════ */
+.profile-page{max-width:960px;margin:0 auto;padding:0;}
+.prof-hero{
+  background:linear-gradient(140deg,var(--gD) 0%,#2e7d32 55%,#388e3c 100%);
+  border-radius:22px;padding:28px;
+  display:flex;align-items:center;gap:20px;
+  margin-bottom:22px;position:relative;overflow:hidden;
+}
+.prof-hero::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07);}
+.prof-hero::after{content:'';position:absolute;bottom:-30px;left:50%;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05);}
+.prof-hero-av{
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;font-weight:800;color:#fff;
+  position:relative;z-index:1;
+}
+.prof-hero-info{flex:1;position:relative;z-index:1;}
+.prof-hero-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;}
+.prof-hero-reg{font-size:12px;color:rgba(255,255,255,.7);margin-bottom:8px;}
+.prof-hero-tags{display:flex;gap:7px;flex-wrap:wrap;}
+.prof-hero-tag{font-size:10.5px;font-weight:600;padding:3px 11px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
+.prof-hero-tag.rep{background:rgba(250,204,21,.25);color:#fde68a;}
+
+.prof-section{background:#fff;border-radius:18px;border:1px solid var(--br);overflow:hidden;margin-bottom:18px;}
+.prof-section-hd{
+  padding:14px 20px 12px;border-bottom:1px solid var(--brl);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.prof-section-title{font-size:15.5px;font-weight:700;color:var(--td);display:flex;align-items:center;gap:8px;}
+.prof-section-body{padding:18px 20px;}
+
+.fields-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.field-group{display:flex;flex-direction:column;gap:4px;}
+.field-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);}
+.field-val{font-size:13px;font-weight:600;color:var(--td);}
+.field-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.fb-yes{background:rgba(76,175,80,.12);color:var(--gK);}
+.fb-no{background:#f3f4f6;color:#6b7280;}
+
+.chpw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
 /* ── RESPONSIVE MOBILE ─────────────────────── */
 @media (max-width:768px){
   :root{--sb-w:0px;}
@@ -262,7 +350,7 @@ body{-webkit-user-select:none;user-select:none;}
 <!-- APP -->
 <div id="app">
 <div class="sb-overlay" id="sb-overlay-t" onclick="toggleSidebar()"></div>
-<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">&#9776;</button>
+<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">✖</button>
 <nav class="sb" id="sidebar">
   <div class="sb-logo">
     <div class="sb-brand">Sri Shakthi EAMS<small>Teacher Portal</small></div>
@@ -278,9 +366,15 @@ body{-webkit-user-select:none;user-select:none;}
       <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
     </div>
     <button class="si" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
+    <button class="si" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
   </div>
   <div class="sb-bot">
-    <button class="logoutbtn" onclick="doLogout()">&#128682; Logout</button>
+    <button class="sb-logout-btn" onclick="doLogout()" title="Logout">
+      <div class="logout-sign">
+        <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
+      </div>
+      <div class="logout-text">Logout</div>
+    </button>
   </div>
 </nav>
 
@@ -529,32 +623,66 @@ body{-webkit-user-select:none;user-select:none;}
 <!-- PROFILE -->
 <div class="pg" id="pg-profile">
   <div class="phd"><div><div class="pt">&#128100; My Profile</div><div class="ps">View your details and update your password.</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;">
-    <div class="card">
-      <div class="chd"><div class="ct">Personal Details</div></div>
-      <div class="cb">
-        <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid var(--brl);margin-bottom:16px;">
-          <div class="prbav" id="profav">T</div>
-          <div style="font-size:18px;font-weight:800;color:var(--td);" id="profname">—</div>
-          <div style="margin-top:6px;"><span style="background:var(--gLt);color:var(--gK);padding:2px 12px;border-radius:10px;font-size:11px;font-weight:700;">Faculty</span></div>
-        </div>
-        <div class="pdrcard">
-          <div class="pdrrow"><div class="pdric">&#127891;</div><div><div class="pdrlbl">Designation</div><div class="pdrval" id="pdrdesig">—</div></div></div>
-          <div class="pdrrow"><div class="pdric">&#129514;</div><div><div class="pdrlbl">Employee ID</div><div class="pdrval" id="pdremp">—</div></div></div>
-          <div class="pdrrow"><div class="pdric">&#127963;</div><div><div class="pdrlbl">Department</div><div class="pdrval" id="pdrdept">—</div></div></div>
-          <div class="pdrrow"><div class="pdric">&#128218;</div><div><div class="pdrlbl">Assigned Classes</div><div class="pdrval" id="pdrcls">—</div></div></div>
-          <div class="pdrrow"><div class="pdric">&#128100;</div><div><div class="pdrlbl">Username</div><div class="pdrval" id="pdrusr">—</div></div></div>
+  <div class="profile-page" id="profile-content">
+    <div class="prof-hero">
+      <div class="prof-hero-av" id="profav">T</div>
+      <div class="prof-hero-info">
+        <div class="prof-hero-name" id="profname">—</div>
+        <div class="prof-hero-reg" id="pdrdesig">—</div>
+        <div class="prof-hero-tags">
+          <span class="prof-hero-tag">Faculty</span>
+          <span class="prof-hero-tag rep" id="prof-hod-tag" style="display:none;">HOD</span>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="chd"><div class="ct">&#128274; Change Password</div></div>
-      <div class="cb">
-        <div style="margin-bottom:14px;"><label class="flbl">Current Password</label><input type="password" class="finp" id="pwcur" placeholder="Current password"></div>
-        <div style="margin-bottom:14px;"><label class="flbl">New Password</label><input type="password" class="finp" id="pwnew" placeholder="Min 6 characters"></div>
-        <div style="margin-bottom:18px;"><label class="flbl">Confirm New Password</label><input type="password" class="finp" id="pwconf" placeholder="Re-enter new password"></div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🪪 Identity Information</div></div>
+      <div class="prof-section-body">
+        <div class="fields-grid">
+          <div class="field-group"><div class="field-label">Employee ID</div><div class="field-val" id="pdremp">—</div></div>
+          <div class="field-group"><div class="field-label">Username</div><div class="field-val" id="pdrusr">—</div></div>
+          <div class="field-group"><div class="field-label">Email</div><div class="field-val" id="pdremail">—</div></div>
+          <div class="field-group"><div class="field-label">Phone</div><div class="field-val" id="pdrphone">—</div></div>
+          <div class="field-group"><div class="field-label">Qualifications</div><div class="field-val" id="pdrqual">—</div></div>
+          <div class="field-group"><div class="field-label">Experience</div><div class="field-val" id="pdrexp">—</div></div>
+          <div class="field-group"><div class="field-label">Date of Joining</div><div class="field-val" id="pdrdoj">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🎓 Roles &amp; Academic Details</div></div>
+      <div class="prof-section-body">
+        <div class="fields-grid">
+          <div class="field-group"><div class="field-label">Department</div><div class="field-val" id="pdrdept">—</div></div>
+          <div class="field-group"><div class="field-label">Assigned Classes</div><div class="field-val" id="pdrcls">—</div></div>
+          <div class="field-group"><div class="field-label">HOD</div><div id="pdrhod"></div></div>
+          <div class="field-group"><div class="field-label">Class Advisor</div><div id="pdrclassadv"></div></div>
+          <div class="field-group"><div class="field-label">Timetable Coordinator</div><div id="pdrttcoord"></div></div>
+          <div class="field-group"><div class="field-label">Admin Rights</div><div id="pdradmin"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🔐 Change Password</div></div>
+      <div class="prof-section-body">
         <div id="pwerr" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:9px 13px;font-size:12px;color:#dc2626;margin-bottom:12px;"></div>
-        <button class="mfp" style="width:100%;" onclick="changePw()">Update Password</button>
+        <div class="chpw-grid">
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="flbl">Current Password</label>
+            <input type="password" class="finp" id="pwcur" placeholder="Current password">
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="flbl">New Password</label>
+            <input type="password" class="finp" id="pwnew" placeholder="Min 6 characters">
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="flbl">Confirm New Password</label>
+            <input type="password" class="finp" id="pwconf" placeholder="Re-enter new password">
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="mfp" onclick="changePw()" style="padding:10px 28px;">Update Password</button>
+        </div>
       </div>
     </div>
   </div>
@@ -565,7 +693,7 @@ body{-webkit-user-select:none;user-select:none;}
 <!-- MODAL: Schedule Slot -->
 <div class="mbg" id="msched">
   <div class="modal msm">
-    <div class="mhd"><div><div class="mtit" id="mschedtit">&#10133; Add Schedule Slot</div><div class="msub">Add a slot to your weekly timetable.</div></div><button class="mclose" onclick="closeModal('msched')">&#10005;</button></div>
+    <div class="mhd"><div><div class="mtit" id="mschedtit">&#10133; Add Schedule Slot</div><div class="msub">Add a slot to your weekly timetable.</div></div><button class="mclose" onclick="closeModal('msched')">☰;</button></div>
     <div class="mbody">
       <input type="hidden" id="schedeid">
       <div class="fr fr2">
@@ -585,7 +713,7 @@ body{-webkit-user-select:none;user-select:none;}
 <!-- MODAL: Grievance -->
 <div class="mbg" id="mgriev">
   <div class="modal msm">
-    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">&#10005;</button></div>
+    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">☰;</button></div>
     <div class="mbody">
       <div style="margin-bottom:14px;"><label class="flbl">Title / Subject</label><input type="text" class="finp" id="gsubj" placeholder="Brief title of the issue"></div>
       <div style="margin-bottom:14px;"><label class="flbl">Category</label><select class="finp" id="gcat"><option>Timetable Issue</option><option>Attendance Correction</option><option>Facilities / Infrastructure</option><option>Student Behaviour</option><option>Administrative</option><option>Other</option></select></div>
@@ -696,12 +824,12 @@ body{-webkit-user-select:none;user-select:none;}
     if (isMobile) {
       const isOpen = sidebar.classList.toggle('sb-mobile-open');
       if (overlay) overlay.classList.toggle('visible', isOpen);
-      toggleButton.innerHTML = isOpen ? '&#10005;' : '&#9776;';
+      toggleButton.innerHTML = isOpen ? '✖' : '☰';
     } else {
       const isHidden = sidebar.classList.toggle('sb-hidden');
       mainContent.classList.toggle('sb-expanded', isHidden);
       toggleButton.classList.toggle('closed', isHidden);
-      toggleButton.innerHTML = isHidden ? '&#9776;' : '&#10005;';
+      toggleButton.innerHTML = isHidden ? '☰' : '✖';
     }
   }
 
@@ -1965,6 +2093,21 @@ body{-webkit-user-select:none;user-select:none;}
     document.getElementById('pdrdept').textContent   = currentUser.dept   || '—';
     document.getElementById('pdrusr').textContent    = currentUser.username || '—';
 
+    if (document.getElementById('pdremail')) document.getElementById('pdremail').textContent = currentUser.email || '—';
+    if (document.getElementById('pdrphone')) document.getElementById('pdrphone').textContent = currentUser.phone || '—';
+    if (document.getElementById('pdrqual')) document.getElementById('pdrqual').textContent = currentUser.qualifications || '—';
+    if (document.getElementById('pdrexp')) document.getElementById('pdrexp').textContent = currentUser.experience || '—';
+    if (document.getElementById('pdrdoj')) document.getElementById('pdrdoj').textContent = currentUser.joiningDate || '—';
+
+    if (document.getElementById('prof-hod-tag')) {
+      document.getElementById('prof-hod-tag').style.display = currentUser.isHOD ? 'inline-block' : 'none';
+    }
+
+    if (document.getElementById('pdrhod')) document.getElementById('pdrhod').innerHTML = currentUser.isHOD ? '<span class="field-badge fb-yes">⭐ '+ (currentUser.HoddeptName || 'Yes') +'</span>' : '<span class="field-badge fb-no">No</span>';
+    if (document.getElementById('pdrclassadv')) document.getElementById('pdrclassadv').innerHTML = currentUser.isClassAdvisor ? '<span class="field-badge fb-yes">⭐ ' + (currentUser.advisorClassName || 'Yes') + '</span>' : '<span class="field-badge fb-no">No</span>';
+    if (document.getElementById('pdrttcoord')) document.getElementById('pdrttcoord').innerHTML = currentUser.isTimeTableCoordinator ? '<span class="field-badge fb-yes">⭐ ' + (currentUser.TTdeptName || 'Yes') + '</span>' : '<span class="field-badge fb-no">No</span>';
+    if (document.getElementById('pdradmin')) document.getElementById('pdradmin').innerHTML = currentUser.isAdmin ? '<span class="field-badge fb-yes">⭐ Yes</span>' : '<span class="field-badge fb-no">No</span>';
+
     const assignedClasses = Array.from(new Set(getMyAssignments().map(function(a) { return a.className; })));
     document.getElementById('pdrcls').textContent = assignedClasses.length ? assignedClasses.join(', ') : 'None assigned';
 
@@ -2130,7 +2273,7 @@ function submitForcePw() {
     if(d.error){err.textContent=d.error;err.style.display='block';return;}
     sessionStorage.setItem('eams_mustChangePw','0');
     document.getElementById('forcePwModal').style.display='none';
-    alert('✅ Password changed successfully! Please remember your new password.');
+    showToast('✅ Password changed successfully! Please remember your new password.');
   }).catch(function(){err.textContent='Server error. Try again.';err.style.display='block';});
 }
 function submitChangePw() {
