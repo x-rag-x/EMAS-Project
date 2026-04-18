@@ -65,11 +65,12 @@ async function seedDefaults() {
   // Seed default settings
   const defaults = [
     { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher','student'], endTime: null, startedAt: null } },
-    { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SSIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
+    { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
     { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 6 } },
-    { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
+    { key: 'security', value: { maxLoginAttempts: 3, sessionTimeoutMins: 480, forcePwChange: true } },
     { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
     { key: 'college_ips', value: ['127.0.0.1', '::1', '192.', '10.'] },
+    { key: 'tokenSystem', value: { enabled: false } },
   ];
   for (const d of defaults) {
     const exists = await M.Settings.findOne({ key: d.key });
@@ -562,10 +563,14 @@ app.post('/api/attendance', authMiddleware, async (req, res) => {
     if (existing) {
       const updated = await M.Attendance.findByIdAndUpdate(existing._id, req.body, { new: true });
       await logAction(req.user._id, req.user.name, req.user.role, 'Attendance Updated', `${req.body.className} on ${req.body.date}`, 'attendance', 'info', req.ip);
+      // Fire-and-forget: check for unauthorized absences
+      checkUnauthorizedAbsences(req.body.classId, req.body.date, req.body.className).catch(() => {});
       return res.json(updated);
     }
     const record = await M.Attendance.create(req.body);
     await logAction(req.user._id, req.user.name, req.user.role, 'Attendance Marked', `${req.body.className} on ${req.body.date}`, 'attendance', 'info', req.ip);
+    // Fire-and-forget: check for unauthorized absences
+    checkUnauthorizedAbsences(req.body.classId, req.body.date, req.body.className).catch(() => {});
     res.status(201).json(record);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -784,6 +789,800 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
     res.status(500).json({ error: err.message });
   }
 });
+
+// ════════════════════════════════════════════════════════
+//  TOKEN SYSTEM — Helpers
+// ════════════════════════════════════════════════════════
+
+// HMAC sign attendance data for tamper detection
+function signAttendanceData(payload) {
+  const hmac = crypto.createHmac('sha256', cfg.HMAC_SECRET);
+  hmac.update(JSON.stringify(payload));
+  return hmac.digest('hex');
+}
+
+// Check if token system is enabled (reads DB first, falls back to config)
+async function isTokenSystemEnabled() {
+  const setting = await M.Settings.findOne({ key: 'tokenSystem' });
+  if (setting) return !!setting.value?.enabled;
+  return !!cfg.TOKEN_SCHEMA.enabled;
+}
+
+// Get token config (merge DB overrides with config.js defaults)
+function getTokenConfig() {
+  return cfg.TOKEN_SCHEMA;
+}
+
+// Ensure a StudentToken record exists for a student, creating if needed
+async function ensureTokenRecord(studentId, userId, student) {
+  let record = await M.StudentToken.findOne({ userId });
+  if (record) return record;
+
+  const tc = getTokenConfig();
+  // Determine semester from StudentUser or student record
+  let sem = 'I';
+  const stuUser = await M.StudentUser.findOne({ _id: userId }).lean()
+    || await M.StudentUser.findOne({ username: (await M.User.findById(userId).lean())?.username }).lean();
+  if (stuUser?.currentSem) sem = stuUser.currentSem;
+
+  const isFirstSem = sem === 'I' || sem === '1';
+  const initial = isFirstSem ? tc.initialTokens.sem1 : tc.initialTokens.sem2;
+
+  record = await M.StudentToken.create({
+    studentId, userId,
+    regNo: student?.regNo || '',
+    studentName: student?.name || '',
+    className: student?.className || '',
+    semester: sem,
+    tokens: initial,
+    maxTokens: tc.maxTokens,
+    initialTokens: initial,
+    history: [{
+      action: 'init', feature: 'system', amount: initial,
+      balance: initial, reason: `Initial allocation (Sem ${sem})`,
+      date: new Date()
+    }]
+  });
+  return record;
+}
+
+// Compute attendance data for a student (extracted from /api/student/me logic)
+async function computeStudentAttendance(student) {
+  const allAttendance = await M.Attendance.find({ classId: student.classId }).lean();
+  const subjectMap = {};
+  for (const rec of allAttendance) {
+    const sid = String(rec.subjectId);
+    if (!subjectMap[sid]) {
+      subjectMap[sid] = {
+        subjectId: sid, subjectName: rec.subjectName || 'Unknown',
+        teacherName: rec.teacherName || '—',
+        present: 0, absent: 0, total: 0, dates: [],
+      };
+    }
+    const entry = subjectMap[sid];
+    const myRecord = rec.records.find(r =>
+      (r.studentId && String(r.studentId) === String(student._id)) ||
+      (r.regNo && r.regNo === student.regNo)
+    );
+    if (myRecord) {
+      entry.total++;
+      if (myRecord.status === 'present') entry.present++;
+      else entry.absent++;
+      entry.dates.push({ date: rec.date, status: myRecord.status });
+    }
+  }
+  // Lookup subject type (Theory/Lab) for each subject
+  const subjectIds = Object.keys(subjectMap);
+  const subjects = await M.Subject.find({ _id: { $in: subjectIds } }).lean();
+  const typeMap = {};
+  subjects.forEach(s => { typeMap[String(s._id)] = s.type || 'Theory'; });
+
+  const subjectList = Object.values(subjectMap).map(s => ({
+    ...s,
+    type: typeMap[s.subjectId] || 'Theory',
+    percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
+    dates: s.dates.sort((a, b) => a.date.localeCompare(b.date)),
+  }));
+
+  const totalPresent = subjectList.reduce((n, s) => n + s.present, 0);
+  const totalAbsent  = subjectList.reduce((n, s) => n + s.absent, 0);
+  const totalClasses = subjectList.reduce((n, s) => n + s.total, 0);
+  const overall      = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+
+  return { subjects: subjectList, totalPresent, totalAbsent, totalClasses, overall };
+}
+
+// Get color indicator from percentage
+function getColorIndicator(pct) {
+  if (pct >= 90) return { color: 'green', emoji: '🟢', label: '90–100%' };
+  if (pct >= 75) return { color: 'orange', emoji: '🟠', label: '75–89%' };
+  return { color: 'red', emoji: '🔴', label: '< 75%' };
+}
+
+// Check if a cooldown is active
+function isCooldownActive(until) {
+  if (!until) return false;
+  return new Date(until) > new Date();
+}
+
+// Calculate days remaining on a cooldown
+function cooldownDaysLeft(until) {
+  if (!until) return 0;
+  const diff = new Date(until) - new Date();
+  return Math.max(0, Math.ceil(diff / 86400000));
+}
+
+// ════════════════════════════════════════════════════════
+//  TOKEN SYSTEM — Public check
+// ════════════════════════════════════════════════════════
+
+app.get('/api/settings/token-system', authMiddleware, async (req, res) => {
+  const enabled = await isTokenSystemEnabled();
+  res.json({ enabled, config: getTokenConfig() });
+});
+
+// ════════════════════════════════════════════════════════
+//  TOKEN SYSTEM — Student endpoints
+// ════════════════════════════════════════════════════════
+
+// GET /api/student/token-status — token balance, cooldowns, blocks
+app.get('/api/student/token-status', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    const enabled = await isTokenSystemEnabled();
+    if (!enabled) return res.json({ enabled: false });
+
+    const student = await M.Student.findOne({ userId: req.user._id }).lean()
+      || await M.Student.findOne({ regNo: (await M.User.findById(req.user._id).lean())?.regNo }).lean();
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+
+    const tokenRec = await ensureTokenRecord(student._id, req.user._id, student);
+    const tc = getTokenConfig();
+    const now = new Date();
+
+    // Build cooldown status
+    const cooldownStatus = {};
+    for (const key of ['overallColor','overallPercent','theory','lab']) {
+      const until = tokenRec.cooldowns?.[key]?.until;
+      cooldownStatus[key] = {
+        active: isCooldownActive(until),
+        until: until || null,
+        daysLeft: cooldownDaysLeft(until),
+      };
+    }
+
+    // Build block status
+    const blockStatus = {
+      overall: { active: isCooldownActive(tokenRec.blocks?.overall?.until), until: tokenRec.blocks?.overall?.until, daysLeft: cooldownDaysLeft(tokenRec.blocks?.overall?.until) },
+      all: { active: isCooldownActive(tokenRec.blocks?.all?.until), until: tokenRec.blocks?.all?.until, daysLeft: cooldownDaysLeft(tokenRec.blocks?.all?.until) },
+    };
+
+    // Free check eligibility
+    let freeCheckAvailable = false;
+    if (!tokenRec.freeCheckUsed || (tokenRec.freeCheckAvailableAfter && now >= tokenRec.freeCheckAvailableAfter)) {
+      // Check if attendance < 75%
+      const att = await computeStudentAttendance(student);
+      if (att.overall < tc.freeCheck.threshold) freeCheckAvailable = true;
+    }
+
+    res.json({
+      enabled: true,
+      tokens: tokenRec.tokens,
+      maxTokens: tokenRec.maxTokens,
+      semester: tokenRec.semester,
+      costs: tc.costs,
+      cooldowns: cooldownStatus,
+      blocks: blockStatus,
+      freeCheckAvailable,
+      freeCheckAfter: tokenRec.freeCheckAvailableAfter,
+      history: (tokenRec.history || []).slice(-20).reverse(),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/student/spend-token — spend tokens to unlock a view
+app.post('/api/student/spend-token', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    const enabled = await isTokenSystemEnabled();
+    if (!enabled) return res.status(400).json({ error: 'Token system not active' });
+
+    const { feature, useFreeCheck } = req.body; // feature: 'overallColor','overallPercent','theory','lab'
+    const tc = getTokenConfig();
+    const validFeatures = ['overallColor','overallPercent','theory','lab'];
+    if (!validFeatures.includes(feature)) return res.status(400).json({ error: 'Invalid feature' });
+
+    const student = await M.Student.findOne({ userId: req.user._id }).lean()
+      || await M.Student.findOne({ regNo: (await M.User.findById(req.user._id).lean())?.regNo }).lean();
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+
+    const tokenRec = await ensureTokenRecord(student._id, req.user._id, student);
+    const now = new Date();
+
+    // Check if ALL views are blocked (penalty)
+    if (isCooldownActive(tokenRec.blocks?.all?.until)) {
+      return res.status(403).json({ error: 'All attendance views are blocked', blockedUntil: tokenRec.blocks.all.until, daysLeft: cooldownDaysLeft(tokenRec.blocks.all.until) });
+    }
+
+    // Check if overall is blocked (for overall features)
+    if ((feature === 'overallColor' || feature === 'overallPercent') && isCooldownActive(tokenRec.blocks?.overall?.until)) {
+      return res.status(403).json({ error: 'Overall view is blocked', blockedUntil: tokenRec.blocks.overall.until, daysLeft: cooldownDaysLeft(tokenRec.blocks.overall.until) });
+    }
+
+    // Check if feature is on cooldown
+    if (isCooldownActive(tokenRec.cooldowns?.[feature]?.until)) {
+      return res.status(403).json({ error: `${feature} is on cooldown`, cooldownUntil: tokenRec.cooldowns[feature].until, daysLeft: cooldownDaysLeft(tokenRec.cooldowns[feature].until) });
+    }
+
+    // Check if blocked by another feature's cooldown (e.g. overallPercent blocks all)
+    for (const [blocker, blockedFeatures] of Object.entries(tc.blocks)) {
+      if (blockedFeatures.includes(feature) && isCooldownActive(tokenRec.cooldowns?.[blocker]?.until)) {
+        return res.status(403).json({ error: `${feature} is blocked by ${blocker} cooldown`, cooldownUntil: tokenRec.cooldowns[blocker].until, daysLeft: cooldownDaysLeft(tokenRec.cooldowns[blocker].until) });
+      }
+    }
+
+    // Handle free check for <75% students
+    if (useFreeCheck && feature === 'overallColor') {
+      const att = await computeStudentAttendance(student);
+      if (att.overall < tc.freeCheck.threshold) {
+        const canUseFree = !tokenRec.freeCheckUsed || (tokenRec.freeCheckAvailableAfter && now >= tokenRec.freeCheckAvailableAfter);
+        if (canUseFree) {
+          // Grant free check — no token deduction, set cooldown for free check
+          const freeCheckNextAvail = new Date(now.getTime() + tc.freeCheck.cooldownDays * 86400000);
+          await M.StudentToken.findByIdAndUpdate(tokenRec._id, {
+            freeCheckUsed: true,
+            freeCheckAvailableAfter: freeCheckNextAvail,
+            [`lastCheck.${feature}`]: now,
+            [`cooldowns.${feature}.until`]: new Date(now.getTime() + tc.cooldowns[feature] * 86400000),
+            $push: { history: { action: 'free_check', feature, amount: 0, balance: tokenRec.tokens, reason: 'Free check (attendance < 75%)', date: now } }
+          });
+          // Return unlocked data
+          const data = await computeStudentAttendance(student);
+          const academic = await M.Settings.findOne({ key: 'academic' });
+          const minRequired = academic?.value?.minAttendance || 75;
+          const payload = { overall: data.overall, indicator: getColorIndicator(data.overall), feature, unlocked: true, minRequired };
+          payload._sig = signAttendanceData(payload);
+          return res.json(payload);
+        }
+      }
+      return res.status(400).json({ error: 'Free check not available' });
+    }
+
+    // Check token balance
+    const cost = tc.costs[feature];
+    if (tokenRec.tokens < cost) {
+      return res.status(400).json({ error: `Not enough tokens (need ${cost}, have ${tokenRec.tokens})`, cost, balance: tokenRec.tokens });
+    }
+
+    // Atomic spend: deduct tokens, set cooldown, set all blocked features
+    const cooldownEnd = new Date(now.getTime() + tc.cooldowns[feature] * 86400000);
+    const updateOps = {
+      $inc: { tokens: -cost },
+      $set: {
+        [`lastCheck.${feature}`]: now,
+        [`cooldowns.${feature}.until`]: cooldownEnd,
+      },
+      $push: {
+        history: { action: 'spend', feature, amount: -cost, balance: tokenRec.tokens - cost, reason: `Viewed ${feature}`, date: now }
+      }
+    };
+
+    // Set blocked features from this view's cooldown block list
+    const blockedByThis = tc.blocks[feature] || [];
+    for (const bf of blockedByThis) {
+      if (bf !== feature) { // Already set above for the feature itself
+        updateOps.$set[`cooldowns.${bf}.until`] = cooldownEnd;
+      }
+    }
+
+    // Enforce min tokens
+    const newBalance = tokenRec.tokens - cost;
+    if (newBalance < tc.minTokens) {
+      return res.status(400).json({ error: 'Token balance would go below minimum', balance: tokenRec.tokens });
+    }
+
+    await M.StudentToken.findByIdAndUpdate(tokenRec._id, updateOps);
+
+    // Compute attendance data for the unlocked view
+    const att = await computeStudentAttendance(student);
+    const academic = await M.Settings.findOne({ key: 'academic' });
+    const minRequired = academic?.value?.minAttendance || 75;
+    let responsePayload = {};
+
+    if (feature === 'overallColor') {
+      responsePayload = {
+        feature, unlocked: true, cost,
+        overall: getColorIndicator(att.overall),
+        minRequired, newBalance,
+      };
+    } else if (feature === 'overallPercent') {
+      responsePayload = {
+        feature, unlocked: true, cost,
+        overall: att.overall,
+        indicator: getColorIndicator(att.overall),
+        totalPresent: att.totalPresent, totalAbsent: att.totalAbsent, totalClasses: att.totalClasses,
+        minRequired, newBalance,
+      };
+      // Bonus check after overall percentage view
+      const bonusCooldownActive = isCooldownActive(tokenRec.bonusCooldowns?.attendanceBonus?.until);
+      if (!bonusCooldownActive) {
+        let bonusTokens = 0, bonusReason = '';
+        if (att.overall >= 95) { bonusTokens = tc.bonuses.attendance95.tokens; bonusReason = 'Attendance ≥ 95%'; }
+        else if (att.overall >= 85) { bonusTokens = tc.bonuses.attendance85.tokens; bonusReason = 'Attendance ≥ 85%'; }
+        if (bonusTokens > 0) {
+          const capped = Math.min(newBalance + bonusTokens, tc.maxTokens);
+          const actualBonus = capped - newBalance;
+          if (actualBonus > 0) {
+            const bonusCdEnd = new Date(now.getTime() + tc.bonuses.attendance95.cooldownDays * 86400000);
+            await M.StudentToken.findByIdAndUpdate(tokenRec._id, {
+              $inc: { tokens: actualBonus },
+              $set: { 'bonusCooldowns.attendanceBonus.until': bonusCdEnd },
+              $push: { history: { action: 'bonus', feature: 'attendanceBonus', amount: actualBonus, balance: capped, reason: bonusReason, date: now } }
+            });
+            responsePayload.bonus = { tokens: actualBonus, reason: bonusReason, newBalance: capped };
+            // Create student notification for bonus
+            await M.StudentNotification.create({
+              studentId: student._id, userId: req.user._id, type: 'token-bonus',
+              title: '🎉 Bonus Tokens!', message: `+${actualBonus} tokens for ${bonusReason}`,
+            });
+          }
+        }
+      }
+    } else if (feature === 'theory') {
+      responsePayload = {
+        feature, unlocked: true, cost,
+        subjects: att.subjects.filter(s => s.type === 'Theory').map(s => ({
+          subjectName: s.subjectName, teacherName: s.teacherName,
+          indicator: getColorIndicator(s.percentage), type: s.type,
+        })),
+        newBalance,
+      };
+    } else if (feature === 'lab') {
+      responsePayload = {
+        feature, unlocked: true, cost,
+        subjects: att.subjects.filter(s => s.type === 'Lab').map(s => ({
+          subjectName: s.subjectName, teacherName: s.teacherName,
+          indicator: getColorIndicator(s.percentage), type: s.type,
+        })),
+        newBalance,
+      };
+    }
+
+    responsePayload._sig = signAttendanceData(responsePayload);
+    await logAction(req.user._id, req.user.name, 'student', 'Token Spent', `${feature} (-${cost} tokens, balance: ${newBalance})`, 'token', 'info', req.ip);
+    res.json(responsePayload);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/student/attendance-view — token-gated attendance data
+app.get('/api/student/attendance-view', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+
+    const student = await M.Student.findOne({ userId: req.user._id }).lean()
+      || await M.Student.findOne({ regNo: (await M.User.findById(req.user._id).lean())?.regNo }).lean();
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+
+    const enabled = await isTokenSystemEnabled();
+    const att = await computeStudentAttendance(student);
+    const academic = await M.Settings.findOne({ key: 'academic' });
+    const minRequired = academic?.value?.minAttendance || 75;
+
+    if (!enabled) {
+      // Token system off — return full data (existing behavior)
+      const payload = {
+        tokenSystem: false,
+        subjects: att.subjects,
+        totalPresent: att.totalPresent, totalAbsent: att.totalAbsent,
+        totalClasses: att.totalClasses, overall: att.overall, minRequired,
+      };
+      payload._sig = signAttendanceData(payload);
+      return res.json(payload);
+    }
+
+    // Token system on — return color-only by default
+    const tokenRec = await ensureTokenRecord(student._id, req.user._id, student);
+
+    const payload = {
+      tokenSystem: true,
+      // Always free: color-based overall
+      overallIndicator: getColorIndicator(att.overall),
+      // Subject-wise color indicators (always free)
+      subjects: att.subjects.map(s => ({
+        subjectId: s.subjectId, subjectName: s.subjectName,
+        teacherName: s.teacherName, type: s.type,
+        indicator: getColorIndicator(s.percentage),
+        // Only include detailed data if not on active cooldown
+      })),
+      tokens: tokenRec.tokens,
+      minRequired,
+    };
+    payload._sig = signAttendanceData(payload);
+    res.json(payload);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  LEAVE REQUESTS — Student endpoints
+// ════════════════════════════════════════════════════════
+
+// POST /api/student/leave/apply — apply for leave
+app.post('/api/student/leave/apply', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+
+    const { leaveDate, reason } = req.body;
+    if (!leaveDate || !reason) return res.status(400).json({ error: 'leaveDate and reason required' });
+
+    const student = await M.Student.findOne({ userId: req.user._id }).lean()
+      || await M.Student.findOne({ regNo: (await M.User.findById(req.user._id).lean())?.regNo }).lean();
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+
+    // Check if already applied for this date
+    const existingLeave = await M.LeaveRequest.findOne({ userId: req.user._id, leaveDate });
+    if (existingLeave) return res.status(409).json({ error: 'Leave already applied for this date' });
+
+    // Find class advisor from StudentUser schema
+    const stuUser = await M.StudentUser.findOne({
+      $or: [{ _id: req.user._id }, { username: (await M.User.findById(req.user._id).lean())?.username }]
+    }).lean();
+
+    let advisorId = stuUser?.classAdvisorId || null;
+    let advisorName = stuUser?.classAdvisorName || '';
+
+    // Fallback: find class advisor from User collection
+    if (!advisorId) {
+      const advisor = await M.User.findOne({ isClassAdvisor: true, advisorClassName: student.className, active: true }).lean();
+      if (advisor) { advisorId = advisor._id; advisorName = advisor.name; }
+    }
+
+    const leave = await M.LeaveRequest.create({
+      studentId: student._id, userId: req.user._id,
+      studentName: student.name, regNo: student.regNo,
+      classId: student.classId, className: student.className,
+      leaveDate, reason,
+      teacherId: advisorId, teacherName: advisorName,
+    });
+
+    // Token penalty for applying leave (if token system enabled)
+    const enabled = await isTokenSystemEnabled();
+    if (enabled) {
+      const tc = getTokenConfig();
+      const tokenRec = await ensureTokenRecord(student._id, req.user._id, student);
+      const penalty = tc.penalties.applyLeave;
+      const deduction = Math.min(penalty.tokens, tokenRec.tokens); // Don't go below 0
+      const blockUntil = new Date(Date.now() + penalty.blockOverallDays * 86400000);
+
+      await M.StudentToken.findByIdAndUpdate(tokenRec._id, {
+        $inc: { tokens: -deduction },
+        $set: { 'blocks.overall.until': blockUntil },
+        $push: {
+          history: { action: 'penalty', feature: 'applyLeave', amount: -deduction, balance: tokenRec.tokens - deduction, reason: `Leave application (${leaveDate})`, date: new Date() }
+        }
+      });
+
+      // Notify student about token deduction
+      await M.StudentNotification.create({
+        studentId: student._id, userId: req.user._id, type: 'token-penalty',
+        title: '📝 Leave Applied — Token Deducted',
+        message: `-${deduction} tokens for leave application. Overall view blocked for ${penalty.blockOverallDays} days.`,
+      });
+    }
+
+    // Notify class advisor (via existing Notification system)
+    if (advisorId) {
+      await M.Notification.create({
+        type: 'request', from: student.name, fromRole: 'Student',
+        toTeacherId: advisorId, toTeacherName: advisorName,
+        message: `[Leave Request] ${student.name} (${student.regNo}) requests leave on ${leaveDate}. Reason: ${reason.slice(0, 120)}`,
+        priority: 'Normal',
+      });
+    }
+
+    await logAction(req.user._id, req.user.name, 'student', 'Leave Applied', `Date: ${leaveDate}`, 'leave', 'info', req.ip);
+    res.status(201).json(leave);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/student/leave/history — student's own leave requests
+app.get('/api/student/leave/history', authMiddleware, checkMaintenance, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    const leaves = await M.LeaveRequest.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50).lean();
+    res.json(leaves);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  STUDENT NOTIFICATIONS
+// ════════════════════════════════════════════════════════
+
+app.get('/api/student/notifications', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    const notifs = await M.StudentNotification.find({ userId: req.user._id }).sort({ time: -1 }).limit(30).lean();
+    const unread = await M.StudentNotification.countDocuments({ userId: req.user._id, read: false });
+    res.json({ notifications: notifs, unreadCount: unread });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/student/notifications/:id/read', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    await M.StudentNotification.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { read: true });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/student/notifications/read-all', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+    await M.StudentNotification.updateMany({ userId: req.user._id, read: false }, { read: true });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  LEAVE REQUESTS — Teacher endpoints
+// ════════════════════════════════════════════════════════
+
+app.get('/api/teacher/leave-requests', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: 'Teachers/admin only' });
+    const filter = {};
+    if (req.user.role === 'teacher') filter.teacherId = req.user._id;
+    if (req.query.status) filter.status = req.query.status;
+    const leaves = await M.LeaveRequest.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+    const pendingCount = await M.LeaveRequest.countDocuments({ ...filter, status: 'Pending' });
+    res.json({ leaves, pendingCount });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/teacher/leave-requests/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: 'Teachers/admin only' });
+
+    const { status, note } = req.body; // 'Approved' or 'Rejected'
+    if (!['Approved','Rejected'].includes(status)) return res.status(400).json({ error: 'Status must be Approved or Rejected' });
+
+    const leave = await M.LeaveRequest.findByIdAndUpdate(req.params.id, {
+      status, teacherNote: note || '', reviewedAt: new Date(),
+      teacherId: req.user._id, teacherName: req.user.name,
+    }, { new: true });
+
+    if (!leave) return res.status(404).json({ error: 'Leave request not found' });
+
+    // Notify student about the decision
+    const emoji = status === 'Approved' ? '✅' : '❌';
+    await M.StudentNotification.create({
+      studentId: leave.studentId, userId: leave.userId,
+      type: 'leave-response',
+      title: `${emoji} Leave ${status}`,
+      message: `Your leave request for ${leave.leaveDate} has been ${status.toLowerCase()}${note ? '. Note: ' + note : ''}.`,
+    });
+
+    await logAction(req.user._id, req.user.name, req.user.role, `Leave ${status}`, `Student: ${leave.studentName} (${leave.leaveDate})`, 'leave', 'info', req.ip);
+    res.json(leave);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  TOKEN MANAGEMENT — Admin endpoints
+// ════════════════════════════════════════════════════════
+
+app.put('/api/admin/token-system/toggle', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    await M.Settings.findOneAndUpdate({ key: 'tokenSystem' }, { value: { enabled: !!enabled } }, { upsert: true });
+    await logAction(req.user._id, req.user.name, req.user.role, 'Token System ' + (enabled ? 'Enabled' : 'Disabled'), '', 'settings', 'warning', req.ip);
+    res.json({ enabled: !!enabled });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/token-management', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.search) {
+      const re = new RegExp(req.query.search, 'i');
+      filter.$or = [{ studentName: re }, { regNo: re }, { className: re }];
+    }
+    const records = await M.StudentToken.find(filter).sort({ studentName: 1 }).limit(200).lean();
+    const enabled = await isTokenSystemEnabled();
+    res.json({ enabled, records, config: getTokenConfig() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/admin/token-management/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { tokens, reason, resetCooldowns, resetBlocks } = req.body;
+    const record = await M.StudentToken.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Token record not found' });
+
+    const tc = getTokenConfig();
+    const updates = {};
+    const historyEntry = {
+      action: 'admin_adjust', feature: 'admin',
+      amount: 0, balance: record.tokens,
+      reason: reason || 'Admin adjustment', date: new Date()
+    };
+
+    if (tokens !== undefined) {
+      const newBalance = Math.max(tc.minTokens, Math.min(tc.maxTokens, Number(tokens)));
+      historyEntry.amount = newBalance - record.tokens;
+      historyEntry.balance = newBalance;
+      updates.tokens = newBalance;
+    }
+
+    if (resetCooldowns) {
+      updates['cooldowns.overallColor.until'] = null;
+      updates['cooldowns.overallPercent.until'] = null;
+      updates['cooldowns.theory.until'] = null;
+      updates['cooldowns.lab.until'] = null;
+    }
+
+    if (resetBlocks) {
+      updates['blocks.overall.until'] = null;
+      updates['blocks.all.until'] = null;
+      updates.curBlocked = [];
+    }
+
+    await M.StudentToken.findByIdAndUpdate(req.params.id, { $set: updates, $push: { history: historyEntry } });
+
+    // Notify student
+    await M.StudentNotification.create({
+      studentId: record.studentId, userId: record.userId, type: 'info',
+      title: '🔧 Token Adjustment',
+      message: `Your tokens were adjusted by admin. ${reason || ''}`,
+    });
+
+    await logAction(req.user._id, req.user.name, req.user.role, 'Token Adjusted', `Student: ${record.studentName}, Amount: ${historyEntry.amount}`, 'token', 'info', req.ip);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin grant emergency leave (no penalty)
+app.post('/api/admin/emergency-leave', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { studentUserId, leaveDate, reason } = req.body;
+    if (!studentUserId || !leaveDate) return res.status(400).json({ error: 'studentUserId and leaveDate required' });
+
+    const user = await M.User.findById(studentUserId).lean();
+    const student = await M.Student.findOne({ userId: studentUserId }).lean()
+      || await M.Student.findOne({ regNo: user?.regNo }).lean();
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+
+    const leave = await M.LeaveRequest.create({
+      studentId: student._id, userId: studentUserId,
+      studentName: student.name, regNo: student.regNo,
+      classId: student.classId, className: student.className,
+      leaveDate, reason: reason || 'Emergency leave (admin granted)',
+      status: 'Approved', isEmergency: true,
+      teacherId: req.user._id, teacherName: req.user.name,
+      reviewedAt: new Date(),
+    });
+
+    await M.StudentNotification.create({
+      studentId: student._id, userId: studentUserId, type: 'info',
+      title: '🏥 Emergency Leave Granted',
+      message: `Emergency leave for ${leaveDate} has been granted by admin. No token penalty applied.`,
+    });
+
+    await logAction(req.user._id, req.user.name, req.user.role, 'Emergency Leave Granted', `Student: ${student.name}, Date: ${leaveDate}`, 'leave', 'info', req.ip);
+    res.status(201).json(leave);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  UNAUTHORIZED ABSENCE DETECTION (called after attendance is marked)
+// ════════════════════════════════════════════════════════
+
+// This runs as a background task after attendance is saved
+async function checkUnauthorizedAbsences(classId, date, className) {
+  try {
+    const enabled = await isTokenSystemEnabled();
+    if (!enabled) return;
+
+    const tc = getTokenConfig();
+
+    // Get all attendance records for this class on this date
+    const dayRecords = await M.Attendance.find({ classId, date }).lean();
+    if (dayRecords.length === 0) return;
+
+    // Get all students in this class
+    const students = await M.Student.find({ classId }).lean();
+
+    // For each student, check if they were absent for ALL classes on this date
+    for (const student of students) {
+      let totalClassesToday = 0, absentCount = 0;
+      for (const rec of dayRecords) {
+        const myRecord = rec.records.find(r =>
+          (r.studentId && String(r.studentId) === String(student._id)) ||
+          (r.regNo && r.regNo === student.regNo)
+        );
+        if (myRecord) {
+          totalClassesToday++;
+          if (myRecord.status === 'absent') absentCount++;
+        }
+      }
+
+      // Only flag if absent for ALL classes (full day absent)
+      if (totalClassesToday > 0 && absentCount === totalClassesToday) {
+        // Check if they have an approved leave request for this date
+        const userId = student.userId || (await M.User.findOne({ regNo: student.regNo, role: 'student' }).lean())?._id;
+        if (!userId) continue;
+
+        const approvedLeave = await M.LeaveRequest.findOne({
+          userId, leaveDate: date, status: 'Approved'
+        });
+
+        if (!approvedLeave) {
+          // UNAUTHORIZED ABSENCE — apply penalty
+          const tokenRec = await M.StudentToken.findOne({ userId });
+          if (!tokenRec) continue;
+
+          const penalty = tc.penalties.unauthorizedLeave;
+          const deduction = Math.min(penalty.tokens, tokenRec.tokens);
+          const blockUntil = new Date(Date.now() + penalty.blockAllDays * 86400000);
+
+          await M.StudentToken.findByIdAndUpdate(tokenRec._id, {
+            $inc: { tokens: -deduction },
+            $set: { 'blocks.all.until': blockUntil },
+            $push: {
+              history: { action: 'penalty', feature: 'unauthorizedLeave', amount: -deduction, balance: tokenRec.tokens - deduction, reason: `Unauthorized absence on ${date}`, date: new Date() }
+            }
+          });
+
+          // Notify student
+          await M.StudentNotification.create({
+            studentId: student._id, userId, type: 'unauthorized-absence',
+            title: '🚨 Unauthorized Absence',
+            message: `You were absent on ${date} without an approved leave request. Penalty: -${deduction} tokens, all views blocked for ${penalty.blockAllDays} days.`,
+          });
+
+          // Log
+          await logAction(null, 'SYSTEM', 'system', 'Unauthorized Absence', `Student: ${student.name} (${student.regNo}) on ${date}`, 'token', 'warning');
+        }
+      }
+    }
+
+    // Notify class advisor about all unauthorized absences
+    const unauthorizedStudents = [];
+    for (const student of students) {
+      let totalClassesToday = 0, absentCount = 0;
+      for (const rec of dayRecords) {
+        const myRecord = rec.records.find(r =>
+          (r.studentId && String(r.studentId) === String(student._id)) ||
+          (r.regNo && r.regNo === student.regNo)
+        );
+        if (myRecord) { totalClassesToday++; if (myRecord.status === 'absent') absentCount++; }
+      }
+      if (totalClassesToday > 0 && absentCount === totalClassesToday) {
+        const userId = student.userId || (await M.User.findOne({ regNo: student.regNo, role: 'student' }).lean())?._id;
+        if (userId) {
+          const leave = await M.LeaveRequest.findOne({ userId, leaveDate: date, status: 'Approved' });
+          if (!leave) unauthorizedStudents.push({ name: student.name, regNo: student.regNo });
+        }
+      }
+    }
+
+    if (unauthorizedStudents.length > 0) {
+      // Find class advisor
+      const cls = await M.Class.findById(classId).lean();
+      const advisor = await M.User.findOne({ isClassAdvisor: true, advisorClassName: cls?.name, active: true }).lean();
+      if (advisor) {
+        const studentList = unauthorizedStudents.map(s => `${s.name} (${s.regNo})`).join(', ');
+        await M.Notification.create({
+          type: 'attendance-alert', from: 'SYSTEM', fromRole: 'System',
+          toTeacherId: advisor._id, toTeacherName: advisor.name,
+          message: `[Unauthorized Absence] ${unauthorizedStudents.length} student(s) were absent on ${date} in ${className || cls?.name || 'class'} without leave request: ${studentList.slice(0, 300)}`,
+          priority: 'High',
+        });
+      }
+    }
+  } catch (err) {
+    console.error('checkUnauthorizedAbsences error:', err.message);
+  }
+}
 
 // ════════════════════════════════════════════════════════
 //  NOTIFICATIONS

@@ -66,8 +66,15 @@ const StudentUserSchema = new mongoose.Schema({
   branch:       { type: String, default: '' },
   course:       { type: String, default: '' },
   department:   { type: String, default: '' },
+  currentSem:   { type: String, default: '' },
   currentYear:  { type: String, default: '' },
   academicYear: { type: String, default: '' },
+  classAdvisorName: { type: String, default: '' },
+  classAdvisorId: { type: String, default: '' },
+  classRepName: { type: String, default: '' },
+  classRepId: { type: String, default: '' },  
+  classHallNo: { type: String, default: '' }, 
+  
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
@@ -306,6 +313,92 @@ const SectionTimetableSchema = new mongoose.Schema({
   updatedBy : String,
 }, { timestamps:true });
 
+// ── STUDENT TOKEN Schema (Token System) ──────────────────
+const StudentTokenSchema = new mongoose.Schema({
+  studentId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  userId:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  regNo:         { type: String, default: '' },
+  studentName:   { type: String, default: '' },
+  className:     { type: String, default: '' },
+  semester:      { type: String, default: 'I' },
+  tokens:        { type: Number, default: 50 },
+  maxTokens:     { type: Number, default: 60 },
+  initialTokens: { type: Number, default: 50 },
+  // Cooldown timestamps — null = not on cooldown
+  cooldowns: {
+    overallColor:   { until: { type: Date, default: null } },
+    overallPercent: { until: { type: Date, default: null } },
+    theory:         { until: { type: Date, default: null } },
+    lab:            { until: { type: Date, default: null } },
+  },
+  // Bonus cooldowns
+  bonusCooldowns: {
+    attendanceBonus: { until: { type: Date, default: null } },
+    noLeave2w:       { until: { type: Date, default: null } },
+    noLeave1m:       { until: { type: Date, default: null } },
+  },
+  // Block timestamps (from penalties)
+  blocks: {
+    overall: { until: { type: Date, default: null } },
+    all:     { until: { type: Date, default: null } },
+  },
+  // Last check timestamps
+  lastCheck: {
+    overallColor:   { type: Date, default: null },
+    overallPercent: { type: Date, default: null },
+    theory:         { type: Date, default: null },
+    lab:            { type: Date, default: null },
+  },
+  // Currently blocked feature names
+  curBlocked: [{ type: String }],
+  // Free check for <75% students
+  freeCheckUsed:          { type: Boolean, default: false },
+  freeCheckAvailableAfter:{ type: Date, default: null },
+  // Transaction history
+  history: [{
+    action:  { type: String },   // 'spend','bonus','penalty','admin_adjust','free_check'
+    feature: { type: String },   // 'overallColor','overallPercent','theory','lab',etc
+    amount:  { type: Number },   // negative=spent, positive=gained
+    balance: { type: Number },   // balance after this action
+    reason:  { type: String, default: '' },
+    date:    { type: Date, default: Date.now },
+  }],
+}, { timestamps: true });
+StudentTokenSchema.index({ userId: 1 }, { unique: true });
+StudentTokenSchema.index({ studentId: 1 }, { unique: true });
+
+// ── LEAVE REQUEST Schema ─────────────────────────────────
+const LeaveRequestSchema = new mongoose.Schema({
+  studentId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  userId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  studentName:  { type: String, required: true },
+  regNo:        { type: String, default: '' },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
+  className:    { type: String, default: '' },
+  leaveDate:    { type: String, required: true },   // YYYY-MM-DD
+  reason:       { type: String, required: true },
+  status:       { type: String, enum: ['Pending','Approved','Rejected'], default: 'Pending' },
+  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  teacherName:  { type: String, default: '' },
+  teacherNote:  { type: String, default: '' },
+  isEmergency:  { type: Boolean, default: false },
+  reviewedAt:   { type: Date, default: null },
+}, { timestamps: true });
+LeaveRequestSchema.index({ userId: 1, leaveDate: 1 });
+LeaveRequestSchema.index({ teacherId: 1, status: 1 });
+
+// ── STUDENT NOTIFICATION Schema ──────────────────────────
+const StudentNotificationSchema = new mongoose.Schema({
+  studentId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+  userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  type:       { type: String, enum: ['leave-response','token-bonus','token-penalty','unauthorized-absence','info'], default: 'info' },
+  title:      { type: String, required: true },
+  message:    { type: String, required: true },
+  read:       { type: Boolean, default: false },
+  time:       { type: Date, default: Date.now },
+}, { timestamps: true });
+StudentNotificationSchema.index({ userId: 1, read: 1 });
+
 module.exports = {
   Admin:        mongoose.model('Admin',        AdminSchema),
   Teacher:      mongoose.model('Teacher',      TeacherSchema),
@@ -326,4 +419,7 @@ module.exports = {
   UndoLog:      mongoose.model('UndoLog',      UndoLogSchema),
   LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
   SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
+  StudentToken:        mongoose.model('StudentToken',        StudentTokenSchema),
+  LeaveRequest:        mongoose.model('LeaveRequest',        LeaveRequestSchema),
+  StudentNotification: mongoose.model('StudentNotification', StudentNotificationSchema),
 };
