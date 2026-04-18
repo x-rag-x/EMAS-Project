@@ -1024,8 +1024,10 @@ app.delete('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
 
 app.get('/api/assignments', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.teacherId) filter.teacherId = req.query.teacherId;
-  else if (req.user.role === 'teacher') filter.teacherId = req.user._id;
+  if (req.query.subjectId) filter.subjectId = req.query.subjectId;   // ← added
+  if (req.query.teacherId)  filter.teacherId  = req.query.teacherId;
+  else if (!req.query.subjectId && !req.query.classId && req.user.role === 'teacher')
+    filter.teacherId = req.user._id;
   if (req.query.classId) filter.classId = req.query.classId;
   res.json(await M.Assignment.find(filter).sort({ teacherName: 1 }));
 });
@@ -1037,6 +1039,48 @@ app.post('/api/assignments', authMiddleware, adminOnly, async (req, res) => {
     await logAction(req.user._id, req.user.name, req.user.role, 'Assignment Created', `${req.body.subjectName} → ${req.body.className}`, 'data', 'info', req.ip);
     res.status(201).json(asgn);
   } catch (err) { res.status(400).json({ error: err.message }); }
+});
+app.post('/api/assignments/bulk', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { subjectId, assignments } = req.body;
+
+    // ── Validation ──────────────────────────────────────────
+    if (!subjectId)
+      return res.status(400).json({ error: 'subjectId is required' });
+    if (!Array.isArray(assignments) || assignments.length === 0)
+      return res.status(400).json({ error: 'assignments[] must be a non-empty array' });
+
+    // ── Validate each row has required fields ────────────────
+    for (let i = 0; i < assignments.length; i++) {
+      const { classId, teacherId, hallNo } = assignments[i];
+      if (!classId || !teacherId || !hallNo)
+        return res.status(400).json({ error: `Row ${i + 1}: classId, teacherId and hallNo are required` });
+    }
+
+    // ── Duplicate section check (same subject + class) ───────
+    const classIds = assignments.map(a => a.classId);
+    const uniqueIds = new Set(classIds);
+    if (uniqueIds.size !== classIds.length)
+      return res.status(409).json({ error: 'Duplicate section detected — each class must appear only once per subject' });
+
+    // ── Replace: delete old assignments for this subject ─────
+    const deleted = await M.Assignment.deleteMany({ subjectId });
+
+    // ── Insert all new rows in one shot ──────────────────────
+    const saved = await M.Assignment.insertMany(assignments);
+
+    await logAction(
+      req.user._id, req.user.name, req.user.role,
+      'Assignments Bulk Saved',
+      `${saved.length} section(s) for subject ${subjectId} (replaced ${deleted.deletedCount} old)`,
+      'data', 'info', req.ip
+    );
+
+    res.status(201).json({ success: true, count: saved.length, data: saved });
+  } catch (err) {
+    console.error('Bulk assignment error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 app.delete('/api/assignments/:id', authMiddleware, adminOnly, async (req, res) => {
   await M.Assignment.findByIdAndDelete(req.params.id);

@@ -188,14 +188,15 @@ const SubjectSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const AssignmentSchema = new mongoose.Schema({
-  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  teacherName:  { type: String, required: true },
-  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
-  className:    { type: String, required: true },
-  subjectId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
-  subjectName:  { type: String, required: true },
-  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
-  deptName:     { type: String, default: '' },
+  subjectId:   { type: String, required: true },
+  subjectName: { type: String },
+  classId:     { type: String, required: true },
+  className:   { type: String },
+  teacherId:   { type: String, required: true },
+  teacherName: { type: String },
+  hallNo:      { type: String },          
+  deptName:    { type: String },
+  deptCode:    { type: String }
 }, { timestamps: true });
 
 const TimetableSchema = new mongoose.Schema({

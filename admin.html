@@ -5792,11 +5792,14 @@
         ? allSubjects.map(function (subj) {
           var assignments = DB.get('assignments').filter(function (a) { return a.subjectId === subj._id; });
           var teacherNames = Array.from(new Set(assignments.map(function (a) { return a.teacherName; }).filter(Boolean)));
-          return '<div class="ec" onclick="openSD(\'' + subj._id + '\')">'
+          var sectionCount = assignments.length;
+          return '<div class="ec" onclick="openSubjAssignModal(\'' + subj._id + '\')" style="cursor:pointer;">'
             + '<div class="ech"><div class="eci" style="background:rgba(59,130,246,.1)">📚</div>'
-            + '<div><div class="ecn">' + subj.name + '</div>'
-            + '<div class="ecsu">' + subj.code + ' · ' + subj.credits + ' credits · ' + subj.type + '</div></div></div>'
-            + '<div class="ecb"><div class="emt">' + (teacherNames.length ? '👩‍🏫 ' + teacherNames.join(', ') : 'No teacher assigned') + '</div></div>'
+            + '<div style="flex:1"><div class="ecn">' + subj.name + '</div>'
+            + '<div class="ecsu">' + subj.code + ' · ' + subj.credits + ' credits · ' + subj.type + '</div></div>'
+            + '<button class="btn-xs btn-out" onclick="event.stopPropagation();openSD(\'' + subj._id + '\')" title="Subject Details / Edit" style="flex-shrink:0;margin-left:6px;padding:4px 10px;font-size:11px;">ℹ Details</button>'
+            + '</div>'
+            + '<div class="ecb"><div class="emt">' + (sectionCount ? '📋 ' + sectionCount + ' section(s) assigned' : '➕ Click to assign sections') + '</div></div>'
             + '</div>';
         }).join('')
         : '<div class="emst" style="grid-column:1/-1"><span class="emico">📚</span><div class="emtx">No subjects. Click "+ Add Subject".</div></div>';
@@ -6132,6 +6135,209 @@
           clearInputs(['ns-nm', 'ns-cd']);
         });
     }
+
+    // ─── SUBJECT STAFF & HALL ASSIGNMENT MODAL ────────────────────────────────────
+    var _saSubjectId = null;
+
+    // ─── SUBJECT STAFF & HALL ASSIGNMENT MODAL ────────────────────────────────────
+    var _saSubjectId = null;
+
+    function openSubjAssignModal(subjectId) {
+      _saSubjectId = subjectId;
+
+      // Read subject info from cache (subjects are always synced on login)
+      var subj = DB.get('subjects').find(function(s){ return s._id === subjectId; });
+      if (!subj) { showToast('Subject not found', 'warn'); return; }
+
+      // Set header
+      document.getElementById('sa-ttl').textContent = '\u{1F4CC} ' + subj.name + ' — Assign Staff & Hall';
+      document.getElementById('sa-sub').textContent = subj.code + ' · ' + subj.credits + ' Credits · ' + subj.type + (subj.deptName ? ' · ' + subj.deptName : '');
+      document.getElementById('sa-warn').style.display = 'none';
+
+      // Show modal immediately with loading state
+      var tbody = document.getElementById('sa-rows');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--tmu);font-size:13px;">\u23f3 Loading from database…</td></tr>';
+      openModal_('m-subj-assign');
+
+      // ✅ Fetch existing assignments DIRECTLY from MongoDB (no localStorage)
+      apiCall('GET', '/assignments?subjectId=' + encodeURIComponent(subjectId))
+        .then(function(existing) {
+          tbody.innerHTML = '';
+          if (Array.isArray(existing) && existing.length > 0) {
+            existing.forEach(function(a){ addAssignRow(a.classId, a.teacherId, a.hallNo); });
+          } else {
+            addAssignRow(); // one default empty row
+          }
+        })
+        .catch(function() {
+          tbody.innerHTML = '';
+          addAssignRow();
+          showToast('Could not load existing assignments from DB', 'warn');
+        });
+    }
+
+    function _buildSaClassOptions(selectedId) {
+      var classes = DB.get('classes');
+      return '<option value="">\u2014 Select Section \u2014</option>'
+        + classes.map(function(c){
+            return '<option value="' + c._id + '" data-hall="' + (c.hallNo || '') + '"'
+              + (c._id === selectedId ? ' selected' : '') + '>' + c.name + '</option>';
+          }).join('');
+    }
+
+    function _buildSaTeacherOptions(selectedId) {
+      var teachers = DB.get('users').filter(function(u){ return u.role === 'teacher'; });
+      return '<option value="">\u2014 Select Staff \u2014</option>'
+        + teachers.map(function(t){
+            return '<option value="' + t._id + '"' + (t._id === selectedId ? ' selected' : '') + '>' + t.name + '</option>';
+          }).join('');
+    }
+
+    function addAssignRow(classId, teacherId, hallNo) {
+      var tbody = document.getElementById('sa-rows');
+      var tr = document.createElement('tr');
+      tr.className = 'sa-row';
+      tr.style.borderBottom = '1px solid var(--brl)';
+      tr.innerHTML =
+        '<td style="padding:8px 10px;">'
+          + '<select class="fc2 sa-cls" onchange="onSaClassChange(this)" style="font-size:13px;padding:8px 10px;min-width:150px;">'
+          + _buildSaClassOptions(classId || '')
+          + '</select></td>'
+        + '<td style="padding:8px 10px;">'
+          + '<select class="fc2 sa-tch" style="font-size:13px;padding:8px 10px;min-width:160px;">'
+          + _buildSaTeacherOptions(teacherId || '')
+          + '</select></td>'
+        + '<td style="padding:8px 10px;">'
+          + '<input type="text" class="fc2 sa-hall" placeholder="e.g. H101" maxlength="20"'
+          + ' style="font-size:13px;padding:8px 10px;min-width:90px;" value="' + (hallNo || '') + '">'
+          + '</td>'
+        + '<td style="padding:8px 10px;text-align:center;">'
+          + '<button onclick="removeAssignRow(this)" style="background:var(--red);color:#fff;border:none;border-radius:8px;'
+          + 'width:28px;height:28px;cursor:pointer;font-size:15px;line-height:1;display:inline-flex;align-items:center;'
+          + 'justify-content:center;" title="Remove row">✕</button>'
+          + '</td>';
+      tbody.appendChild(tr);
+      // Auto-fill hall from class default when no hallNo supplied
+      if (!hallNo && classId) {
+        var cls = DB.get('classes').find(function(c){ return c._id === classId; });
+        if (cls && cls.hallNo) tr.querySelector('.sa-hall').value = cls.hallNo;
+      }
+    }
+
+    function onSaClassChange(sel) {
+      var tr = sel.closest ? sel.closest('tr') : sel.parentNode.parentNode;
+      if (!tr) return;
+      var opt = sel.options[sel.selectedIndex];
+      var hall = opt ? (opt.getAttribute('data-hall') || '') : '';
+      tr.querySelector('.sa-hall').value = hall;
+    }
+
+    function removeAssignRow(btn) {
+      var tr = btn.closest ? btn.closest('tr') : btn.parentNode.parentNode;
+      var tbody = document.getElementById('sa-rows');
+      if (tbody.querySelectorAll('tr.sa-row').length <= 1) {
+        showToast('At least one row is required', 'warn'); return;
+      }
+      tbody.removeChild(tr);
+    }
+
+    function saveSubjAssignments() {
+      var warnEl = document.getElementById('sa-warn');
+      warnEl.style.display = 'none';
+      var rows = document.querySelectorAll('#sa-rows tr.sa-row');
+      if (!rows.length) { showToast('Add at least one row', 'warn'); return; }
+      var assignments = [];
+      var seenClasses = {};
+      var errorMsg = '';
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var classId   = row.querySelector('.sa-cls').value;
+        var teacherId = row.querySelector('.sa-tch').value;
+        var hallNo    = row.querySelector('.sa-hall').value.trim();
+        if (!classId || !teacherId || !hallNo) {
+          errorMsg = 'Row ' + (i + 1) + ': All fields (Section, Staff, Hall No.) are required.';
+          break;
+        }
+        if (seenClasses[classId]) {
+          var clsName = row.querySelector('.sa-cls').options[row.querySelector('.sa-cls').selectedIndex].text;
+          errorMsg = 'Duplicate section "' + clsName + '" in row ' + (i + 1) + '.';
+          break;
+        }
+        seenClasses[classId] = true;
+        assignments.push({ classId: classId, teacherId: teacherId, hallNo: hallNo });
+      }
+      if (errorMsg) {
+        warnEl.textContent = '\u26a0 ' + errorMsg;
+        warnEl.style.display = 'block';
+        return;
+      }
+      apiBulkSaveAssignments(_saSubjectId, assignments);
+    }
+
+    function apiBulkSaveAssignments(subjectId, assignments) {
+      var subj    = DB.get('subjects').find(function(s){ return s._id === subjectId; });
+      var classes = DB.get('classes');
+      var users   = DB.get('users');
+      if (!subj) { showToast('Subject not found', 'warn'); return; }
+
+      // Enrich rows with display names before sending to server
+      var enriched = [];
+      var rowErr = '';
+      for (var i = 0; i < assignments.length; i++) {
+        var row     = assignments[i];
+        var cls     = classes.find(function(c){ return c._id === row.classId; });
+        var teacher = users.find(function(u){ return u._id === row.teacherId; });
+        if (!cls || !teacher) { rowErr = 'Row ' + (i + 1) + ': invalid class or teacher'; break; }
+        enriched.push({
+          subjectId:   subjectId,
+          subjectName: subj.name,
+          classId:     row.classId,
+          className:   cls.name,
+          teacherId:   row.teacherId,
+          teacherName: teacher.name,
+          hallNo:      row.hallNo,
+          deptName:    cls.deptName  || subj.deptName  || '',
+          deptCode:    cls.deptCode  || subj.deptCode  || ''
+        });
+      }
+      if (rowErr) { showToast(rowErr, 'warn'); return; }
+
+      dbToast('Saving to MongoDB…', 'saving', enriched.length + ' section(s)');
+
+      // ✅ POST directly to MongoDB via API — zero localStorage writes
+      apiCall('POST', '/assignments/bulk', { subjectId: subjectId, assignments: enriched })
+        .then(function(d) {
+          if (!d || d.error) {
+            dbToast('DB Error: ' + (d && d.error ? d.error : 'Unknown'), 'error');
+            showToast('Save failed: ' + (d && d.error ? d.error : 'check server'), 'warn');
+            return;
+          }
+
+          dbToast('Saved to MongoDB ✓', 'success', d.count + ' section(s) written to DB');
+          closeModalBg('m-subj-assign');
+          addLog('Assignments Bulk Saved', d.count + ' sections → ' + subj.name);
+          showToast('✅ ' + d.count + ' assignment(s) saved to DB!');
+
+          // Refresh subject grid: re-fetch assignment counts from DB, then re-render
+          apiCall('GET', '/assignments')
+            .then(function(allAssignments) {
+              if (Array.isArray(allAssignments)) {
+                // Update ONLY the assignments cache (DB → localStorage) — not a user-data write
+                localStorage.setItem('ss3_assignments', JSON.stringify(allAssignments));
+              }
+              if (structureContext && structureContext.deptId) renderClassSubjectView(structureContext.deptId);
+            })
+            .catch(function() {
+              if (structureContext && structureContext.deptId) renderClassSubjectView(structureContext.deptId);
+            });
+        })
+        .catch(function(err) {
+          console.error('Bulk save error:', err);
+          dbToast('Network error — is server running?', 'error');
+          showToast('Cannot reach server. Check that server.js is running.', 'warn');
+        });
+    }
+
 
     // ─── STUDENTS PAGE ───────────────────────────────────────────────────────────
     function renderStudents() {
@@ -7720,6 +7926,51 @@
       }
     }
   </script>
+
+  <!-- ── SUBJECT STAFF & HALL ASSIGNMENT MODAL ─────────────── -->
+  <div class="modal-bg" id="m-subj-assign">
+    <div class="modal" style="max-width:820px;width:96vw;">
+      <div class="modal-hd">
+        <div>
+          <div class="modal-title" id="sa-ttl">📌 Assign Staff &amp; Hall</div>
+          <div class="modal-sub" id="sa-sub"></div>
+        </div>
+        <div class="modal-close" onclick="closeModalBg('m-subj-assign')">✖</div>
+      </div>
+
+      <!-- Instruction bar -->
+      <div style="background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--tmu);margin-bottom:14px;">
+        📋 Each row assigns <strong>one section</strong> to a <strong>staff member</strong> with a <strong>hall location</strong>.
+        Hall defaults to the class default hall. All fields are required.
+      </div>
+
+      <!-- Assignment rows table -->
+      <div style="overflow-x:auto;border:1px solid var(--br);border-radius:12px;margin-bottom:12px;">
+        <table style="width:100%;border-collapse:collapse;" id="sa-table">
+          <thead>
+            <tr style="background:var(--gLt);">
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--br);">Section (Class)</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--br);">Staff (Teacher)</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--br);">Hall No.</th>
+              <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--br);width:52px;">Remove</th>
+            </tr>
+          </thead>
+          <tbody id="sa-rows"></tbody>
+        </table>
+      </div>
+
+      <!-- Add Row + validation warning -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <button class="btn-out btn-sm" onclick="addAssignRow()" style="gap:5px;">➕ Add Row</button>
+        <span id="sa-warn" style="display:none;color:var(--red);font-size:12px;font-weight:600;"></span>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-subj-assign')">Cancel</button>
+        <button class="btn-form-pri" onclick="saveSubjAssignments()">💾 Save to DB</button>
+      </div>
+    </div>
+  </div>
 
   <div id="db-toast"></div>
   <!-- ── CLEAR BROWSER STORAGE MODAL ─────────────────── -->
