@@ -853,17 +853,6 @@ app.delete('/api/timetable/:id', authMiddleware, async (req, res) => {
   res.json({ deleted: true });
 });
 
-const SectionTimetableSchema = new mongoose.Schema({
-  classId   : { type: mongoose.Schema.Types.ObjectId, ref:'Class', required:true, unique:true },
-  className : String,
-  deptId    : { type: mongoose.Schema.Types.ObjectId, ref:'Department' },
-  deptName  : String,
-  slots     : { type: mongoose.Schema.Types.Mixed, default:{} },
-  updatedBy : String,
-}, { timestamps:true });
-
-exports.SectionTimetable = mongoose.model('SectionTimetable', SectionTimetableSchema);
-
 app.get('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
   const doc = await M.SectionTimetable.findOne({ classId:req.params.classId }).lean();
   res.json(doc || { slots:{} });

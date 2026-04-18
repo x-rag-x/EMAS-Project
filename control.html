@@ -94,6 +94,15 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .danger-label{font-size:13.5px;font-weight:600;color:var(--danger);}
 .danger-hint{font-size:11.5px;color:#9b1c1c;margin-top:3px;}
 
+/* ── USER GRID ── */
+.ug-tab{padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--tmu);font-family:'Poppins',sans-serif;transition:all .18s;}
+.ug-tab.act{background:#fff;color:var(--gD);font-weight:700;box-shadow:0 1px 4px rgba(27,94,32,.12);}
+.ug-cell-input{width:100%;border:1.5px solid transparent;border-radius:6px;padding:4px 7px;font-size:12px;font-family:'Poppins',sans-serif;background:transparent;outline:none;transition:border-color .15s;}
+.ug-cell-input:focus{border-color:var(--gM);background:#fff;}
+.ug-cell-input:hover{border-color:var(--gLr);}
+.ug-row-changed{background:#fffbeb!important;}
+.ug-row-saved{background:#f0fdf4!important;}
+
 /* ── TOGGLE SWITCH ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--br);}
 .toggle-row:last-child{border-bottom:none;}
@@ -246,6 +255,7 @@ select.form-input{cursor:pointer;}
   <div style="flex:1;overflow-y:auto;padding:6px 0;">
     <div class="sb-section-label">Overview</div>
     <button class="sb-item act" onclick="nav('overview')"><span class="sbi-ic">🖥️</span>System Overview</button>
+    <button class="sb-item" onclick="nav('usergrid')"><span class="sbi-ic">👥</span>User Grid</button>
 
     <div class="sb-section-label">Danger Zone</div>
     <button class="sb-item" onclick="nav('data')"><span class="sbi-ic">🗑️</span>Data Management</button>
@@ -256,7 +266,6 @@ select.form-input{cursor:pointer;}
     <div class="sb-section-label">Configuration</div>
     <button class="sb-item" onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Basic Settings</button>
     <button class="sb-item" onclick="nav('security')"><span class="sbi-ic">🔐</span>Security</button>
-    <button class="sb-item" onclick="nav('appearance')"><span class="sbi-ic">🎨</span>Appearance</button>
     <button class="sb-item" onclick="nav('advanced')"><span class="sbi-ic">🧪</span>Advanced</button>
   </div>
 
@@ -329,7 +338,11 @@ select.form-input{cursor:pointer;}
     <div id="health-errors-card" class="card" style="margin-bottom:16px;display:none;">
       <div class="card-hd">
         <div class="card-icon red">⚠️</div>
-        <div><div class="card-title">Recent Errors &amp; Warnings</div><div class="card-desc">Last 5 error-level log entries</div></div>
+        <div><div class="card-title">Recent Errors &amp; Warnings</div><div class="card-desc" id="errors-card-desc">Last <span id="errors-count-label">20</span> error-level log entries</div></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+          <button onclick="setErrorsMode('week')" id="err-btn-week" style="padding:5px 12px;background:var(--gD);color:#fff;border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">This Week</button>
+          <button onclick="setErrorsMode('n')" id="err-btn-n" style="padding:5px 12px;background:var(--gLt);border:1px solid var(--gLr);color:var(--gD);border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Last <span id="err-n-disp">20</span></button>
+        </div>
       </div>
       <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
@@ -344,27 +357,8 @@ select.form-input{cursor:pointer;}
 
     <!-- DB Memory/Storage Cards -->
     <div class="stats-strip">
-      <div class="stat-chip"><span class="stat-chip-ic">💾</span><div><div class="stat-chip-val" id="ov-data-size">—</div><div class="stat-chip-label">Data Size (MB)</div></div></div>
-      <div class="stat-chip"><span class="stat-chip-ic">🗜️</span><div><div class="stat-chip-val" id="ov-storage-size">—</div><div class="stat-chip-label">Storage Used (MB)</div></div></div>
       <div class="stat-chip"><span class="stat-chip-ic">🗂️</span><div><div class="stat-chip-val" id="ov-index-size">—</div><div class="stat-chip-label">Index Size (MB)</div></div></div>
       <div class="stat-chip"><span class="stat-chip-ic">📄</span><div><div class="stat-chip-val" id="ov-total-docs">—</div><div class="stat-chip-label">Total Documents</div></div></div>
-    </div>
-
-    <!-- Storage Bar -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-hd">
-        <div class="card-icon blue">📊</div>
-        <div><div class="card-title">Storage Usage</div><div class="card-desc" id="ov-storage-desc">Fetching storage info…</div></div>
-        <button onclick="loadOverview()" style="margin-left:auto;padding:6px 14px;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;">↻ Refresh</button>
-      </div>
-      <div style="background:#f1f5f9;border-radius:8px;height:14px;overflow:hidden;margin-bottom:8px;">
-        <div id="ov-storage-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:8px;transition:width .6s ease;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tmu);font-family:'JetBrains Mono',monospace;">
-        <span id="ov-used-label">Used: —</span>
-        <span id="ov-free-label">Free: —</span>
-        <span id="ov-total-label">Total: —</span>
-      </div>
     </div>
     <!-- DB Collection Breakdown -->
     <div class="card" style="margin-bottom:16px;">
@@ -385,6 +379,74 @@ select.form-input{cursor:pointer;}
         <div class="terminal-line info"><span class="terminal-prompt">›</span>Control panel initialized</div>
         <div class="terminal-line success"><span class="terminal-prompt">›</span>MongoDB connected ✓</div>
         <div class="terminal-line info"><span class="terminal-prompt">›</span>Awaiting commands…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ USER GRID PAGE ══ -->
+  <div class="pg" id="pg-usergrid">
+    <div class="page-hd">
+      <div class="page-title">👥 User Grid</div>
+      <div class="page-sub">View, filter and inline-edit students, teachers and attendance records</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <!-- Role Tabs -->
+        <div style="display:flex;gap:4px;background:var(--gLt);border-radius:10px;padding:3px;">
+          <button class="ug-tab act" id="ugt-student" onclick="ugSetRole('student',this)">🎓 Students</button>
+          <button class="ug-tab" id="ugt-teacher" onclick="ugSetRole('teacher',this)">👩‍🏫 Teachers</button>
+          <button class="ug-tab" id="ugt-attendance" onclick="ugSetRole('attendance',this)">📅 Attendance</button>
+        </div>
+        <!-- Class filter (shows when student/attendance selected) -->
+        <select id="ug-class-filter" class="form-input" style="max-width:200px;padding:7px 12px;font-size:12px;" onchange="ugApplyFilters()">
+          <option value="">All Classes</option>
+        </select>
+        <!-- Dept filter -->
+        <select id="ug-dept-filter" class="form-input" style="max-width:180px;padding:7px 12px;font-size:12px;" onchange="ugApplyFilters()">
+          <option value="">All Depts</option>
+        </select>
+        <!-- Search -->
+        <div style="position:relative;flex:1;min-width:180px;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tdi);font-size:13px;">🔍</span>
+          <input type="text" id="ug-search" placeholder="Search name / reg no / username…" oninput="ugApplyFilters()"
+            style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid var(--br);border-radius:9px;font-size:12.5px;font-family:Poppins,sans-serif;outline:none;color:var(--td);">
+        </div>
+        <button class="btn btn-pri btn-sm" onclick="ugRefresh()" title="Reload from DB">↻ Refresh</button>
+        <button class="btn btn-out btn-sm" onclick="ugSaveAll()" id="ug-save-btn" style="display:none;">💾 Save Changes</button>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div id="ug-status" style="font-size:12px;color:var(--tmu);margin-bottom:10px;min-height:18px;"></div>
+
+    <!-- Grid Table -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table id="ug-table" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+          <thead id="ug-thead" style="background:var(--gLt);"></thead>
+          <tbody id="ug-tbody"></tbody>
+        </table>
+      </div>
+      <div id="ug-empty" style="text-align:center;padding:40px;color:var(--tdi);display:none;">
+        <div style="font-size:32px;margin-bottom:8px;">📭</div>
+        <div style="font-size:13px;">No records found</div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="ug-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:5000;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:18px;padding:28px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-size:16px;font-weight:700;color:var(--td);" id="ug-modal-title">Edit User</div>
+          <button onclick="ugCloseEdit()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tmu);">✖</button>
+        </div>
+        <div id="ug-modal-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <button class="btn btn-out btn-sm" onclick="ugCloseEdit()">Cancel</button>
+          <button class="btn btn-pri btn-sm" onclick="ugSaveEdit()">💾 Save to DB</button>
+        </div>
       </div>
     </div>
   </div>
@@ -712,7 +774,7 @@ select.form-input{cursor:pointer;}
     </div>
 
     <!-- Maintenance Activity Log + Server Logs -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div style="display:grid;grid-template-columns:0.5fr 1.5fr;gap:20px;">
 
       <!-- Maintenance DB Logs -->
       <div class="card">
@@ -829,6 +891,11 @@ select.form-input{cursor:pointer;}
             <option value="6">6 Days (Mon–Sat)</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">Recent Errors Count (N)</label>
+          <input type="number" class="form-input" id="acad-errorsN" placeholder="20" min="5" max="200" title="Number of error logs shown in System Overview">
+          <span style="font-size:11px;color:var(--tmu);margin-top:3px;">Errors shown in System Overview → Last N logs</span>
+        </div>
       </div>
       <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('academic')">💾 Save Academic Settings</button></div>
     </div>
@@ -898,46 +965,6 @@ select.form-input{cursor:pointer;}
       <div style="margin-top:18px;">
         <button class="btn btn-warn" onclick="resetAdminPassword()">🔑 Reset Admin Password</button>
       </div>
-    </div>
-  </div>
-
-  <!-- ══ APPEARANCE PAGE ══ -->
-  <div class="pg" id="pg-appearance">
-    <div class="page-hd">
-      <div class="page-title">🎨 Appearance</div>
-      <div class="page-sub">Customize the look and feel of EAMS</div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-icon purple">🎨</div>
-        <div><div class="card-title">Theme & Branding</div><div class="card-desc">Colors, logo, and display preferences</div></div>
-      </div>
-      <div class="settings-grid">
-        <div class="form-group">
-          <label class="form-label">Primary Color</label>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <input type="color" id="theme-color" value="#1b5e20" style="width:44px;height:36px;border:none;cursor:pointer;border-radius:8px;padding:2px;">
-            <input type="text" class="form-input" id="theme-color-hex" value="#1b5e20" placeholder="#1b5e20" style="flex:1;">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">App Title</label>
-          <input type="text" class="form-input" id="app-title" placeholder="EAMS – Admin Dashboard">
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Login Page Welcome Message</label>
-          <input type="text" class="form-input" id="login-msg" placeholder="Welcome to EAMS">
-        </div>
-      </div>
-      <div class="toggle-row" style="margin-top:10px;">
-        <div><div class="toggle-label">Show Logo in Sidebar</div><div class="toggle-hint">Display institution logo/icon next to app name.</div></div>
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="show-logo" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-          <span class="toggle-state on" id="show-logo-label">ON</span>
-        </div>
-      </div>
-      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('appearance')">💾 Save Appearance</button></div>
     </div>
   </div>
 
@@ -1145,7 +1172,19 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // ── Nav ───────────────────────────────────────────────
-var PAGE_NAMES = ['overview','data','backup','undo','maintenance','settings','security','appearance','advanced'];
+var _errorsMode = 'week'; // 'week' | 'n'
+var _errorsN    = 20;
+
+function setErrorsMode(mode) {
+  _errorsMode = mode;
+  var btnW = document.getElementById('err-btn-week');
+  var btnN = document.getElementById('err-btn-n');
+  if (btnW) { btnW.style.background = mode === 'week' ? 'var(--gD)' : 'var(--gLt)'; btnW.style.color = mode === 'week' ? '#fff' : 'var(--gD)'; btnW.style.border = mode === 'week' ? 'none' : '1px solid var(--gLr)'; }
+  if (btnN) { btnN.style.background = mode === 'n' ? 'var(--gD)' : 'var(--gLt)'; btnN.style.color = mode === 'n' ? '#fff' : 'var(--gD)'; btnN.style.border = mode === 'n' ? 'none' : '1px solid var(--gLr)'; }
+  loadHealth();
+}
+
+var PAGE_NAMES = ['overview','usergrid','data','backup','undo','maintenance','settings','security','advanced'];
 
 function nav(page) {
   document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('act'); });
@@ -1156,6 +1195,7 @@ function nav(page) {
   var items = document.querySelectorAll('.sb-item');
   if (idx >= 0 && items[idx]) items[idx].classList.add('act');
   if (page === 'overview')    { loadOverview(); loadHealth(); }
+  if (page === 'usergrid')   { ugLoadData(); }
   if (page === 'data')        refreshExportCount();
   if (page === 'backup')      loadBackupPage();
   if (page === 'undo')        loadUndoPage();
@@ -1832,10 +1872,11 @@ function syncLabel(checkbox, labelId) {
 });
 
 // ── Save settings ──────────────────────────────────────
+// ── Settings: save to DB only ─────────────────────────
 function saveSettings(section) {
-  var saved = getSettings(SETTINGS_KEY) || {};
+  var payload = {};
   if (section === 'institution') {
-    saved.institution = {
+    payload = {
       name:  document.getElementById('inst-name').value,
       short: document.getElementById('inst-short').value,
       addr:  document.getElementById('inst-addr').value,
@@ -1843,72 +1884,96 @@ function saveSettings(section) {
       phone: document.getElementById('inst-phone').value,
     };
   } else if (section === 'academic') {
-    saved.academic = {
+    payload = {
       year:   document.getElementById('acad-year').value,
       sem:    document.getElementById('acad-sem').value,
       start:  document.getElementById('acad-start').value,
       end:    document.getElementById('acad-end').value,
       minAtt: document.getElementById('acad-minatt').value,
       wdays:  document.getElementById('acad-wdays').value,
+      errorsN: document.getElementById('acad-errorsN') ? document.getElementById('acad-errorsN').value : 20,
     };
   } else if (section === 'security') {
-    saved.security = {
+    payload = {
       forcePw:    document.getElementById('sec-forcepw').checked,
       strongPw:   document.getElementById('sec-strongpw').checked,
       timeout:    document.getElementById('sec-timeout').checked,
       timeoutMin: document.getElementById('sec-timeout-mins').value,
       maxLogin:   document.getElementById('sec-maxlogin').value,
     };
-  } else if (section === 'appearance') {
-    saved.appearance = {
-      color:    document.getElementById('theme-color').value,
-      title:    document.getElementById('app-title').value,
-      loginMsg: document.getElementById('login-msg').value,
-      showLogo: document.getElementById('show-logo').checked,
-    };
   }
-  setSettings(SETTINGS_KEY, saved);
-  logLine('Settings saved: ' + section, 'success');
-  showToast('💾 ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved');
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  showToast('⏳ Saving ' + section + ' to database…');
+  fetch('/api/settings/' + section, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({ value: payload })
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.error) { showToast('❌ ' + d.error); return; }
+      logLine('Settings saved to DB: ' + section, 'success');
+      showToast('✅ ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved to database');
+      // Update errorsN display if academic
+      if (section === 'academic' && payload.errorsN) {
+        var n = parseInt(payload.errorsN) || 20;
+        var el = document.getElementById('err-n-disp'); if (el) el.textContent = n;
+        var el2 = document.getElementById('errors-count-label'); if (el2) el2.textContent = n;
+        _errorsN = n;
+      }
+    }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
 }
 
-// ── Load settings into form ────────────────────────────
+// ── Load settings from DB into form ───────────────────
 function loadAllSettings() {
-  var saved = getSettings(SETTINGS_KEY) || {};
-  var inst  = saved.institution || {};
-  var acad  = saved.academic    || {};
-  var sec   = saved.security    || {};
-  var app   = saved.appearance  || {};
-  if (inst.name)  document.getElementById('inst-name').value  = inst.name;
-  if (inst.short) document.getElementById('inst-short').value = inst.short;
-  if (inst.addr)  document.getElementById('inst-addr').value  = inst.addr;
-  if (inst.email) document.getElementById('inst-email').value = inst.email;
-  if (inst.phone) document.getElementById('inst-phone').value = inst.phone;
-  if (acad.year)  document.getElementById('acad-year').value  = acad.year;
-  if (acad.sem)   document.getElementById('acad-sem').value   = acad.sem;
-  if (acad.start) document.getElementById('acad-start').value = acad.start;
-  if (acad.end)   document.getElementById('acad-end').value   = acad.end;
-  if (acad.minAtt)document.getElementById('acad-minatt').value= acad.minAtt;
-  if (acad.wdays) document.getElementById('acad-wdays').value = acad.wdays;
-  if (sec.forcePw !== undefined) document.getElementById('sec-forcepw').checked = sec.forcePw;
-  if (sec.strongPw !== undefined)document.getElementById('sec-strongpw').checked= sec.strongPw;
-  if (sec.timeout !== undefined) document.getElementById('sec-timeout').checked  = sec.timeout;
-  if (sec.timeoutMin)document.getElementById('sec-timeout-mins').value = sec.timeoutMin;
-  if (sec.maxLogin)  document.getElementById('sec-maxlogin').value     = sec.maxLogin;
-  if (app.color) { document.getElementById('theme-color').value=app.color; document.getElementById('theme-color-hex').value=app.color; }
-  if (app.title)    document.getElementById('app-title').value    = app.title;
-  if (app.loginMsg) document.getElementById('login-msg').value    = app.loginMsg;
-  if (app.showLogo !== undefined) document.getElementById('show-logo').checked = app.showLogo;
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/settings', { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data || data.error) {
+        // Fallback: try loading from localStorage cache
+        _applySettingsToForm(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+        return;
+      }
+      // Cache a copy in localStorage as fallback
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+      _applySettingsToForm(data);
+    })
+    .catch(function() {
+      // Offline fallback
+      _applySettingsToForm(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+    });
+}
+
+function _applySettingsToForm(data) {
+  if (!data) return;
+  var inst = data.institution || {};
+  var acad = data.academic    || {};
+  var sec  = data.security    || {};
+  if (inst.name)  { var el = document.getElementById('inst-name');  if (el) el.value = inst.name; }
+  if (inst.short) { var el = document.getElementById('inst-short'); if (el) el.value = inst.short; }
+  if (inst.addr)  { var el = document.getElementById('inst-addr');  if (el) el.value = inst.addr; }
+  if (inst.email) { var el = document.getElementById('inst-email'); if (el) el.value = inst.email; }
+  if (inst.phone) { var el = document.getElementById('inst-phone'); if (el) el.value = inst.phone; }
+  if (acad.year)   { var el = document.getElementById('acad-year');   if (el) el.value = acad.year; }
+  if (acad.sem)    { var el = document.getElementById('acad-sem');    if (el) el.value = acad.sem; }
+  if (acad.start)  { var el = document.getElementById('acad-start');  if (el) el.value = acad.start; }
+  if (acad.end)    { var el = document.getElementById('acad-end');    if (el) el.value = acad.end; }
+  if (acad.minAtt) { var el = document.getElementById('acad-minatt'); if (el) el.value = acad.minAtt; }
+  if (acad.wdays)  { var el = document.getElementById('acad-wdays');  if (el) el.value = acad.wdays; }
+  if (acad.errorsN) {
+    var n = parseInt(acad.errorsN) || 20;
+    var el = document.getElementById('acad-errorsN'); if (el) el.value = n;
+    var el2 = document.getElementById('err-n-disp'); if (el2) el2.textContent = n;
+    var el3 = document.getElementById('errors-count-label'); if (el3) el3.textContent = n;
+    _errorsN = n;
+  }
+  if (sec.forcePw !== undefined)  { var el = document.getElementById('sec-forcepw');    if (el) el.checked = sec.forcePw; }
+  if (sec.strongPw !== undefined) { var el = document.getElementById('sec-strongpw');   if (el) el.checked = sec.strongPw; }
+  if (sec.timeout !== undefined)  { var el = document.getElementById('sec-timeout');    if (el) el.checked = sec.timeout; }
+  if (sec.timeoutMin) { var el = document.getElementById('sec-timeout-mins'); if (el) el.value = sec.timeoutMin; }
+  if (sec.maxLogin)   { var el = document.getElementById('sec-maxlogin');     if (el) el.value = sec.maxLogin; }
 }
 loadAllSettings();
-
-// Sync color picker and hex input
-document.getElementById('theme-color').addEventListener('input', function() {
-  document.getElementById('theme-color-hex').value = this.value;
-});
-document.getElementById('theme-color-hex').addEventListener('input', function() {
-  document.getElementById('theme-color').value = this.value;
-});
 
 // ── Admin password reset ───────────────────────────────
 function resetAdminPassword() {
@@ -1963,11 +2028,21 @@ function executeAction() {
   showProgress('Processing…', 10);
 
   if (currentAction === 'resetSettings') {
-    localStorage.removeItem(SETTINGS_KEY);
-    loadAllSettings();
-    closeConfirm();
-    logLine('All settings reset to defaults', 'warn');
-    showToast('↩ Settings reset to defaults');
+    var tok2 = sessionStorage.getItem('eams_token') || TOKEN || '';
+    fetch('/api/settings/reset', { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok2 } })
+      .then(function() {
+        localStorage.removeItem(SETTINGS_KEY);
+        loadAllSettings();
+        closeConfirm();
+        logLine('All settings reset to defaults (DB + cache)', 'warn');
+        showToast('↩ Settings reset to defaults');
+      }).catch(function() {
+        localStorage.removeItem(SETTINGS_KEY);
+        loadAllSettings();
+        closeConfirm();
+        logLine('All settings reset to defaults (cache only)', 'warn');
+        showToast('↩ Settings reset (cache only — server unreachable)');
+      });
     return;
   }
 
@@ -2008,27 +2083,60 @@ function getDeleteSteps(action) {
   }
   if (action === 'attendance') {
     return [
-      { label:'Fetching attendance records…', fn: function() { return api('GET','/attendance'); } },
-      { label:'Deleting attendance data…', fn: function() {
-        return api('GET','/attendance').then(function(records) {
-          return Promise.all((records||[]).map(function(r){ return fetch('/api/attendance/'+r._id,{ method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN}}).then(function(x){return x.json();}); }));
+      { label:'Clearing all attendance records from DB…', fn: function() {
+        // Try bulk clear endpoint first, then fallback to individual deletes
+        return api('DELETE', '/attendance/all').catch(function() {
+          return api('GET','/attendance').then(function(records) {
+            return Promise.all((records||[]).map(function(r){
+              return fetch('/api/attendance/'+r._id,{ method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN}}).then(function(x){return x.json();});
+            }));
+          });
         });
+      }},
+      { label:'Clearing local attendance cache…', fn: function() {
+        localStorage.removeItem('ss3_attendance');
+        return Promise.resolve({ok:true});
       }},
     ];
   }
   if (action === 'logs') {
-    return [{ label:'Clearing logs…', fn: function() { return Promise.resolve({ok:true}); }}];
+    return [
+      { label:'Clearing all activity logs from DB…', fn: function() {
+        return api('DELETE', '/logs/all').catch(function() {
+          return api('GET','/logs').then(function(logs) {
+            return Promise.all((logs||[]).map(function(l){ return api('DELETE','/logs/'+l._id); }));
+          });
+        });
+      }},
+      { label:'Clearing local logs cache…', fn: function() {
+        localStorage.removeItem('ss3_logs');
+        return Promise.resolve({ok:true});
+      }},
+    ];
   }
   if (action === 'clearall') {
     return [
-      { label:'Removing all students…', fn: function() {
-        return api('GET','/students').then(function(s){ return Promise.all((s||[]).map(function(x){ return api('DELETE','/students/'+x._id);})); });
+      { label:'Removing all attendance records…', fn: function() {
+        return api('DELETE', '/attendance/all').catch(function() {
+          return api('GET','/attendance').then(function(r){ return Promise.all((r||[]).map(function(x){ return api('DELETE','/attendance/'+x._id);})); });
+        });
       }},
-      { label:'Removing all teachers…', fn: function() {
-        return api('GET','/users?role=teacher').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
+      { label:'Removing all activity logs…', fn: function() {
+        return api('DELETE', '/logs/all').catch(function() {
+          return api('GET','/logs').then(function(r){ return Promise.all((r||[]).map(function(x){ return api('DELETE','/logs/'+x._id);})); });
+        });
       }},
       { label:'Removing all assignments…', fn: function() {
         return api('GET','/assignments').then(function(a){ return Promise.all((a||[]).map(function(x){ return api('DELETE','/assignments/'+x._id);})); });
+      }},
+      { label:'Removing all students…', fn: function() {
+        return api('GET','/students').then(function(s){ return Promise.all((s||[]).map(function(x){ return api('DELETE','/students/'+x._id);})); });
+      }},
+      { label:'Removing all student accounts…', fn: function() {
+        return api('GET','/users?role=student').then(function(u){ return Promise.all((u||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
+      }},
+      { label:'Removing all teachers…', fn: function() {
+        return api('GET','/users?role=teacher').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
       }},
       { label:'Removing departments…', fn: function() {
         return api('GET','/departments').then(function(d){ return Promise.all((d||[]).map(function(x){ return api('DELETE','/departments/'+x._id);})); });
@@ -2038,6 +2146,13 @@ function getDeleteSteps(action) {
       }},
       { label:'Removing subjects…', fn: function() {
         return api('GET','/subjects').then(function(s){ return Promise.all((s||[]).map(function(x){ return api('DELETE','/subjects/'+x._id);})); });
+      }},
+      { label:'Removing notifications…', fn: function() {
+        return api('DELETE', '/notifications/all').catch(function() { return Promise.resolve({ok:true}); });
+      }},
+      { label:'Clearing all local caches…', fn: function() {
+        ['ss3_students','ss3_users','ss3_attendance','ss3_logs','ss3_assignments','ss3_depts','ss3_classes','ss3_subjects','ss3_notifications'].forEach(function(k){ localStorage.removeItem(k); });
+        return Promise.resolve({ok:true});
       }},
     ];
   }
@@ -2050,9 +2165,17 @@ function runSteps(steps, idx) {
     showProgress('Done!', 100);
     setTimeout(function() {
       closeConfirm();
-      logLine(currentAction + ' operation completed ✓', 'success');
+      var action = currentAction;
+      logLine((action || '') + ' operation completed ✓', 'success');
       showToast('✅ Operation completed successfully');
       loadOverview();
+      // Clear relevant localStorage caches
+      if (action === 'logs')       { localStorage.removeItem('ss3_logs'); }
+      if (action === 'attendance') { localStorage.removeItem('ss3_attendance'); }
+      if (action === 'clearall')   {
+        ['ss3_students','ss3_users','ss3_attendance','ss3_logs','ss3_assignments',
+         'ss3_depts','ss3_classes','ss3_subjects','ss3_notifications'].forEach(function(k){ localStorage.removeItem(k); });
+      }
       document.getElementById('m-confirm-btn').disabled = false;
     }, 600);
     return;
@@ -2173,7 +2296,15 @@ function doLogout()  { sessionStorage.clear(); window.location.href = 'index.htm
 // ── Health stats (for Overview live strip) ─────────────
 function loadHealth() {
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  fetch('/api/system/health', { headers: { 'Authorization': 'Bearer ' + tok } })
+  // Build query params for errors filter
+  var errParam = '?errorsMode=' + _errorsMode + '&errorsN=' + _errorsN;
+  if (_errorsMode === 'week') {
+    var monday = new Date();
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    monday.setHours(0,0,0,0);
+    errParam += '&errorsFrom=' + monday.toISOString();
+  }
+  fetch('/api/system/health' + errParam, { headers: { 'Authorization': 'Bearer ' + tok } })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var dbDot = document.getElementById('hc-db-dot');
@@ -2192,19 +2323,34 @@ function loadHealth() {
       if (errVal) errVal.textContent = d.errorCount + ' errors / ' + d.warnCount + ' warnings';
       var mem = document.getElementById('hc-mem');
       if (mem) mem.textContent = d.memoryMB + ' MB';
-      // Recent errors card
+      // Recent errors card — filtered by mode
       var card = document.getElementById('health-errors-card');
       var list = document.getElementById('health-errors-list');
-      if (card && list && d.recentErrors && d.recentErrors.length) {
+      var errors = d.recentErrors || [];
+      if (_errorsMode === 'week') {
+        var weekStart = new Date(); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay()+6)%7)); weekStart.setHours(0,0,0,0);
+        errors = errors.filter(function(e) { return new Date(e.time) >= weekStart; });
+      } else {
+        errors = errors.slice(0, _errorsN);
+      }
+      var descEl = document.getElementById('errors-card-desc');
+      if (descEl) descEl.innerHTML = _errorsMode === 'week'
+        ? 'This week\'s error-level log entries (<strong>' + errors.length + '</strong> found)'
+        : 'Last <span id="errors-count-label">' + _errorsN + '</span> error-level log entries';
+      if (card && list && errors.length) {
         card.style.display = 'block';
-        list.innerHTML = d.recentErrors.map(function(e) {
+        list.innerHTML = errors.map(function(e) {
           var col = e.severity === 'critical' ? '#dc2626' : e.severity === 'warning' ? '#d97706' : '#64748b';
           return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:#fff8f0;border-radius:8px;border-left:3px solid '+col+';">'
             + '<span style="font-size:12px;font-weight:700;color:'+col+';white-space:nowrap;">['+e.severity.toUpperCase()+']</span>'
             + '<div><div style="font-size:12.5px;font-weight:600;color:var(--td);">'+e.action+' — '+e.details+'</div>'
             + '<div style="font-size:11px;color:var(--tmu);">'+new Date(e.time).toLocaleString('en-IN')+'</div></div></div>';
         }).join('');
-      } else if (card) { card.style.display = 'none'; }
+      } else if (card) {
+        card.style.display = errors.length || d.errorCount > 0 ? 'block' : 'none';
+        if (list && !errors.length) list.innerHTML = '<div style="padding:12px;text-align:center;font-size:12.5px;color:var(--tmu);">✅ No errors or warnings ' + (_errorsMode === 'week' ? 'this week' : 'in last ' + _errorsN + ' entries') + '</div>';
+        if (errors.length || d.errorCount > 0) card.style.display = 'block';
+      }
       logLine('Health: DB=' + d.dbStatus + ' Errors=' + d.errorCount + ' Mem=' + d.memoryMB + 'MB', 'success');
     }).catch(function(err) {
       var dbVal = document.getElementById('hc-db-val');
@@ -2438,9 +2584,304 @@ function dismissUndo(id, btn) {
     .catch(function() { showToast('❌ Failed to discard'); });
 }
 
+// ── Modal helpers (for Clear Cache modal) ─────────────
+function openModal_(id) {
+  var el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; el.style.alignItems = 'center'; el.style.justifyContent = 'center'; }
+}
+function closeModalBg(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+function dbToast(msg) { showToast(msg); }
+function syncAllFromDB() { /* no-op in control panel — data reloads on nav */ }
+
 // ── Legacy saveBackup stub (runSteps calls this — no-op now) ───────────
 function saveBackup(label, data) { /* superseded by server-side UndoLog */ }
 function loadBackups() { /* legacy no-op */ }
+
+// ═══════════════════════════════════════════════════════════════════
+//  USER GRID
+// ═══════════════════════════════════════════════════════════════════
+var _ugRole      = 'student';   // 'student' | 'teacher' | 'attendance'
+var _ugData      = [];          // raw data from API
+var _ugFiltered  = [];          // filtered rows
+var _ugChanged   = {};          // {id: {field: newVal, …}}
+var _ugEditId    = null;        // ID being edited in modal
+var _ugEditRole  = null;
+
+// Column definitions per role
+var UG_COLS = {
+  student: [
+    { key: 'name',         label: 'Full Name',     editable: true },
+    { key: 'regNo',        label: 'Reg No',        editable: true },
+    { key: 'academicYear', label: 'Acad. Year',    editable: true },
+    { key: 'courseType',   label: 'Course',        editable: true },
+    { key: 'branch',       label: 'Branch',        editable: true },
+    { key: 'deptName',     label: 'Department',    editable: false },
+    { key: 'className',    label: 'Class',         editable: false },
+    { key: 'section',      label: 'Section',       editable: true },
+    { key: 'year',         label: 'Year',          editable: true },
+    { key: 'email',        label: 'Email',         editable: true },
+  ],
+  teacher: [
+    { key: 'name',        label: 'Full Name',    editable: true },
+    { key: 'empId',       label: 'Emp ID',       editable: true },
+    { key: 'dept',        label: 'Department',   editable: true },
+    { key: 'designation', label: 'Designation',  editable: true },
+    { key: 'username',    label: 'Username',     editable: true },
+    { key: 'phone',       label: 'Phone',        editable: true },
+    { key: 'email',       label: 'Email',        editable: true },
+  ],
+  attendance: [
+    { key: 'studentName', label: 'Student',    editable: false },
+    { key: 'regNo',       label: 'Reg No',     editable: false },
+    { key: 'className',   label: 'Class',      editable: false },
+    { key: 'subjectName', label: 'Subject',    editable: false },
+    { key: 'date',        label: 'Date',       editable: false },
+    { key: 'status',      label: 'Status',     editable: true, type: 'select', options: ['present','absent','late'] },
+    { key: 'markedBy',    label: 'Marked By',  editable: false },
+  ]
+};
+
+function ugSetRole(role, btn) {
+  _ugRole = role;
+  _ugChanged = {};
+  document.querySelectorAll('.ug-tab').forEach(function(b) { b.classList.remove('act'); });
+  if (btn) btn.classList.add('act');
+  document.getElementById('ug-save-btn').style.display = 'none';
+  ugLoadData();
+}
+
+function ugRefresh() {
+  _ugChanged = {};
+  document.getElementById('ug-save-btn').style.display = 'none';
+  ugLoadData();
+}
+
+function ugLoadData() {
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var status = document.getElementById('ug-status');
+  if (status) status.textContent = '⏳ Loading from database…';
+  var endpoint = _ugRole === 'student' ? '/students'
+               : _ugRole === 'teacher' ? '/users?role=teacher'
+               : '/attendance';
+  fetch('/api' + endpoint, { headers: { 'Authorization': 'Bearer ' + tok } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _ugData = data || [];
+      ugPopulateClassFilter();
+      ugPopulateDeptFilter();
+      ugApplyFilters();
+      if (status) status.textContent = '✅ ' + _ugData.length + ' records loaded from DB';
+    })
+    .catch(function(err) {
+      if (status) status.textContent = '❌ Failed to load: ' + (err.message || 'network error');
+    });
+}
+
+function ugPopulateClassFilter() {
+  var sel = document.getElementById('ug-class-filter');
+  if (!sel) return;
+  var classes = Array.from(new Set(_ugData.map(function(r) { return r.className || r.class || ''; }).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">All Classes</option>'
+    + classes.map(function(c) { return '<option value="'+c+'">'+c+'</option>'; }).join('');
+  sel.style.display = (_ugRole === 'attendance' || _ugRole === 'student') ? '' : 'none';
+}
+
+function ugPopulateDeptFilter() {
+  var sel = document.getElementById('ug-dept-filter');
+  if (!sel) return;
+  var depts = Array.from(new Set(_ugData.map(function(r) { return r.deptName || r.dept || ''; }).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">All Depts</option>'
+    + depts.map(function(d) { return '<option value="'+d+'">'+d+'</option>'; }).join('');
+}
+
+function ugApplyFilters() {
+  var classF = (document.getElementById('ug-class-filter') || {}).value || '';
+  var deptF  = (document.getElementById('ug-dept-filter')  || {}).value || '';
+  var searchF = ((document.getElementById('ug-search') || {}).value || '').toLowerCase().trim();
+
+  _ugFiltered = _ugData.filter(function(r) {
+    if (classF && (r.className || r.class || '') !== classF) return false;
+    if (deptF  && (r.deptName  || r.dept  || '') !== deptF)  return false;
+    if (searchF) {
+      var haystack = [r.name, r.regNo, r.username, r.studentName, r.empId, r.email].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(searchF)) return false;
+    }
+    return true;
+  });
+
+  ugRenderGrid();
+  var status = document.getElementById('ug-status');
+  if (status) status.textContent = 'Showing ' + _ugFiltered.length + ' of ' + _ugData.length + ' records  •  Click a row to edit  •  Changed rows are highlighted yellow';
+}
+
+function ugRenderGrid() {
+  var cols   = UG_COLS[_ugRole] || [];
+  var thead  = document.getElementById('ug-thead');
+  var tbody  = document.getElementById('ug-tbody');
+  var empty  = document.getElementById('ug-empty');
+
+  if (!_ugFiltered.length) {
+    if (tbody)  tbody.innerHTML = '';
+    if (thead)  thead.innerHTML = '';
+    if (empty)  empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // Header
+  thead.innerHTML = '<tr>'
+    + cols.map(function(c) {
+        return '<th style="padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;color:var(--tmu);border-bottom:1px solid var(--br);white-space:nowrap;text-align:left;">'
+          + c.label + (c.editable ? ' <span style="color:var(--gL);font-size:9px;">✏</span>' : '') + '</th>';
+      }).join('')
+    + '<th style="padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;color:var(--tmu);border-bottom:1px solid var(--br);">Actions</th>'
+    + '</tr>';
+
+  // Body
+  tbody.innerHTML = _ugFiltered.map(function(row, ri) {
+    var id      = row._id || row.id || ri;
+    var changed = !!_ugChanged[id];
+    var rowCls  = changed ? 'ug-row-changed' : '';
+    return '<tr id="ugr-'+id+'" class="'+rowCls+'" style="border-bottom:1px solid var(--brl);transition:background .15s;" '
+      + 'onmouseover="if(!this.classList.contains(\'ug-row-changed\'))this.style.background=\'var(--gLt)\'" '
+      + 'onmouseout="if(!this.classList.contains(\'ug-row-changed\'))this.style.background=\'\'">'
+      + cols.map(function(c) {
+          var val = (row[c.key] !== undefined && row[c.key] !== null) ? row[c.key] : '';
+          if (c.editable) {
+            if (c.type === 'select') {
+              return '<td style="padding:6px 10px;">'
+                + '<select class="ug-cell-input" data-id="'+id+'" data-field="'+c.key+'" onchange="ugCellChange(this)">'
+                + (c.options || []).map(function(o) { return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('')
+                + '</select></td>';
+            }
+            return '<td style="padding:6px 10px;">'
+              + '<input class="ug-cell-input" type="text" value="'+String(val).replace(/"/g,'&quot;')+'" '
+              + 'data-id="'+id+'" data-field="'+c.key+'" '
+              + 'onchange="ugCellChange(this)" oninput="ugCellChange(this)">'
+              + '</td>';
+          }
+          return '<td style="padding:8px 12px;color:var(--td);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="'+String(val).replace(/"/g,'&quot;')+'">'+val+'</td>';
+        }).join('')
+      + '<td style="padding:6px 10px;white-space:nowrap;">'
+      + '<button onclick="ugOpenEdit(\''+id+'\')" style="padding:4px 10px;background:var(--gLt);border:1px solid var(--gLr);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;margin-right:4px;">✏ Edit</button>'
+      + (changed ? '<button onclick="ugSaveRow(\''+id+'\')" style="padding:4px 10px;background:var(--gD);border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:#fff;font-family:Poppins,sans-serif;">💾</button>' : '')
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function ugCellChange(input) {
+  var id    = input.dataset.id;
+  var field = input.dataset.field;
+  var val   = input.value;
+  if (!_ugChanged[id]) _ugChanged[id] = {};
+  _ugChanged[id][field] = val;
+  // Highlight row
+  var row = document.getElementById('ugr-' + id);
+  if (row) { row.classList.add('ug-row-changed'); row.style.background = ''; }
+  // Re-render action cell to show save button
+  ugRenderGrid();
+  document.getElementById('ug-save-btn').style.display = Object.keys(_ugChanged).length ? '' : 'none';
+}
+
+function ugSaveRow(id) {
+  if (!_ugChanged[id]) return;
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var endpoint = _ugRole === 'student' ? '/students/' + id
+               : _ugRole === 'teacher' ? '/teachers/' + id
+               : '/attendance/' + id;
+  showToast('⏳ Saving…');
+  fetch('/api' + endpoint, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify(_ugChanged[id])
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.error) { showToast('❌ ' + d.error); return; }
+      // Apply changes to local data
+      var rec = _ugData.find(function(r) { return (r._id || r.id) === id; });
+      if (rec) Object.assign(rec, _ugChanged[id]);
+      delete _ugChanged[id];
+      var row = document.getElementById('ugr-' + id);
+      if (row) { row.classList.remove('ug-row-changed'); row.classList.add('ug-row-saved'); setTimeout(function() { if (row) row.classList.remove('ug-row-saved'); }, 1500); }
+      if (!Object.keys(_ugChanged).length) document.getElementById('ug-save-btn').style.display = 'none';
+      showToast('✅ Saved to database');
+      ugRenderGrid();
+    }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
+}
+
+function ugSaveAll() {
+  var ids = Object.keys(_ugChanged);
+  if (!ids.length) { showToast('No changes to save'); return; }
+  var done = 0;
+  ids.forEach(function(id) { ugSaveRow(id); done++; });
+  showToast('⏳ Saving ' + ids.length + ' records…');
+}
+
+// ── Full Edit Modal ──────────────────────────────────────
+function ugOpenEdit(id) {
+  _ugEditId   = id;
+  _ugEditRole = _ugRole;
+  var rec  = _ugData.find(function(r) { return (r._id || r.id) === id; }) || {};
+  var cols = UG_COLS[_ugRole] || [];
+  document.getElementById('ug-modal-title').textContent = '✏️ Edit ' + (_ugRole === 'student' ? rec.name || 'Student' : _ugRole === 'teacher' ? rec.name || 'Teacher' : 'Attendance Record');
+  document.getElementById('ug-modal-fields').innerHTML = cols.map(function(c) {
+    var val = (rec[c.key] !== undefined && rec[c.key] !== null) ? rec[c.key] : '';
+    var inputHtml;
+    if (!c.editable) {
+      inputHtml = '<input type="text" class="form-input" value="'+String(val).replace(/"/g,'&quot;')+'" readonly style="background:#f8fafc;color:var(--tmu);">';
+    } else if (c.type === 'select') {
+      inputHtml = '<select class="form-input" id="ugm-'+c.key+'">'
+        + (c.options||[]).map(function(o){return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
+    } else {
+      inputHtml = '<input type="text" class="form-input" id="ugm-'+c.key+'" value="'+String(val).replace(/"/g,'&quot;')+'">';
+    }
+    var colspan = (cols.indexOf(c) === cols.length - 1 && cols.length % 2 !== 0) ? 'grid-column:1/-1;' : '';
+    return '<div class="form-group" style="'+colspan+'"><label class="form-label">'+c.label+(c.editable?'':' (read-only)')+'</label>'+inputHtml+'</div>';
+  }).join('');
+  document.getElementById('ug-edit-modal').style.display = 'flex';
+}
+
+function ugCloseEdit() {
+  _ugEditId = null;
+  document.getElementById('ug-edit-modal').style.display = 'none';
+}
+
+function ugSaveEdit() {
+  if (!_ugEditId) return;
+  var cols = UG_COLS[_ugEditRole] || [];
+  var updates = {};
+  cols.forEach(function(c) {
+    if (!c.editable) return;
+    var el = document.getElementById('ugm-' + c.key);
+    if (el) updates[c.key] = el.value;
+  });
+  var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
+  var endpoint = _ugEditRole === 'student' ? '/students/' + _ugEditId
+               : _ugEditRole === 'teacher' ? '/teachers/' + _ugEditId
+               : '/attendance/' + _ugEditId;
+  showToast('⏳ Saving to DB…');
+  fetch('/api' + endpoint, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify(updates)
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.error) { showToast('❌ ' + d.error); return; }
+      var rec = _ugData.find(function(r) { return (r._id || r.id) === _ugEditId; });
+      if (rec) Object.assign(rec, updates);
+      ugCloseEdit();
+      ugApplyFilters();
+      showToast('✅ Saved to database');
+      logLine('User record updated: ' + (_ugEditRole) + ' id=' + _ugEditId, 'success');
+    }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
+}
+
+// Trigger load when page is navigated to
+var _ugLoaded = false;
 
 </script>
 </body>

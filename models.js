@@ -296,6 +296,15 @@ const LiveSessionSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+const SectionTimetableSchema = new mongoose.Schema({
+  classId   : { type: mongoose.Schema.Types.ObjectId, ref:'Class', required:true, unique:true },
+  className : String,
+  deptId    : { type: mongoose.Schema.Types.ObjectId, ref:'Department' },
+  deptName  : String,
+  slots     : { type: mongoose.Schema.Types.Mixed, default:{} },
+  updatedBy : String,
+}, { timestamps:true });
+
 module.exports = {
   Admin:        mongoose.model('Admin',        AdminSchema),
   Teacher:      mongoose.model('Teacher',      TeacherSchema),
@@ -315,4 +324,5 @@ module.exports = {
   Log:          mongoose.model('Log',          LogSchema),
   UndoLog:      mongoose.model('UndoLog',      UndoLogSchema),
   LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
+  SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
 };

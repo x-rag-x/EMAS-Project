@@ -2721,8 +2721,7 @@
         <button class="sb-item" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span
             class="sb-badge" id="sb-teach-badge">0</span></button>
         <!-- Timetable – Management section -->
-        <button class="sb-item" onclick="window.location.href='timetable.html'">
-          <span class="sbi-ic">🗓️</span>Timetable</button>
+        <button class="sb-item" onclick="window.location.href='timetable.html'"><span class="sbi-ic">🗓️</span>Timetable</button>
 
         <div class="sb-section-label">Reports & Logs</div>
         <button class="sb-item" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
@@ -2797,7 +2796,6 @@
             <div class="page-actions">
               <button class="btn-pri" onclick="shiftToMenu('m-add-student', 'students')">+ Add Student</button>
               <button class="btn-out" onclick="window.location.href='bulk.html'">📤 Upload Data</button>
-              <button class="btn-out" onclick="openClearStorageModal()" title="Clear cached data from browser storage" style="color:#ef4444;border-color:#ef4444;">🗑️ Clear Cache</button>
             </div>
           </div>
 
@@ -3610,7 +3608,12 @@
               </div>
             </div>
           </div>
-      
+
+          <!-- ── Log Entries ── -->
+          <div id="fll"></div>
+
+        </div><!-- /page-wrap -->
+      </div><!-- /pg-logs -->
 
       <!-- ══════════════════════ MAINTENANCE MODE PAGE ══════════════════════ -->
       <div class="pg" id="pg-maintenance">
@@ -4739,10 +4742,10 @@
       var el = document.getElementById('log-stat-cards');
       if (!el) return;
       var cards = [
-        { label: 'Total Logs',       val: total,           icon: '📋', bg: 'var(-p)',  tc: '#fff',     mc: 'rgba(255,255,255,.75)' },
-        { label: 'Admin Actions',    val: counts.admin,    icon: '👑', bg: '#fef2f2',  tc: '#dc2626',  mc: 'var(--tmu)' },
-        { label: 'Teacher Actions',  val: counts.teacher,  icon: '👩‍🏫', bg: '#eff6ff',  tc: '#2563eb',  mc: 'var(--tmu)' },
-        { label: 'Student Actions',  val: counts.student,  icon: '🎓', bg: '#f0fdf4',  tc: '#16a34a',  mc: 'var(--tmu)' },
+        { label: 'Total Logs',       val: total,           icon: '📋', bg: 'var(-p)',  tc: 'black',     mc: 'var(--tmu)' },
+        { label: 'Admin Actions',    val: counts.admin,    icon: '👑', bg: '#fef2f2',  tc: '#dc2626',   mc: 'var(--tmu)' },
+        { label: 'Teacher Actions',  val: counts.teacher,  icon: '👩‍🏫', bg: '#eff6ff',  tc: '#2563eb',   mc: 'var(--tmu)' },
+        { label: 'Student Actions',  val: counts.student,  icon: '🎓', bg: '#f0fdf4',  tc: '#16a34a',   mc: 'var(--tmu)' },
       ];
       el.innerHTML = cards.map(function (c) {
         return '<div style="background:' + c.bg + ';border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;border:1px solid var(--br);box-shadow:0 1px 4px rgba(0,0,0,.04);">'
@@ -4855,11 +4858,29 @@
       document.getElementById('dc-confirm-id').value = 'logs';
       document.getElementById('dc-confirm-msg').textContent = 'Clear all activity logs? This cannot be undone.';
       document.getElementById('dc-confirm-btn').onclick = function () {
-        DB.set('logs', []);
-        renderLogs();
-        addLog('Logs Cleared', 'All logs cleared');
-        closeModalBg('m-dc-confirm');
-        showToast('Logs cleared', 'warn');
+        requireSpecialPw(function() {
+          var tok = sessionStorage.getItem('eams_token');
+          var headers = { 'Content-Type': 'application/json' };
+          if (tok) headers['Authorization'] = 'Bearer ' + tok;
+          dbToast('Clearing logs from DB…', 'saving');
+          // Try bulk clear endpoint first
+          fetch('/api/logs/all', { method: 'DELETE', headers: headers })
+            .catch(function() { return fetch('/api/logs', { method: 'GET', headers: headers })
+              .then(function(r) { return r.json(); })
+              .then(function(logs) {
+                return Promise.all((logs||[]).map(function(l) {
+                  return fetch('/api/logs/' + l._id, { method: 'DELETE', headers: headers });
+                }));
+              });
+            })
+            .finally(function() {
+              DB.set('logs', []);
+              renderLogs();
+              addLog('Logs Cleared', 'All logs cleared from DB');
+              closeModalBg('m-dc-confirm');
+              dbToast('All logs cleared', 'success', 'Removed from MongoDB + cache');
+            });
+        });
       };
       openModal_('m-dc-confirm');
     }
@@ -7153,7 +7174,6 @@
         window.location.href = 'index.html';
         return;
       }
-      addLog('Login', 'Admin logged into dashboard');
       bootApp();
       setTimeout(updateAllSidebarBadges, 800);
     })();
