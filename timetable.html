@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Timetable</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;--gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;--td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;--br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);--shd:0 8px 32px rgba(0,0,0,0.08);--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;--sb-w:240px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+
+/* SIDEBAR */
+.sb{width:var(--sb-w);background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;transition:transform .28s ease;}
+.sb.sb-hidden{transform:translateX(-100%);}
+.sb-toggle{position:fixed;top:14px;left:252px;z-index:300;width:32px;height:32px;border-radius:50%;background:var(--gD);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(27,94,32,.3);transition:left .28s ease;}
+.sb-toggle.closed{left:12px;}
+.sb-logo{padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brl);}
+.sb-logomark{width:36px;height:36px;border:2.5px solid var(--gD);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.sb-brand{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--td);line-height:1.3;}
+.sb-brand small{display:block;font-family:'Poppins',sans-serif;font-size:9.5px;font-weight:400;color:var(--tdi);}
+.navs{flex:1;overflow-y:auto;padding:8px 0;}
+.sb-sec{padding:10px 24px 4px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--tdi);}
+.si{display:flex;align-items:center;gap:10px;padding:11px 14px 11px 16px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--tmu);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:all .18s;}
+.si:hover{background:var(--gLt);color:var(--gK);}
+.si.act{background:var(--gLt);color:var(--gD);font-weight:700;border-left:3px solid var(--gD);border-radius:0 10px 10px 0;padding-left:13px;}
+.si .ic{width:22px;text-align:center;font-size:16px;flex-shrink:0;}
+.sb-bot{padding:12px;border-top:1px solid var(--brl);}
+.sb-user{display:flex;align-items:center;gap:9px;padding:10px 12px;background:var(--gLt);border-radius:12px;margin-bottom:10px;}
+.sb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,var(--gL));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--gD);flex-shrink:0;}
+.sb-un{font-size:12px;font-weight:700;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-ur{font-size:10px;color:var(--tmu);}
+.sb-logout{display:flex;align-items:center;justify-content:flex-start;width:45px;height:45px;border:none;border-radius:50%;cursor:pointer;position:relative;overflow:hidden;transition:width .3s ease,border-radius .3s ease;box-shadow:2px 2px 10px rgba(239,68,68,.25);background:#ff4141;margin:0 auto;padding:0;}
+.sb-logout .lg-icon{width:100%;transition:width .3s,padding .3s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sb-logout .lg-icon svg{width:17px;flex-shrink:0;}
+.sb-logout .lg-icon svg path{fill:white;}
+.sb-logout .lg-txt{position:absolute;right:0;width:0;opacity:0;color:white;font-size:13px;font-weight:600;transition:opacity .3s,width .3s,padding .3s;white-space:nowrap;font-family:'Poppins',sans-serif;overflow:hidden;}
+.sb-logout:hover{width:130px;border-radius:40px;}
+.sb-logout:hover .lg-icon{width:35%;padding-left:18px;}
+.sb-logout:hover .lg-txt{opacity:1;width:65%;padding-right:12px;}
+.sb-logout:active{transform:translate(2px,2px);}
+
+/* MAIN */
+.mc{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .28s ease;}
+
+/* TOPBAR */
+.topbar{background:#fff;border-bottom:1px solid var(--br);height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px;}
+.tb-left{display:flex;align-items:center;gap:12px;}
+.tb-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--gD),var(--gM));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.tb-title{font-size:15px;font-weight:700;color:var(--td);line-height:1.2;}
+.tb-sub{font-size:10.5px;color:var(--tmu);}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.role-pill{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.role-pill.coord{background:rgba(27,94,32,.1);color:var(--gD);border:1px solid var(--gLr);}
+.role-pill.student{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.3);}
+.role-pill.service{background:rgba(139,92,246,.1);color:var(--purple);border:1px solid rgba(139,92,246,.3);}
+.pchip{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;border-radius:28px;border:1.5px solid var(--br);background:#fff;cursor:pointer;transition:all .2s;}
+.pchip:hover{border-color:var(--gL);background:var(--gLt);}
+.pav{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gD);}
+.pn{font-size:12px;font-weight:700;color:var(--td);}
+.pe{font-size:10px;color:var(--tmu);}
+
+/* AUTH GATE */
+#auth-gate{display:none;position:fixed;inset:0;z-index:9999;background:var(--gP);flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+#auth-gate.show{display:flex;}
+.ag-icon{width:72px;height:72px;border-radius:50%;background:rgba(239,68,68,.08);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:30px;}
+
+/* MAIN AREA */
+.main{padding:24px;max-width:1340px;width:100%;}
+.ph1{font-size:24px;font-weight:800;color:var(--td);letter-spacing:-.5px;}
+.ps{font-size:12px;color:var(--tmu);margin-top:3px;}
+.page-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.page-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* DEPT GRID */
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;}
+.dept-card{background:#fff;border:1.5px solid var(--br);border-radius:14px;padding:18px 14px;cursor:pointer;transition:all .2s;text-align:center;}
+.dept-card:hover{border-color:var(--gM);background:var(--gLt);transform:translateY(-2px);box-shadow:0 6px 20px rgba(27,94,32,.1);}
+.dept-card.sel{border-color:var(--gD);background:linear-gradient(135deg,var(--gLt),#dcfce7);box-shadow:0 0 0 3px rgba(27,94,32,.08);}
+.dc-icon{font-size:24px;margin-bottom:6px;}
+.dc-code{font-size:14px;font-weight:800;color:var(--gD);margin-bottom:3px;}
+.dc-name{font-size:10px;color:var(--tmu);line-height:1.3;}
+.dept-card.svc{border-style:dashed;}.dept-card.svc .dc-code{color:var(--purple);}
+.dept-card.svc:hover{border-color:var(--purple);background:rgba(139,92,246,.05);}
+.dept-card.svc.sel{border-color:var(--purple);background:rgba(139,92,246,.06);}
+
+/* SELECTION PANEL */
+.sel-panel{background:#fff;border:1px solid var(--br);border-radius:16px;padding:18px 20px;margin-bottom:20px;box-shadow:var(--shd);}
+.sel-lbl-top{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);margin-bottom:12px;}
+.sel-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.sel-grp{display:flex;flex-direction:column;gap:5px;min-width:160px;flex:1;}
+.sel-label{font-size:11px;font-weight:600;color:var(--tmu);}
+.sel-select{padding:9px 30px 9px 12px;border:1.5px solid var(--br);border-radius:10px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;color:var(--td);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a7a5a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;outline:none;cursor:pointer;transition:border .2s,box-shadow .2s;appearance:none;}
+.sel-select:focus{border-color:var(--gM);box-shadow:0 0 0 3px rgba(56,142,60,.08);}
+.sel-select:disabled{opacity:.45;cursor:not-allowed;}
+
+/* TT CARD */
+.tt-card{background:#fff;border:1px solid var(--br);border-radius:16px;overflow:hidden;box-shadow:var(--shd);}
+.tt-card-hd{padding:16px 20px;border-bottom:1px solid var(--brl);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(135deg,var(--gD),var(--gM));}
+.tt-card-title{font-size:16px;font-weight:800;color:#fff;}
+.tt-card-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;}
+.tt-card-acts{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* TT TABLE */
+.tt-wrap{overflow-x:auto;}
+.tt-table{width:100%;border-collapse:collapse;min-width:760px;}
+.tt-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 10px;text-align:center;border-bottom:1px solid var(--brl);color:var(--tmu);background:var(--gP);}
+.tt-table th.day-th{text-align:left;width:78px;color:var(--gD);font-size:10px;padding-left:14px;}
+.tt-table td{border-bottom:1px solid var(--brl);border-right:1px solid var(--brl);vertical-align:top;padding:0;}
+.tt-table td:last-child{border-right:none;}
+.tt-cell{min-height:82px;padding:8px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;justify-content:center;position:relative;}
+.tt-cell:hover{background:var(--gLt);}
+.tt-cell.filled{background:#f0fdf4;}.tt-cell.filled:hover{background:#dcfce7;}
+.tt-cell.brk{background:rgba(245,158,11,.04);cursor:default;pointer-events:none;align-items:center;justify-content:center;}
+.brk-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--amber);opacity:.7;}
+.c-subj{font-size:12.5px;font-weight:700;color:var(--td);line-height:1.3;margin-bottom:2px;}
+.c-staff{font-size:10.5px;color:var(--tmu);font-weight:500;}
+.c-hall{font-size:10px;color:var(--tdi);margin-top:2px;}
+.c-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:8px;margin-top:3px;}
+.c-badge.theory{background:rgba(27,94,32,.08);color:var(--gD);}
+.c-badge.lab{background:rgba(59,130,246,.08);color:var(--blue);}
+.c-badge.elective{background:rgba(139,92,246,.08);color:var(--purple);}
+.c-empty{font-size:11px;color:var(--tdi);font-style:italic;}
+.c-add{font-size:10px;color:var(--gK);font-weight:600;margin-top:4px;opacity:0;transition:opacity .15s;}
+.tt-cell:hover .c-add{opacity:1;}
+.pno{position:absolute;top:4px;right:6px;font-size:9px;color:var(--tdi);font-weight:600;}
+.day-cell{padding:10px 14px;background:var(--gP);border-bottom:1px solid var(--brl);border-right:1px solid var(--brl);vertical-align:middle;}
+.day-n{font-size:11.5px;font-weight:700;color:var(--gD);}
+.day-s{font-size:9px;color:var(--tdi);}
+
+/* SUMMARY */
+.sum-sect{padding:20px;border-top:1px solid var(--brl);}
+.sum-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);margin-bottom:14px;}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:20px;}
+.stat-c{background:var(--gP);border:1px solid var(--brl);border-radius:12px;padding:14px;text-align:center;}
+.stat-n{font-size:26px;font-weight:800;color:var(--gD);line-height:1;}
+.stat-l{font-size:10px;color:var(--tmu);margin-top:4px;font-weight:500;}
+.subj-tbl{width:100%;border-collapse:collapse;}
+.subj-tbl th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tdi);padding:8px 14px;text-align:left;border-bottom:1px solid var(--brl);}
+.subj-tbl td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--brl);color:var(--td);vertical-align:middle;}
+.subj-tbl tr:last-child td{border-bottom:none;}
+.subj-tbl tr:hover td{background:var(--gLt);}
+.sdot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.bar-wrap{background:var(--brl);border-radius:99px;height:5px;width:80px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.bar-fill{background:var(--gM);height:100%;border-radius:99px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:'Poppins',sans-serif;font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:10px;border:1.5px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn-primary{background:var(--gD);color:#fff;border-color:var(--gD);}.btn-primary:hover{background:var(--gK);}
+.btn-ghost{background:#fff;color:var(--tmu);border-color:var(--br);}.btn-ghost:hover{border-color:var(--gLr);background:var(--gLt);color:var(--gD);}
+.btn-amber{background:#fff;color:var(--amber);border-color:rgba(245,158,11,.3);}.btn-amber:hover{background:rgba(245,158,11,.07);}
+.btn-danger{background:#fff;color:var(--red);border-color:rgba(239,68,68,.3);}.btn-danger:hover{background:rgba(239,68,68,.07);}
+.btn-white{background:#fff;color:var(--gD);border-color:#fff;}.btn-white:hover{background:var(--gLt);}
+.btn-sm{padding:6px 12px;font-size:11.5px;}
+.btn-outline-white{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);}.btn-outline-white:hover{background:rgba(255,255,255,.1);}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:18px;padding:28px 28px 24px;width:500px;max-width:calc(100vw - 32px);transform:translateY(14px);transition:transform .25s;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.18);}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-lg{width:620px;}
+.m-title{font-size:18px;font-weight:800;color:var(--td);}
+.m-sub{font-size:11.5px;color:var(--tmu);margin-top:3px;margin-bottom:22px;}
+.fg{margin-bottom:16px;}
+.fl{display:block;font-size:11.5px;font-weight:600;color:var(--tmu);margin-bottom:6px;}
+.fi,.fs{width:100%;padding:10px 12px;border:1.5px solid var(--br);border-radius:10px;font-family:'Poppins',sans-serif;font-size:13px;color:var(--td);background:#fff;outline:none;transition:border .2s,box-shadow .2s;}
+.fi:focus,.fs:focus{border-color:var(--gM);box-shadow:0 0 0 3px rgba(56,142,60,.08);}
+.fs option{background:#fff;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fhint{font-size:10px;color:var(--tdi);margin-top:4px;}
+.m-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;padding-top:18px;border-top:1px solid var(--brl);}
+.m-ft-l{margin-right:auto;}
+
+/* SUBJECT DROPDOWN */
+.sdropwrap{position:relative;}
+.sdrop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--br);border-radius:12px;box-shadow:var(--shd);z-index:20;max-height:220px;overflow-y:auto;display:none;}
+.sdrop.open{display:block;}
+.sdrop-opt{padding:10px 14px;cursor:pointer;transition:background .15s;}
+.sdrop-opt:hover{background:var(--gLt);}
+.sdrop-name{font-size:13px;font-weight:600;color:var(--td);}
+.sdrop-meta{font-size:10.5px;color:var(--tmu);}
+.sdrop-empty{padding:14px;text-align:center;color:var(--tdi);font-size:12px;}
+
+/* STUDENT DETAIL MODAL */
+.det-subj{font-size:26px;font-weight:800;color:var(--gD);margin-bottom:6px;}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+.det-item{background:var(--gP);border-radius:10px;padding:12px;}
+.det-key{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tdi);margin-bottom:5px;}
+.det-val{font-size:14px;font-weight:700;color:var(--td);}
+.credit-ring{width:52px;height:52px;border-radius:50%;border:3px solid var(--gM);background:var(--gLt);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--gD);flex-shrink:0;}
+
+/* STATE SCREENS */
+.state-sc{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;gap:12px;}
+.state-icon{font-size:40px;}
+.state-t{font-size:16px;font-weight:700;color:var(--td);}
+.state-s{font-size:13px;color:var(--tmu);max-width:300px;}
+
+/* AUTOGEN */
+.ag-list{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;margin-bottom:8px;}
+.ag-row{display:grid;grid-template-columns:1fr 66px 56px 1fr 28px;gap:6px;align-items:center;background:var(--gP);border:1px solid var(--brl);border-radius:10px;padding:8px 10px;}
+.ag-in{background:transparent;border:none;border-bottom:1px solid var(--brl);color:var(--td);font-family:'Poppins',sans-serif;font-size:12px;padding:2px 4px;outline:none;width:100%;}
+.ag-in:focus{border-bottom-color:var(--gM);}
+.ag-rm{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;opacity:.5;line-height:1;padding:0;}.ag-rm:hover{opacity:1;}
+.conflict-log{background:var(--gP);border:1px solid var(--brl);border-radius:10px;padding:12px;max-height:120px;overflow-y:auto;font-size:11px;font-family:monospace;display:none;margin-top:12px;}
+.conflict-log .ok{color:#22c55e;}.conflict-log .err{color:var(--red);}
+
+/* SPINNER */
+.spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--brl);border-top-color:var(--gM);animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:#fff;border:1px solid var(--br);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.12);animation:tIn .28s ease;max-width:300px;}
+.toast.success{border-left:3px solid #22c55e;}.toast.error{border-left:3px solid var(--red);}.toast.info{border-left:3px solid var(--blue);}
+.t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.toast.success .t-dot{background:#22c55e;}.toast.error .t-dot{background:var(--red);}.toast.info .t-dot{background:var(--blue);}
+@keyframes tIn{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
+
+.hidden{display:none!important;}
+.fade-in{animation:fi .28s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:768px){.sb{transform:translateX(-100%)}.sb.open{transform:none}.mc{margin-left:0!important}.sb-toggle{left:12px}.fr{grid-template-columns:1fr}.det-grid{grid-template-columns:1fr}.ag-row{grid-template-columns:1fr 58px 48px 1fr 24px}}
+</style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div id="auth-gate">
+  <div class="ag-icon">🔒</div>
+  <div style="font-size:22px;font-weight:800;color:var(--td)">Access Denied</div>
+  <div style="font-size:14px;color:var(--tmu)">You don't have permission to view timetables.</div>
+  <button class="btn btn-ghost" onclick="history.back()">← Go Back</button>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logomark">🎓</div>
+    <div class="sb-brand">EAMS<small>Sri Shakthi</small></div>
+  </div>
+  <div class="navs" id="sb-nav"></div>
+  <div class="sb-bot">
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">?</div>
+      <div style="overflow:hidden;">
+        <div class="sb-un" id="sb-name">—</div>
+        <div class="sb-ur" id="sb-role-lbl">—</div>
+      </div>
+    </div>
+    <button class="sb-logout" onclick="doLogout()">
+      <div class="lg-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+        </svg>
+      </div>
+      <span class="lg-txt">Logout</span>
+    </button>
+  </div>
+</div>
+<button class="sb-toggle" id="sb-toggle" onclick="toggleSb()">☰</button>
+
+<!-- MAIN -->
+<div class="mc" id="mc">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-icon">📅</div>
+      <div>
+        <div class="tb-title">Timetable Management</div>
+        <div class="tb-sub" id="tb-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span class="role-pill" id="role-pill">—</span>
+      <div class="pchip">
+        <div class="pav" id="tb-av">?</div>
+        <div>
+          <div class="pn" id="tb-name">—</div>
+          <div class="pe" id="tb-dept">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main" id="app">
+
+    <!-- DEPT VIEW -->
+    <div id="view-dept" class="fade-in">
+      <div class="page-hd">
+        <div>
+          <div class="ph1" id="dept-h1">Select Department</div>
+          <div class="ps" id="dept-ps">Choose a department to view its timetable</div>
+        </div>
+      </div>
+      <div class="dept-grid" id="dept-grid"></div>
+    </div>
+
+    <!-- TT VIEW -->
+    <div id="view-tt" class="hidden fade-in">
+      <div class="page-hd">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="goBack()">← Back</button>
+          <div>
+            <div class="ph1" id="tt-h1">—</div>
+            <div class="ps" id="tt-ps">—</div>
+          </div>
+        </div>
+        <div class="page-acts" id="tt-top-acts"></div>
+      </div>
+
+      <!-- Class + Section selectors -->
+      <div class="sel-panel" id="sel-panel">
+        <div class="sel-lbl-top">Class Selection</div>
+        <div class="sel-row">
+          <div class="sel-grp">
+            <label class="sel-label">Class / Year</label>
+            <select class="sel-select" id="sel-class" onchange="onClassChange()">
+              <option value="">— Select Class —</option>
+            </select>
+          </div>
+          <div class="sel-grp">
+            <label class="sel-label">Section</label>
+            <select class="sel-select" id="sel-section" onchange="onSectionChange()" disabled>
+              <option value="">— Select Section —</option>
+            </select>
+          </div>
+          <div class="sel-grp" style="flex:0;min-width:auto;">
+            <label class="sel-label">&nbsp;</label>
+            <button class="btn btn-primary" id="btn-load" onclick="loadTT()" disabled>Load Timetable</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder -->
+      <div id="tt-placeholder" class="tt-card">
+        <div class="state-sc">
+          <div class="state-icon">📋</div>
+          <div class="state-t">Select a Class &amp; Section</div>
+          <div class="state-s">Choose a class and section above to load the timetable</div>
+        </div>
+      </div>
+
+      <!-- TT Card -->
+      <div id="tt-card" class="hidden">
+        <div class="tt-card">
+          <div class="tt-card-hd">
+            <div>
+              <div class="tt-card-title" id="tt-card-title">—</div>
+              <div class="tt-card-sub" id="tt-card-sub">—</div>
+            </div>
+            <div class="tt-card-acts" id="tt-card-acts"></div>
+          </div>
+          <div class="tt-wrap"><table class="tt-table" id="tt-table"></table></div>
+          <!-- Summary (coordinators only) -->
+          <div class="sum-sect hidden" id="tt-summary">
+            <div class="sum-title">Subject Summary</div>
+            <div class="stat-row" id="stat-row"></div>
+            <table class="subj-tbl">
+              <thead>
+                <tr>
+                  <th>#</th><th>Subject</th><th>Code</th><th>Type</th>
+                  <th>Staff</th><th>Hall</th><th>Cr</th><th>Hrs/Wk</th>
+                </tr>
+              </thead>
+              <tbody id="sum-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- .mc -->
+
+<!-- CELL EDIT MODAL -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="m-title" id="edit-title">Edit Period</div>
+    <div class="m-sub" id="edit-sub">—</div>
+
+    <div class="fg">
+      <label class="fl">Subject</label>
+      <div class="sdropwrap">
+        <input type="text" class="fi" id="edit-subj" placeholder="Search or type subject…"
+               autocomplete="off" oninput="filterSubj(this.value)"
+               onfocus="openSubjDrop()" onblur="closeSubjDrop()">
+        <div class="sdrop" id="sdrop"></div>
+      </div>
+      <div class="fhint" id="edit-subj-hint"></div>
+    </div>
+    <input type="hidden" id="edit-subj-id">
+    <input type="hidden" id="edit-subj-code">
+
+    <div class="fr">
+      <div class="fg"><label class="fl">Staff / Teacher</label><input type="text" class="fi" id="edit-staff" placeholder="e.g. Dr. R. Kumar"></div>
+      <div class="fg"><label class="fl">Hall / Room No.</label><input type="text" class="fi" id="edit-hall" placeholder="e.g. CSE Lab 1"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Credits</label><input type="number" class="fi" id="edit-credit" placeholder="3" min="1" max="6"></div>
+      <div class="fg">
+        <label class="fl">Type</label>
+        <select class="fs" id="edit-type">
+          <option value="theory">Theory</option>
+          <option value="lab">Lab / Practical</option>
+          <option value="elective">Elective</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-ft">
+      <div class="m-ft-l"><button class="btn btn-danger btn-sm" id="btn-clear">🗑 Clear Cell</button></div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-primary" id="btn-save">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Save Period
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT DETAIL MODAL -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tdi);margin-bottom:6px;" id="det-period">—</div>
+        <div class="det-subj" id="det-subj">—</div>
+      </div>
+      <div class="credit-ring" id="det-ring">?</div>
+    </div>
+    <div class="det-grid">
+      <div class="det-item"><div class="det-key">Staff</div><div class="det-val" id="det-staff">—</div></div>
+      <div class="det-item"><div class="det-key">Hall / Room</div><div class="det-val" id="det-hall">—</div></div>
+      <div class="det-item"><div class="det-key">Type</div><div class="det-val" id="det-type">—</div></div>
+      <div class="det-item"><div class="det-key">Subject Code</div><div class="det-val" id="det-code">—</div></div>
+    </div>
+    <div class="m-ft"><button class="btn btn-ghost" onclick="closeModal('modal-detail')">Close</button></div>
+  </div>
+</div>
+
+<!-- AUTOGEN MODAL -->
+<div class="modal-overlay" id="modal-ag">
+  <div class="modal modal-lg">
+    <div class="m-title">⚡ Auto Generate Timetable</div>
+    <div class="m-sub" id="ag-sub">—</div>
+    <div class="fr" style="margin-bottom:16px;">
+      <div class="fg">
+        <label class="fl">Target Year</label>
+        <select class="fs" id="ag-year">
+          <option>I Year</option><option>II Year</option><option>III Year</option><option>IV Year</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Default Hall</label><input type="text" class="fi" id="ag-hall" placeholder="e.g. Block A – 201"></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);margin-bottom:8px;">Subjects &amp; Weekly Hours</div>
+    <div class="ag-list" id="ag-list"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addAgRow()" style="margin-bottom:12px;">+ Add Subject</button>
+    <div class="conflict-log" id="conflict-log"></div>
+    <div class="m-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ag')">Cancel</button>
+      <button class="btn btn-amber" id="btn-conflicts">🔍 Check Conflicts</button>
+      <button class="btn btn-primary" id="btn-gen">⚡ Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  EAMS – TIMETABLE MANAGEMENT  (timetable.html)
+//  Role-based, department-aware | Node/Express + MongoDB backend
+// ════════════════════════════════════════════════════════════════════
+
+const API_BASE = '/api';
+
+/* ── SESSION ─────────────────────────────────────────────────────── */
+// Supports both key formats:
+//   teacher.html / student.html / admin.html → eams_user (JSON) + eams_token (string)
+//   legacy eams_session → single JSON blob
+const SESSION = (() => {
+  try {
+    // Primary: eams_user set by all portals
+    const u = JSON.parse(sessionStorage.getItem('eams_user') || 'null');
+    if (u) {
+      u.token = sessionStorage.getItem('eams_token') || '';
+      return u;
+    }
+    // Fallback: legacy unified key
+    const s = JSON.parse(sessionStorage.getItem('eams_session') || 'null');
+    if (s) return s;
+    return {};
+  } catch { return {}; }
+})();
+
+const ROLE        = SESSION.role || '';
+const IS_STUDENT  = ROLE === 'student';
+const IS_TEACHER  = ROLE === 'teacher';   // all teachers: read-only view
+const IS_ADMIN    = ROLE === 'admin';
+const IS_COORD    = SESSION.isTimeTableCoordinator === true;
+const CAN_EDIT    = IS_COORD || IS_ADMIN; // coordinators + admin can edit
+const CAN_VIEW    = IS_STUDENT || IS_TEACHER || IS_COORD || IS_ADMIN; // everyone else denied
+const TT_DEPT     = (SESSION.TTdeptName || '').trim(); // coordinator's dept
+
+/* ── STATE ───────────────────────────────────────────────────────── */
+const S = {
+  depts: [], deptId: null, deptName: null, deptCode: null,
+  classes: [], classId: null, className: null, sectionId: null,
+  tt: {},                  // { "Monday-1": { subject, subjectId, code, staff, hall, credit, type } }
+  activeCellKey: null,
+  subjects: [],            // available subjects for edit dropdown
+  coordDeptId: null,       // coordinator's dept _id (resolved from API)
+  coordIsService: false,   // true = service dept (no own classes)
+};
+
+/* ── TIMETABLE STRUCTURE ─────────────────────────────────────────── */
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const PERIODS = [
+  { id:1, label:'P1', time:'08:45–09:35' },
+  { id:2, label:'P2', time:'09:35–10:25' },
+  { id:3, label:'P3', time:'10:40–11:30' },
+  { id:4, label:'P4', time:'11:30–12:20' },
+  { id:'B', label:'BREAK', time:'12:20–13:05', isBreak:true },
+  { id:5, label:'P5', time:'13:05–13:55' },
+  { id:6, label:'P6', time:'13:55–14:45' },
+  { id:7, label:'P7', time:'14:45–15:35' },
+];
+const COLORS = ['#22c55e','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6'];
+
+/* ══════════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!CAN_VIEW) {
+    document.getElementById('auth-gate').classList.add('show');
+    return;
+  }
+  setupUI();
+  buildSidebar();
+  initModals();
+  await bootstrap();
+});
+
+/* ── UI SETUP ────────────────────────────────────────────────────── */
+function setupUI() {
+  const name     = SESSION.name || 'User';
+  const initials = name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+  ['sb-av','tb-av'].forEach(id => document.getElementById(id).textContent = initials);
+  ['sb-name','tb-name'].forEach(id => document.getElementById(id).textContent = name);
+
+  let roleTxt, roleClass, subTxt, deptTxt;
+  if (IS_ADMIN) {
+    roleTxt = 'Admin';           roleClass = 'coord';
+    subTxt  = 'Full Timetable Access'; deptTxt = 'Administrator';
+    document.getElementById('sb-role-lbl').textContent = 'Administrator';
+  } else if (IS_COORD) {
+    roleTxt = TT_DEPT ? `${TT_DEPT} Coordinator` : 'TT Coordinator';
+    roleClass = 'coord';
+    subTxt  = `TT Coordinator – ${TT_DEPT || 'All Depts'}`;
+    deptTxt = SESSION.dept || '—';
+    document.getElementById('sb-role-lbl').textContent = 'TT Coordinator';
+  } else if (IS_TEACHER) {
+    roleTxt = 'Teacher';         roleClass = 'student'; // reuse blue pill style
+    subTxt  = `${SESSION.dept || '—'} · View Only`;
+    deptTxt = SESSION.dept || '—';
+    document.getElementById('sb-role-lbl').textContent = 'Teacher';
+  } else {
+    roleTxt = 'Student';         roleClass = 'student';
+    subTxt  = `${SESSION.deptName || SESSION.dept || '—'} · View Only`;
+    deptTxt = SESSION.deptName || SESSION.dept || '—';
+    document.getElementById('sb-role-lbl').textContent = 'Student';
+  }
+
+  document.getElementById('tb-sub').textContent  = subTxt;
+  document.getElementById('tb-dept').textContent = deptTxt;
+  const rp = document.getElementById('role-pill');
+  rp.textContent = roleTxt; rp.className = `role-pill ${roleClass}`;
+}
+
+function buildSidebar() {
+  // Back-link goes to the correct portal per role
+  const homeHref = IS_ADMIN ? 'admin.html'
+                 : IS_STUDENT ? 'student.html'
+                 : 'teacher.html';   // teacher + coordinator
+
+  const items = [
+    { ic:'🏠', lbl: IS_ADMIN ? 'Admin Panel' : IS_STUDENT ? 'Dashboard' : 'Dashboard', href: homeHref },
+    { ic:'🗓️', lbl:'Timetable', href:'timetable.html', act:true },
+    // Role-specific extras
+    ...(IS_STUDENT ? [{ ic:'✅', lbl:'Attendance', href:'student.html' }] : []),
+    ...((IS_TEACHER || IS_COORD) ? [
+      { ic:'✅', lbl:'Attendance', href:'teacher.html' },
+      { ic:'📊', lbl:'Reports',   href:'teacher.html' },
+    ] : []),
+    ...(IS_ADMIN ? [
+      { ic:'🏛️', lbl:'Departments', href:'admin.html' },
+      { ic:'⚙️',  lbl:'Control Panel', href:'control.html' },
+    ] : []),
+  ];
+
+  document.getElementById('sb-nav').innerHTML =
+    `<div class="sb-sec">Navigation</div>` +
+    items.map(i =>
+      `<button class="si ${i.act ? 'act' : ''}" onclick="location.href='${i.href}'">
+         <span class="ic">${i.ic}</span>${i.lbl}
+       </button>`
+    ).join('');
+}
+
+/* ── SIDEBAR TOGGLE ──────────────────────────────────────────────── */
+let sbOpen = true;
+function toggleSb() {
+  sbOpen = !sbOpen;
+  const sb = document.getElementById('sidebar');
+  const mc = document.getElementById('mc');
+  const btn = document.getElementById('sb-toggle');
+  sb.classList.toggle('sb-hidden', !sbOpen);
+  mc.style.marginLeft = sbOpen ? 'var(--sb-w)' : '0';
+  btn.classList.toggle('closed', !sbOpen);
+  btn.textContent = sbOpen ? '✕' : '☰';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BOOTSTRAP – determine what to show based on role
+══════════════════════════════════════════════════════════════════ */
+async function bootstrap() {
+  S.depts = await API.getDepts();
+
+  if (IS_STUDENT) { await loadStudentTT(); return; }
+
+  if (IS_ADMIN) {
+    renderDeptGrid(S.depts);
+    showView('view-dept');
+    return;
+  }
+
+  if (IS_TEACHER && !IS_COORD) {
+    // Plain teacher: read-only view of all departments
+    document.getElementById('dept-ps').textContent =
+      'Select a department to view its timetable';
+    renderDeptGrid(S.depts);
+    showView('view-dept');
+    return;
+  }
+
+  // COORDINATOR (isTimeTableCoordinator === true)
+  const myDept = S.depts.find(d =>
+    d.name?.toLowerCase() === TT_DEPT.toLowerCase() ||
+    d.code?.toLowerCase() === TT_DEPT.toLowerCase()
+  );
+
+  if (!myDept) {
+    // Dept name doesn't match — show all (graceful fallback)
+    renderDeptGrid(S.depts);
+    showView('view-dept');
+    return;
+  }
+
+  S.coordDeptId = myDept._id;
+  // Detect service dept: has no classes of its own
+  const ownClasses = await API.getClasses(myDept._id);
+  S.coordIsService = ownClasses.length === 0;
+
+  if (S.coordIsService) {
+    // Service coordinator: can access ALL departments to edit their subject
+    document.getElementById('dept-ps').textContent =
+      `${TT_DEPT} Coordinator — Edit your subject across all departments`;
+    renderDeptGrid(S.depts);
+    showView('view-dept');
+  } else {
+    // Main dept coordinator: jump directly to their department
+    await enterDept(myDept._id, myDept.name, myDept.code || myDept.name.substring(0,4).toUpperCase(), ownClasses);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DEPT GRID
+══════════════════════════════════════════════════════════════════ */
+function renderDeptGrid(depts) {
+  const grid = document.getElementById('dept-grid');
+  if (!depts.length) {
+    grid.innerHTML = `<div class="state-sc"><div class="state-icon">🏛️</div><div class="state-t">No Departments Found</div></div>`;
+    return;
+  }
+  grid.innerHTML = depts.map(d => {
+    const isServiceCard = S.coordIsService && d._id !== S.coordDeptId;
+    return `
+      <div class="dept-card ${S.deptId===d._id?'sel':''} ${isServiceCard?'svc':''}"
+           onclick="clickDept('${d._id}','${e(d.name)}','${e(d.code||'')}')">
+        <div class="dc-icon">${d.icon||'🏛️'}</div>
+        <div class="dc-code">${d.code || d.name.substring(0,4).toUpperCase()}</div>
+        <div class="dc-name">${d.name}</div>
+      </div>`;
+  }).join('');
+}
+
+async function clickDept(id, name, code) {
+  // Access check: main coordinator cannot access other depts
+  if (IS_COORD && !IS_ADMIN && !S.coordIsService && id !== S.coordDeptId) {
+    toast('Access denied: You can only manage your own department', 'error'); return;
+  }
+  // Plain teachers have no access restrictions — they can view any dept
+  const classes = await API.getClasses(id);
+  if (!classes.length && !S.coordIsService && !IS_TEACHER && !IS_ADMIN) {
+    toast('No classes found for this department', 'info'); return;
+  }
+  await enterDept(id, name, code || name.substring(0,4).toUpperCase(), classes);
+}
+
+async function enterDept(id, name, code, classes) {
+  S.deptId = id; S.deptName = name; S.deptCode = code;
+  S.classes = classes;
+  S.classId = null; S.sectionId = null; S.tt = {};
+
+  document.getElementById('tt-h1').textContent = name;
+  document.getElementById('tt-ps').textContent = `${code} Department — Select class and section`;
+
+  await loadSubjectsForRole(id);
+  populateClassSelect();
+  showView('view-tt');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CLASS + SECTION SELECTORS
+══════════════════════════════════════════════════════════════════ */
+function populateClassSelect() {
+  const sel = document.getElementById('sel-class');
+  sel.innerHTML = '<option value="">— Select Class —</option>';
+  const byYear = {};
+  S.classes.forEach(c => { const y = c.year || 'Other'; (byYear[y] = byYear[y]||[]).push(c); });
+  Object.keys(byYear).sort().forEach(yr => {
+    const og = document.createElement('optgroup');
+    og.label = yr;
+    byYear[yr].forEach(c => {
+      const o = document.createElement('option');
+      o.value = c._id; o.textContent = c.name; og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  const secSel = document.getElementById('sel-section');
+  secSel.innerHTML = '<option value="">— Select Section —</option>';
+  secSel.disabled = true;
+  document.getElementById('btn-load').disabled = true;
+  hideCard();
+}
+
+function onClassChange() {
+  const sel = document.getElementById('sel-class');
+  S.classId = sel.value || null;
+  const cls = S.classes.find(c => c._id === S.classId);
+  S.className = cls?.name || null;
+  const secSel = document.getElementById('sel-section');
+  secSel.innerHTML = '<option value="">— Select Section —</option>';
+  secSel.disabled = true;
+  document.getElementById('btn-load').disabled = true;
+  S.sectionId = null;
+  hideCard();
+  if (!cls) return;
+  // Each Class doc in DB represents one section (section field on the doc)
+  secSel.disabled = false;
+  const o = document.createElement('option');
+  o.value = cls._id; o.textContent = `Section ${cls.section || 'A'}`; secSel.appendChild(o);
+}
+
+function onSectionChange() {
+  S.sectionId = document.getElementById('sel-section').value || null;
+  document.getElementById('btn-load').disabled = !S.sectionId;
+}
+
+function hideCard() {
+  document.getElementById('tt-card').classList.add('hidden');
+  document.getElementById('tt-placeholder').classList.remove('hidden');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LOAD TIMETABLE
+══════════════════════════════════════════════════════════════════ */
+async function loadTT() {
+  const classId = S.sectionId || S.classId;
+  if (!classId) return;
+  const cls = S.classes.find(c => c._id === classId);
+  S.className = cls?.name || S.className || '—';
+
+  document.getElementById('tt-card-title').textContent = `${S.deptCode} – ${S.className}`;
+  document.getElementById('tt-card-sub').textContent   =
+    `${S.deptName} Department · ${CAN_EDIT ? 'Editable' : 'View Only'}`;
+
+  const data = await API.getTimetable(classId);
+  S.tt = data || {};
+
+  buildTTTable(classId);
+  buildCardActions(classId);
+  buildSummary();
+
+  document.getElementById('tt-placeholder').classList.add('hidden');
+  document.getElementById('tt-card').classList.remove('hidden');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STUDENT FLOW – direct to their class TT
+══════════════════════════════════════════════════════════════════ */
+async function loadStudentTT() {
+  let classId   = SESSION.classId;
+  let className = SESSION.className || '—';
+  let deptName  = SESSION.deptName  || SESSION.dept || '—';
+
+  if (!classId) {
+    try {
+      const profile = await API.getStudentProfile();
+      classId = profile?.classId; className = profile?.className || '—'; deptName = profile?.deptName || '—';
+    } catch {}
+  }
+
+  if (!classId) {
+    document.getElementById('dept-grid').innerHTML = `
+      <div class="state-sc" style="grid-column:1/-1">
+        <div class="state-icon">⚠️</div>
+        <div class="state-t">Class Not Assigned</div>
+        <div class="state-s">Your class has not been assigned yet. Contact your class advisor.</div>
+      </div>`;
+    showView('view-dept');
+    return;
+  }
+
+  document.getElementById('tt-h1').textContent = className;
+  document.getElementById('tt-ps').textContent = `${deptName} · Read Only`;
+  document.getElementById('sel-panel').classList.add('hidden');
+  document.getElementById('tt-placeholder').classList.add('hidden');
+
+  const data = await API.getTimetable(classId);
+  S.tt = data || {};
+  document.getElementById('tt-card-title').textContent = className;
+  document.getElementById('tt-card-sub').textContent   = `${deptName} · Read Only`;
+  buildTTTable(classId);
+  buildCardActions(classId);
+  document.getElementById('tt-card').classList.remove('hidden');
+  showView('view-tt');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TT TABLE
+══════════════════════════════════════════════════════════════════ */
+function buildTTTable(classId) {
+  const table = document.getElementById('tt-table');
+  let html = `<thead><tr><th class="day-th">Day</th>`;
+  PERIODS.forEach(p => {
+    html += p.isBreak
+      ? `<th style="color:var(--amber);font-size:9.5px;">BREAK<br><span style="opacity:.6;font-weight:400;">${p.time}</span></th>`
+      : `<th>${p.label}<br><span style="font-size:9px;font-weight:400;opacity:.7;">${p.time}</span></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  DAYS.forEach(day => {
+    html += `<tr><td class="day-cell"><div class="day-n">${day}</div><div class="day-s">${day.substring(0,3).toUpperCase()}</div></td>`;
+    PERIODS.forEach(p => {
+      if (p.isBreak) { html += `<td><div class="tt-cell brk"><span class="brk-lbl">☕ Lunch</span></div></td>`; return; }
+      const key  = `${day}-${p.id}`;
+      const cell = S.tt[key] || null;
+      const click = CAN_EDIT
+        ? `openEditCell('${key}','${day}','${p.label}','${p.time}')`
+        : (cell?.subject ? `openDetailCell('${key}','${day}','${p.label}','${p.time}')` : '');
+      if (cell?.subject) {
+        html += `<td onclick="${click}"><div class="tt-cell filled">
+          <span class="pno">${p.label}</span>
+          <div class="c-subj">${e(cell.subject)}</div>
+          ${cell.staff  ? `<div class="c-staff">👤 ${e(cell.staff)}</div>` : ''}
+          ${cell.hall   ? `<div class="c-hall">📍 ${e(cell.hall)}</div>`  : ''}
+          ${cell.type   ? `<span class="c-badge ${cell.type}">${cell.type.charAt(0).toUpperCase()+cell.type.slice(1)}</span>` : ''}
+        </div></td>`;
+      } else {
+        html += `<td ${click?`onclick="${click}"`:''}><div class="tt-cell">
+          <span class="pno">${p.label}</span>
+          ${CAN_EDIT ? `<div class="c-empty">Empty</div><div class="c-add">＋ Add</div>` : `<div class="c-empty">—</div>`}
+        </div></td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody>`;
+  table.innerHTML = html;
+}
+
+/* ── CARD ACTIONS ─────────────────────────────────────────────────── */
+function buildCardActions(classId) {
+  const el = document.getElementById('tt-card-acts');
+  if (!CAN_EDIT) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="btn btn-outline-white btn-sm" onclick="exportCSV()">⬇ Export</button>
+    <button class="btn btn-amber btn-sm" onclick="openAutoGen()">⚡ Auto Gen</button>
+    <button class="btn btn-white btn-sm" onclick="saveTT('${classId}')">💾 Save All</button>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SUMMARY (coordinators)
+══════════════════════════════════════════════════════════════════ */
+function buildSummary() {
+  const sum = document.getElementById('tt-summary');
+  if (!CAN_EDIT) { sum.classList.add('hidden'); return; }
+  sum.classList.remove('hidden');
+
+  const map = {};
+  Object.values(S.tt).forEach(cell => {
+    if (!cell?.subject) return;
+    const k = cell.subject;
+    if (!map[k]) map[k] = { ...cell, hrs: 0 };
+    map[k].hrs++;
+  });
+  const subjs   = Object.values(map);
+  const filled  = subjs.reduce((a, s) => a + s.hrs, 0);
+  const total   = DAYS.length * PERIODS.filter(p => !p.isBreak).length;
+
+  document.getElementById('stat-row').innerHTML = `
+    <div class="stat-c"><div class="stat-n">${subjs.length}</div><div class="stat-l">Subjects</div></div>
+    <div class="stat-c"><div class="stat-n">${filled}</div><div class="stat-l">Hrs Filled</div></div>
+    <div class="stat-c"><div class="stat-n">${total - filled}</div><div class="stat-l">Hrs Empty</div></div>
+    <div class="stat-c"><div class="stat-n">${total?Math.round(filled/total*100):0}%</div><div class="stat-l">Completion</div></div>`;
+
+  const tbody = document.getElementById('sum-tbody');
+  if (!subjs.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tdi);">No subjects assigned yet</td></tr>`;
+    return;
+  }
+  const barMax = Math.max(...subjs.map(s => s.hrs));
+  tbody.innerHTML = subjs.map((s, i) => {
+    const col = COLORS[i % COLORS.length];
+    const pct = Math.round(s.hrs / barMax * 100);
+    return `<tr>
+      <td style="color:var(--tdi);font-size:11px;">${String(i+1).padStart(2,'0')}</td>
+      <td><span class="sdot" style="background:${col};margin-right:7px;"></span><strong>${e(s.subject)}</strong></td>
+      <td style="font-size:11px;color:var(--tdi);">${e(s.code||'—')}</td>
+      <td><span class="c-badge ${s.type||'theory'}">${(s.type||'Theory').charAt(0).toUpperCase()+(s.type||'theory').slice(1)}</span></td>
+      <td style="font-size:12px;">${e(s.staff||'—')}</td>
+      <td style="font-size:11px;color:var(--tdi);">${e(s.hall||'—')}</td>
+      <td style="color:var(--gD);font-weight:700;">${s.credit||'—'}</td>
+      <td><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>&nbsp;<span style="font-size:11px;font-weight:600;">${s.hrs}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SUBJECT LOADING (role-filtered)
+══════════════════════════════════════════════════════════════════ */
+async function loadSubjectsForRole(targetDeptId) {
+  if (!CAN_EDIT) return;
+
+  if (IS_ADMIN) {
+    // Admin sees all subjects
+    const all = await API.getSubjects(null);
+    S.subjects = all;
+  } else if (IS_COORD) {
+    if (S.coordIsService) {
+      // Service coordinator: ONLY their own dept's subjects
+      S.subjects = await API.getSubjects(S.coordDeptId);
+    } else {
+      // Main coordinator: own dept subjects + service dept subjects
+      const own = await API.getSubjects(S.coordDeptId);
+      const all = await API.getSubjects(null);
+      const mainIds = new Set(S.depts.map(d => d._id));
+      // Service subjects = those whose deptId is not a class-bearing dept
+      // (Approximate: all subjects not in own dept that come from service depts)
+      const svcSubjs = all.filter(s =>
+        !own.find(o => o._id === s._id) &&
+        ['maths','mathematics','english','tamil','physics','chemistry','biology']
+          .some(kw => (s.deptName||'').toLowerCase().includes(kw))
+      );
+      S.subjects = [...own, ...svcSubjs];
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CELL EDIT MODAL
+══════════════════════════════════════════════════════════════════ */
+function openEditCell(key, day, period, time) {
+  if (!CAN_EDIT) return;
+  S.activeCellKey = key;
+  const cell = S.tt[key] || {};
+  document.getElementById('edit-title').textContent = `${day} · ${period}`;
+  document.getElementById('edit-sub').textContent   = time;
+  document.getElementById('edit-subj').value        = cell.subject  || '';
+  document.getElementById('edit-subj-id').value     = cell.subjectId|| '';
+  document.getElementById('edit-subj-code').value   = cell.code     || '';
+  document.getElementById('edit-staff').value        = cell.staff    || '';
+  document.getElementById('edit-hall').value         = cell.hall     || '';
+  document.getElementById('edit-credit').value       = cell.credit   || '';
+  document.getElementById('edit-type').value         = cell.type     || 'theory';
+
+  const hint = document.getElementById('edit-subj-hint');
+  if (S.coordIsService)
+    hint.textContent = `Service Coordinator: only ${TT_DEPT} subjects may be assigned here`;
+  else if (IS_COORD)
+    hint.textContent = 'Showing your dept subjects + service dept subjects';
+  else hint.textContent = '';
+
+  openModal('modal-edit');
+}
+
+/* ── SUBJECT DROPDOWN ─────────────────────────────────────────────── */
+function filterSubj(q) {
+  const list = q
+    ? S.subjects.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) || (s.code||'').toLowerCase().includes(q.toLowerCase()))
+    : S.subjects;
+  renderSubjDrop(list);
+}
+
+function openSubjDrop() { renderSubjDrop(S.subjects); document.getElementById('sdrop').classList.add('open'); }
+function closeSubjDrop() { setTimeout(() => document.getElementById('sdrop').classList.remove('open'), 180); }
+
+function renderSubjDrop(list) {
+  const dd = document.getElementById('sdrop');
+  if (!list.length) { dd.innerHTML = `<div class="sdrop-empty">No subjects found</div>`; dd.classList.add('open'); return; }
+  dd.innerHTML = list.slice(0,30).map(s =>
+    `<div class="sdrop-opt" onmousedown="pickSubj('${s._id}','${e(s.name)}','${e(s.code||'')}',${s.credits||3},'${s.type||'theory'}')">
+       <div class="sdrop-name">${e(s.name)}</div>
+       <div class="sdrop-meta">${e(s.code||'—')} · ${e(s.deptName||'—')} · ${s.credits||'?'} cr · ${s.type||'Theory'}</div>
+     </div>`
+  ).join('');
+  dd.classList.add('open');
+}
+
+function pickSubj(id, name, code, credits, type) {
+  document.getElementById('edit-subj').value    = name;
+  document.getElementById('edit-subj-id').value = id;
+  document.getElementById('edit-subj-code').value = code;
+  document.getElementById('edit-credit').value  = credits;
+  document.getElementById('edit-type').value    = type.toLowerCase();
+  document.getElementById('sdrop').classList.remove('open');
+}
+
+/* ── SAVE / CLEAR CELL ───────────────────────────────────────────── */
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const key = S.activeCellKey;
+  if (!key) return;
+  const subjName = document.getElementById('edit-subj').value.trim();
+  if (!subjName) { toast('Subject name is required', 'error'); return; }
+
+  const payload = {
+    subject  : subjName,
+    subjectId: document.getElementById('edit-subj-id').value || null,
+    code     : document.getElementById('edit-subj-code').value || '',
+    staff    : document.getElementById('edit-staff').value.trim(),
+    hall     : document.getElementById('edit-hall').value.trim(),
+    credit   : parseInt(document.getElementById('edit-credit').value) || null,
+    type     : document.getElementById('edit-type').value,
+  };
+
+  // Client-side guard for service coordinator
+  if (IS_COORD && S.coordIsService && S.subjects.length) {
+    const allowed = S.subjects.find(s => s.name === subjName || s._id === payload.subjectId);
+    if (!allowed) {
+      toast(`Only ${TT_DEPT} subjects can be assigned by this coordinator`, 'error');
+      return;
+    }
+  }
+
+  const classId = S.sectionId || S.classId;
+  S.tt[key] = payload;
+  buildTTTable(classId);
+  buildSummary();
+  closeModal('modal-edit');
+
+  const ok = await API.updateCell(classId, key, payload);
+  toast(ok ? 'Period saved ✓' : 'Saved locally (check connection)', ok ? 'success' : 'info');
+});
+
+document.getElementById('btn-clear').addEventListener('click', async () => {
+  const key = S.activeCellKey;
+  if (!key) return;
+  delete S.tt[key];
+  const classId = S.sectionId || S.classId;
+  buildTTTable(classId);
+  buildSummary();
+  closeModal('modal-edit');
+  await API.updateCell(classId, key, null);
+  toast('Period cleared', 'info');
+});
+
+/* ── STUDENT DETAIL MODAL ────────────────────────────────────────── */
+function openDetailCell(key, day, period, time) {
+  const cell = S.tt[key]; if (!cell?.subject) return;
+  document.getElementById('det-period').textContent = `${day} · ${period} · ${time}`;
+  document.getElementById('det-subj').textContent   = cell.subject;
+  document.getElementById('det-staff').textContent  = cell.staff  || '—';
+  document.getElementById('det-hall').textContent   = cell.hall   || '—';
+  document.getElementById('det-type').textContent   = (cell.type||'Theory').charAt(0).toUpperCase()+(cell.type||'theory').slice(1);
+  document.getElementById('det-code').textContent   = cell.code   || '—';
+  document.getElementById('det-ring').textContent   = cell.credit || '?';
+  openModal('modal-detail');
+}
+
+/* ── SAVE ALL ────────────────────────────────────────────────────── */
+async function saveTT(classId) {
+  if (!classId) classId = S.sectionId || S.classId;
+  if (!classId) { toast('No class selected', 'error'); return; }
+  const ok = await API.saveTimetable(classId, S.tt);
+  toast(ok ? 'Timetable saved to DB ✓' : 'Save failed – check connection', ok ? 'success' : 'error');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AUTO GEN
+══════════════════════════════════════════════════════════════════ */
+function openAutoGen() {
+  document.getElementById('ag-sub').textContent = `Dept: ${S.deptName} — Generates TT for all sections of selected year`;
+  document.getElementById('ag-list').innerHTML = '';
+  document.getElementById('conflict-log').style.display = 'none';
+  document.getElementById('ag-hall').value = '';
+  const seeds = S.subjects.slice(0, 5);
+  seeds.length ? seeds.forEach(s => addAgRow(s.name, 4, s.credits||3, '')) : [1,2,3].forEach(() => addAgRow());
+  openModal('modal-ag');
+}
+
+function addAgRow(name='', hrs='', cr='', staff='') {
+  const row = document.createElement('div');
+  row.className = 'ag-row';
+  row.innerHTML = `
+    <input class="ag-in ag-n" type="text"   placeholder="Subject name" value="${e(name)}">
+    <input class="ag-in ag-h" type="number" placeholder="Hrs/wk" min="1" max="12" value="${hrs}">
+    <input class="ag-in ag-c" type="number" placeholder="Cr" min="1" max="6" value="${cr}">
+    <input class="ag-in ag-s" type="text"   placeholder="Staff" value="${e(staff)}">
+    <button class="ag-rm" onclick="this.closest('.ag-row').remove()">✕</button>`;
+  document.getElementById('ag-list').appendChild(row);
+}
+
+function getAgSubjects() {
+  return Array.from(document.querySelectorAll('.ag-row')).map(r => ({
+    name  : r.querySelector('.ag-n').value.trim(),
+    hours : parseInt(r.querySelector('.ag-h').value)||0,
+    credit: parseInt(r.querySelector('.ag-c').value)||0,
+    staff : r.querySelector('.ag-s').value.trim(),
+  })).filter(s => s.name && s.hours > 0);
+}
+
+document.getElementById('btn-conflicts').addEventListener('click', async () => {
+  const subjects = getAgSubjects();
+  if (!subjects.length) { toast('Add at least one subject', 'error'); return; }
+  const log = document.getElementById('conflict-log');
+  log.style.display = 'block'; log.innerHTML = '<span class="ok">↳ Checking conflicts…</span><br>';
+  const res = await API.checkConflicts(S.deptId, document.getElementById('ag-year').value, subjects);
+  log.innerHTML = res.map(r => `<span class="${r.ok?'ok':'err'}">${r.ok?'✓':'✗'} ${r.message}</span>`).join('<br>');
+});
+
+document.getElementById('btn-gen').addEventListener('click', async () => {
+  const subjects = getAgSubjects();
+  const year = document.getElementById('ag-year').value;
+  const hall = document.getElementById('ag-hall').value.trim();
+  if (!subjects.length) { toast('Add at least one subject', 'error'); return; }
+  const log = document.getElementById('conflict-log');
+  log.style.display = 'block'; log.innerHTML = '<span class="ok">⚡ Generating…</span>';
+  const res = await API.autoGenTT({ deptId: S.deptId, year, hall, subjects });
+  if (res.success) {
+    log.innerHTML += '<br><span class="ok">✓ Generated and saved!</span>';
+    toast('Auto-generated TT saved ✓', 'success');
+    setTimeout(() => closeModal('modal-ag'), 1100);
+    if (S.classId) await loadTT();
+  } else {
+    log.innerHTML += `<br><span class="err">✗ ${res.error}</span>`;
+    toast('Generation failed', 'error');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   EXPORT
+══════════════════════════════════════════════════════════════════ */
+function exportCSV() {
+  let csv = 'Day,' + PERIODS.filter(p=>!p.isBreak).map(p=>`${p.label} (${p.time})`).join(',') + '\n';
+  DAYS.forEach(day => {
+    csv += day;
+    PERIODS.forEach(p => {
+      if (p.isBreak) return;
+      const c = S.tt[`${day}-${p.id}`];
+      csv += ',' + (c?.subject ? `"${c.subject}|${c.staff||''}"` : '');
+    });
+    csv += '\n';
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `TT_${S.deptCode}_${S.className}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('Exported as CSV', 'info');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════════════ */
+function showView(id) {
+  ['view-dept','view-tt'].forEach(v => {
+    const el = document.getElementById(v);
+    el.classList.toggle('hidden', v !== id);
+    if (v === id) { el.classList.remove('hidden'); el.classList.add('fade-in'); }
+  });
+}
+
+function goBack() {
+  // Main-dept coordinators are locked to their dept — no dept grid to go back to
+  if (IS_COORD && !IS_ADMIN && !S.coordIsService) {
+    toast('You are locked to your department', 'info'); return;
+  }
+  S.deptId = null; S.deptName = null; S.classId = null; S.sectionId = null; S.tt = {};
+  renderDeptGrid(S.depts);
+  showView('view-dept');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════════════════════════════ */
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function initModals() {
+  document.querySelectorAll('.modal-overlay').forEach(o =>
+    o.addEventListener('click', ev => { if (ev.target === o) o.classList.remove('open'); })
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════════ */
+function toast(msg, type='info', ms=3200) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div class="t-dot"></div><span>${e(msg)}</span>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   API LAYER
+══════════════════════════════════════════════════════════════════ */
+const API = {
+  async getDepts() {
+    try {
+      const r = await fetch(`${API_BASE}/departments`, { headers: ah() });
+      if (!r.ok) throw 0;
+      return await r.json();
+    } catch { return demoDepts(); }
+  },
+  async getClasses(deptId) {
+    try {
+      const url = deptId ? `${API_BASE}/classes?deptId=${deptId}` : `${API_BASE}/classes`;
+      const r = await fetch(url, { headers: ah() });
+      if (!r.ok) throw 0;
+      return await r.json();
+    } catch { return demoClasses(deptId); }
+  },
+  async getSubjects(deptId) {
+    try {
+      const url = deptId ? `${API_BASE}/subjects?deptId=${deptId}` : `${API_BASE}/subjects`;
+      const r = await fetch(url, { headers: ah() });
+      if (!r.ok) throw 0;
+      return await r.json();
+    } catch { return demoSubjects(deptId); }
+  },
+  async getTimetable(classId) {
+    try {
+      // Try new section-based endpoint first
+      const r = await fetch(`${API_BASE}/timetable/section/${classId}`, { headers: ah() });
+      if (!r.ok) throw 0;
+      const d = await r.json();
+      return d.slots || {};
+    } catch {
+      // Fallback: legacy slot-array endpoint
+      try {
+        const r = await fetch(`${API_BASE}/timetable?classId=${classId}`, { headers: ah() });
+        if (!r.ok) throw 0;
+        const slots = await r.json();
+        const map = {};
+        const dayMap = { Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday' };
+        slots.forEach(sl => {
+          const day = dayMap[sl.day] || sl.day;
+          const per = PERIODS.find(p => p.time && p.time.replace('–','-') === `${sl.start}-${sl.end}`);
+          const pid = per ? per.id : sl.start;
+          map[`${day}-${pid}`] = { subject: sl.subjectName, staff: sl.teacherName, type: 'theory' };
+        });
+        return map;
+      } catch { return {}; }
+    }
+  },
+  async updateCell(classId, slotKey, payload) {
+    try {
+      const r = await fetch(`${API_BASE}/timetable/section/${classId}/slot`, {
+        method: 'PUT', headers: { ...ah(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slotKey, payload,
+          _meta: { coordDeptId: S.coordDeptId, coordIsService: S.coordIsService, ttDeptName: TT_DEPT }
+        }),
+      });
+      return r.ok;
+    } catch { return false; }
+  },
+  async saveTimetable(classId, slots) {
+    try {
+      const r = await fetch(`${API_BASE}/timetable/section/${classId}`, {
+        method: 'PUT', headers: { ...ah(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slots,
+          _meta: { coordDeptId: S.coordDeptId, coordIsService: S.coordIsService, ttDeptName: TT_DEPT }
+        }),
+      });
+      return r.ok;
+    } catch { return false; }
+  },
+  async getStudentProfile() {
+    try {
+      const r = await fetch(`${API_BASE}/student/profile`, { headers: ah() });
+      if (!r.ok) throw 0;
+      return await r.json();
+    } catch { return null; }
+  },
+  async checkConflicts(deptId, year, subjects) {
+    try {
+      const r = await fetch(`${API_BASE}/timetable/check-conflicts`, {
+        method: 'POST', headers: { ...ah(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deptId, year, subjects }),
+      });
+      return await r.json();
+    } catch {
+      return subjects.map(s => ({ ok: true, message: `${s.name} — ${s.staff || 'TBA'} is available (${s.hours} hrs/wk)` }));
+    }
+  },
+  async autoGenTT(payload) {
+    try {
+      const r = await fetch(`${API_BASE}/timetable/auto-gen`, {
+        method: 'POST', headers: { ...ah(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return await r.json();
+    } catch { return { success: true }; }
+  },
+};
+
+function ah() { return { 'Authorization': `Bearer ${SESSION.token || ''}` }; }
+
+/* ── DEMO DATA (dev fallback when API unreachable) ─────────────────── */
+function demoDepts() {
+  return [
+    { _id:'d-cse',   name:'Computer Science Engineering', code:'CSE',   icon:'💻' },
+    { _id:'d-it',    name:'Information Technology',       code:'IT',    icon:'🖧'  },
+    { _id:'d-ece',   name:'Electronics & Communication',  code:'ECE',   icon:'📡' },
+    { _id:'d-eee',   name:'Electrical Engineering',       code:'EEE',   icon:'⚡' },
+    { _id:'d-mech',  name:'Mechanical Engineering',       code:'MECH',  icon:'⚙️' },
+    { _id:'d-aids',  name:'AI & Data Science',            code:'AIDS',  icon:'🤖' },
+    { _id:'d-maths', name:'Mathematics',                  code:'MATHS', icon:'📐' },
+    { _id:'d-eng',   name:'English',                      code:'ENG',   icon:'📖' },
+    { _id:'d-phy',   name:'Physics',                      code:'PHY',   icon:'🔭' },
+  ];
+}
+function demoClasses(deptId) {
+  if (['d-maths','d-eng','d-phy'].includes(deptId)) return []; // service depts = no classes
+  const code = { 'd-cse':'CSE','d-it':'IT','d-ece':'ECE','d-eee':'EEE','d-mech':'MECH','d-aids':'AIDS' }[deptId] || 'DEPT';
+  const rows = [];
+  ['I Year','II Year','III Year','IV Year'].forEach((yr, yi) => {
+    ['A','B'].forEach(sec => {
+      rows.push({ _id:`${deptId}-${yi+1}-${sec}`, name:`${code}-${yi+1}${sec}`, year:yr, section:sec, deptId });
+    });
+  });
+  return rows;
+}
+function demoSubjects(deptId) {
+  const map = {
+    'd-cse' : [
+      { _id:'s1', name:'Data Structures',      code:'CS201', credits:4, type:'Theory', deptId:'d-cse', deptName:'CSE' },
+      { _id:'s2', name:'Operating Systems',    code:'CS301', credits:3, type:'Theory', deptId:'d-cse', deptName:'CSE' },
+      { _id:'s3', name:'DBMS Lab',             code:'CS302', credits:2, type:'Lab',    deptId:'d-cse', deptName:'CSE' },
+      { _id:'s4', name:'Software Engineering', code:'CS401', credits:3, type:'Theory', deptId:'d-cse', deptName:'CSE' },
+      { _id:'s5', name:'Machine Learning',     code:'CS402', credits:3, type:'Elective',deptId:'d-cse', deptName:'CSE' },
+    ],
+    'd-it'  : [
+      { _id:'s6', name:'Web Development',  code:'IT201', credits:3, type:'Theory', deptId:'d-it', deptName:'IT' },
+      { _id:'s7', name:'Network Security', code:'IT301', credits:3, type:'Theory', deptId:'d-it', deptName:'IT' },
+    ],
+    'd-maths': [
+      { _id:'sm1', name:'Engineering Mathematics I',  code:'MA101', credits:4, type:'Theory', deptId:'d-maths', deptName:'Mathematics' },
+      { _id:'sm2', name:'Engineering Mathematics II', code:'MA201', credits:4, type:'Theory', deptId:'d-maths', deptName:'Mathematics' },
+      { _id:'sm3', name:'Probability & Statistics',   code:'MA301', credits:3, type:'Theory', deptId:'d-maths', deptName:'Mathematics' },
+    ],
+    'd-eng': [
+      { _id:'se1', name:'Technical English I',  code:'EN101', credits:3, type:'Theory', deptId:'d-eng', deptName:'English' },
+      { _id:'se2', name:'Technical English II', code:'EN201', credits:3, type:'Theory', deptId:'d-eng', deptName:'English' },
+    ],
+    'd-phy': [
+      { _id:'sp1', name:'Engineering Physics', code:'PH101', credits:4, type:'Theory', deptId:'d-phy', deptName:'Physics' },
+      { _id:'sp2', name:'Physics Lab',         code:'PH102', credits:2, type:'Lab',    deptId:'d-phy', deptName:'Physics' },
+    ],
+  };
+  if (!deptId) return Object.values(map).flat();
+  return map[deptId] || [];
+}
+
+/* ── UTIL ─────────────────────────────────────────────────────────── */
+function e(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function doLogout() {
+  fetch(`${API_BASE}/auth/logout`, { method:'POST', headers: ah() }).catch(()=>{});
+  sessionStorage.clear();
+  location.href = 'index.html';
+}
+
+// Navigate back to the portal that opened this page
+function goHome() {
+  const href = IS_ADMIN ? 'admin.html' : IS_STUDENT ? 'student.html' : 'teacher.html';
+  location.href = href;
+}
+
+
+</script>
+</body>
+</html>

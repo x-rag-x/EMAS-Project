@@ -365,6 +365,7 @@ body{-webkit-user-select:none;user-select:none;}
       <button class="ss" id="sn-ratt" onclick="nav('rep-att')">&#128203; Attendance Record</button>
       <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
     </div>
+    <button class="si" id="sn-tt" onclick="goToTimetable()"><span class="ic">&#128197;</span>Timetable<span id="sn-tt-badge" style="display:none;margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--gM);color:#fff;">COORD</span></button>
     <button class="si" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
     <button class="si" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
   </div>
@@ -833,6 +834,11 @@ body{-webkit-user-select:none;user-select:none;}
     }
   }
 
+  function goToTimetable() {
+    // eams_user + eams_token already in sessionStorage — timetable.html reads them
+    window.location.href = 'timetable.html';
+  }
+
   function bootApp() {
     document.getElementById('app').classList.add('vis');
     document.getElementById('tpav').textContent    = currentUser.name[0];
@@ -840,6 +846,11 @@ body{-webkit-user-select:none;user-select:none;}
     document.getElementById('tpdept').textContent  = currentUser.dept || 'Sri Shakthi';
     document.getElementById('datelbl').textContent =
       new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    // Show COORD badge on Timetable menu if teacher is a TT coordinator
+    if (currentUser.isTimeTableCoordinator) {
+      var badge = document.getElementById('sn-tt-badge');
+      if (badge) badge.style.display = 'inline-block';
+    }
     populateAllFilters();
     initCalendar();
     renderNotifications();

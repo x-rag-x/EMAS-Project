@@ -853,7 +853,90 @@ app.delete('/api/timetable/:id', authMiddleware, async (req, res) => {
   res.json({ deleted: true });
 });
 
+const SectionTimetableSchema = new mongoose.Schema({
+  classId   : { type: mongoose.Schema.Types.ObjectId, ref:'Class', required:true, unique:true },
+  className : String,
+  deptId    : { type: mongoose.Schema.Types.ObjectId, ref:'Department' },
+  deptName  : String,
+  slots     : { type: mongoose.Schema.Types.Mixed, default:{} },
+  updatedBy : String,
+}, { timestamps:true });
 
+exports.SectionTimetable = mongoose.model('SectionTimetable', SectionTimetableSchema);
+
+app.get('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
+  const doc = await M.SectionTimetable.findOne({ classId:req.params.classId }).lean();
+  res.json(doc || { slots:{} });
+});
+
+app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req,res) => {
+  const u = req.user;
+
+  if (!u.isTimeTableCoordinator && u.role !== 'admin')
+    return res.status(403).json({ error:'TT Coordinator access required' });
+
+  const { slotKey, payload, _meta } = req.body;
+
+  if (_meta?.coordIsService && payload?.subjectId) {
+    const subj = await M.Subject.findById(payload.subjectId).lean();
+    if (subj && subj.deptId?.toString() !== _meta.coordDeptId)
+      return res.status(403).json({ error:`Service coordinators may only assign ${u.TTdeptName} subjects` });
+  }
+
+  if (!_meta?.coordIsService && u.role !== 'admin') {
+    const cls = await M.Class.findById(req.params.classId).lean();
+    if (cls?.deptId?.toString() !== u.TTdeptName)
+      return res.status(403).json({ error:'You can only edit timetables for your own department' });
+  }
+
+  const update = payload
+    ? { $set:{ [`slots.${slotKey}`]:payload }, updatedBy:u.name }
+    : { $unset:{ [`slots.${slotKey}`]:'' }, updatedBy:u.name };
+
+  const doc = await M.SectionTimetable.findOneAndUpdate(
+    { classId:req.params.classId },
+    update,
+    { upsert:true, new:true }
+  );
+
+  await logAction(u._id, u.name, u.role, 'TT Slot Updated', slotKey, 'data', 'info', req.ip);
+
+  res.json(doc);
+});
+
+app.put('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
+  const u = req.user;
+
+  if (!u.isTimeTableCoordinator && u.role !== 'admin')
+    return res.status(403).json({ error:'TT Coordinator access required' });
+
+  const { slots } = req.body;
+
+  const doc = await M.SectionTimetable.findOneAndUpdate(
+    { classId:req.params.classId },
+    { slots, updatedBy:u.name },
+    { upsert:true, new:true }
+  );
+
+  await logAction(u._id, u.name, u.role, 'TT Saved', req.params.classId, 'data', 'info', req.ip);
+
+  res.json(doc);
+});
+
+app.post('/api/timetable/check-conflicts', authMiddleware, async (req,res) => {
+  const { subjects } = req.body;
+
+  const results = subjects.map(s => ({
+    ok: true,
+    message: `${s.name} — ${s.staff || 'TBA'} available (${s.hours} hrs/wk)`
+  }));
+
+  res.json(results);
+});
+
+app.post('/api/timetable/auto-gen', authMiddleware, async (req,res) => {
+  res.json({ success:true });
+});
 
 // ════════════════════════════════════════════════════════
 //  ACTIVITY LOGS

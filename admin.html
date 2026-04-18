@@ -2672,6 +2672,24 @@
         transform: rotate(360deg)
       }
     }
+
+    #db-toast-bar {
+      position: absolute;
+      top: 4px;
+        width: 95%;
+        left: 6px;
+        transform: translateX(-50%);
+
+        height: 3px;
+        border-radius: 6px;
+      background: white;
+
+      border-radius: 4px 4px 0 0;
+      transform-origin: left center;
+
+      /* optional polish */
+      box-shadow: 0 0 6px rgba(134, 239, 172, 0.5);
+    }
   </style>
 </head>
 
@@ -2702,6 +2720,9 @@
             class="sb-badge" id="sb-stu-badge">0</span></button>
         <button class="sb-item" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span
             class="sb-badge" id="sb-teach-badge">0</span></button>
+        <!-- Timetable – Management section -->
+        <button class="sb-item" onclick="window.location.href='timetable.html'">
+          <span class="sbi-ic">🗓️</span>Timetable</button>
 
         <div class="sb-section-label">Reports & Logs</div>
         <button class="sb-item" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
@@ -7242,7 +7263,7 @@
 
       // Progress bar — only rendered when there is a countdown
       var progressBar = state !== 'saving'
-        ? '<div id="db-toast-bar" style="position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.85);border-radius:4px 0 0 0;transform-origin:left center;"></div>'
+        ? '<div id="db-toast-bar"></div>'
         : '';
 
       el.innerHTML =
