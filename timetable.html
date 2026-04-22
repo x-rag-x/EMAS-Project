@@ -103,7 +103,10 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .tt-card-acts{display:flex;gap:8px;flex-wrap:wrap;}
 
 /* TT TABLE */
-.tt-wrap{overflow-x:auto;}
+.tt-wrap{overflow-x:scroll;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--gLr) rgba(0,0,0,.04);}
+.tt-wrap::-webkit-scrollbar{height:7px;}
+.tt-wrap::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:6px;}
+.tt-wrap::-webkit-scrollbar-track{background:rgba(0,0,0,.04);border-radius:6px;}
 .tt-table{width:100%;border-collapse:collapse;min-width:760px;}
 .tt-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 10px;text-align:center;border-bottom:1px solid var(--brl);color:var(--tmu);background:var(--gP);}
 .tt-table th.day-th{text-align:left;width:78px;color:var(--gD);font-size:10px;padding-left:14px;}
@@ -211,13 +214,18 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--brl);border-top-color:var(--gM);animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* TOAST */
-.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
-.toast{background:#fff;border:1px solid var(--br);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.12);animation:tIn .28s ease;max-width:300px;}
-.toast.success{border-left:3px solid #22c55e;}.toast.error{border-left:3px solid var(--red);}.toast.info{border-left:3px solid var(--blue);}
-.t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.toast.success .t-dot{background:#22c55e;}.toast.error .t-dot{background:var(--red);}.toast.info .t-dot{background:var(--blue);}
-@keyframes tIn{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
+/* DBTOAST (DB-synced notifications — matches admin.html style) */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+.dbtoast{background:#fff;border:1px solid var(--br);border-radius:14px;padding:13px 18px 13px 14px;display:flex;align-items:flex-start;gap:11px;font-size:13px;box-shadow:0 10px 36px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.07);animation:tIn .3s cubic-bezier(.34,1.56,.64,1);max-width:340px;pointer-events:all;border-left:4px solid var(--gM);}
+.dbtoast.success{border-left-color:#22c55e;background:#f0fdf4;}
+.dbtoast.error  {border-left-color:var(--red);background:#fff5f5;}
+.dbtoast.info   {border-left-color:var(--blue);background:#f0f7ff;}
+.dbtoast.warn   {border-left-color:var(--amber);background:#fffbeb;}
+.dbt-icon{font-size:17px;flex-shrink:0;margin-top:1px;line-height:1;}
+.dbt-body{flex:1;color:var(--td);line-height:1.5;}
+/* keep legacy class name for any external code */
+.toast{display:none;}
+@keyframes tIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
 
 .hidden{display:none!important;}
 .fade-in{animation:fi .28s ease;}
@@ -354,6 +362,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
             <div class="tt-card-acts" id="tt-card-acts"></div>
           </div>
           <div class="tt-wrap"><table class="tt-table" id="tt-table"></table></div>
+          
           <!-- Summary (coordinators only) -->
           <div class="sum-sect hidden" id="tt-summary">
             <div class="sum-title">Subject Summary</div>
@@ -384,7 +393,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div class="fg">
       <label class="fl">Subject</label>
       <div class="sdropwrap">
-        <input type="text" class="fi" id="edit-subj" placeholder="Search or type subject…"
+        <input type="text" class="fi" id="edit-subj" placeholder="Search subjects…"
                autocomplete="off" oninput="filterSubj(this.value)"
                onfocus="openSubjDrop()" onblur="closeSubjDrop()">
         <div class="sdrop" id="sdrop"></div>
@@ -516,17 +525,44 @@ const S = {
   coordIsService: false,   // true = service dept (no own classes)
 };
 
-/* ── TIMETABLE STRUCTURE ─────────────────────────────────────────── */
+/* ── SUBJECT CELL COLORS (light pastels – one consistent color per subject) ── */
+const SUBJ_CELL_COLORS = [
+  { bg:'#f0fdf4', border:'#4ade80', text:'#166534' },  // green
+  { bg:'#eff6ff', border:'#60a5fa', text:'#1e40af' },  // blue
+  { bg:'#fefce8', border:'#facc15', text:'#854d0e' },  // yellow
+  { bg:'#fdf4ff', border:'#d946ef', text:'#6b21a8' },  // purple
+  { bg:'#fff7ed', border:'#fb923c', text:'#9a3412' },  // orange
+  { bg:'#ecfeff', border:'#22d3ee', text:'#155e75' },  // cyan
+  { bg:'#fdf2f8', border:'#f472b6', text:'#831843' },  // pink
+  { bg:'#f0fdfa', border:'#2dd4bf', text:'#134e4a' },  // teal
+  { bg:'#fff1f2', border:'#fb7185', text:'#9f1239' },  // rose
+  { bg:'#f5f3ff', border:'#a78bfa', text:'#4c1d95' },  // violet
+  { bg:'#fafaf9', border:'#a8a29e', text:'#44403c' },  // stone
+  { bg:'#ecfdf5', border:'#34d399', text:'#065f46' },  // emerald
+];
+
+function hashSubjColor(name) {
+  if (!name) return SUBJ_CELL_COLORS[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  return SUBJ_CELL_COLORS[Math.abs(h) % SUBJ_CELL_COLORS.length];
+}
+
+
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const PERIODS = [
-  { id:1, label:'P1', time:'08:45–09:35' },
-  { id:2, label:'P2', time:'09:35–10:25' },
-  { id:3, label:'P3', time:'10:40–11:30' },
-  { id:4, label:'P4', time:'11:30–12:20' },
-  { id:'B', label:'BREAK', time:'12:20–13:05', isBreak:true },
-  { id:5, label:'P5', time:'13:05–13:55' },
-  { id:6, label:'P6', time:'13:55–14:45' },
-  { id:7, label:'P7', time:'14:45–15:35' },
+  { id:1, label:'P1', time:'08:30–09:15' },
+  { id:2, label:'P2', time:'09:15–10:00' },
+  { id:'B1', label:'BREAK', time:'10:00–10:15', isBreak:true, breakLbl:'☕ Break' },
+  { id:3, label:'P3', time:'10:15–11:00' },
+  { id:4, label:'P4', time:'11:00–11:45' },
+  { id:5, label:'P5', time:'11:45–12:30' },
+  { id:'L', label:'LUNCH', time:'12:30–13:15', isBreak:true, breakLbl:'🍱 Lunch' },
+  { id:6, label:'P6', time:'1:15–2:00' },
+  { id:7, label:'P7', time:'2:00–2:45' },
+  { id:'B2', label:'BREAK', time:'14:45–15:00', isBreak:true, breakLbl:'☕ Break' },
+  { id:8, label:'P8', time:'3:00–3:45' },
+  { id:9, label:'P9', time:'3:45–4:30' },
 ];
 const COLORS = ['#22c55e','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6'];
 
@@ -542,6 +578,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildSidebar();
   initModals();
   await bootstrap();
+
+  // Show synced dbtoast only for admin / coordinator / teacher — NOT for students
+  if (!IS_STUDENT) {
+    const ttCount = Object.keys(S.tt).length || 0;
+    dbtoast(`✅ Synced from MongoDB.<br><span style="font-size:11px;opacity:0.8;">Depts: ${S.depts.length} | Periods: ${ttCount}</span>`, 'success', 4000);
+  }
 });
 
 /* ── UI SETUP ────────────────────────────────────────────────────── */
@@ -700,12 +742,12 @@ function renderDeptGrid(depts) {
 async function clickDept(id, name, code) {
   // Access check: main coordinator cannot access other depts
   if (IS_COORD && !IS_ADMIN && !S.coordIsService && id !== S.coordDeptId) {
-    toast('Access denied: You can only manage your own department', 'error'); return;
+    dbtoast('Access denied: You can only manage your own department', 'error'); return;
   }
   // Plain teachers have no access restrictions — they can view any dept
   const classes = await API.getClasses(id);
   if (!classes.length && !S.coordIsService && !IS_TEACHER && !IS_ADMIN) {
-    toast('No classes found for this department', 'info'); return;
+    dbtoast('No classes found for this department', 'info'); return;
   }
   await enterDept(id, name, code || name.substring(0,4).toUpperCase(), classes);
 }
@@ -763,6 +805,10 @@ function onClassChange() {
   secSel.disabled = false;
   const o = document.createElement('option');
   o.value = cls._id; o.textContent = `Section ${cls.section || 'A'}`; secSel.appendChild(o);
+  secSel.value = cls._id; // Automatically select the section
+  // Trigger handler manually
+  S.sectionId = cls._id;
+  document.getElementById('btn-load').disabled = !S.sectionId;
 }
 
 function onSectionChange() {
@@ -781,22 +827,36 @@ function hideCard() {
 async function loadTT() {
   const classId = S.sectionId || S.classId;
   if (!classId) return;
-  const cls = S.classes.find(c => c._id === classId);
-  S.className = cls?.name || S.className || '—';
 
-  document.getElementById('tt-card-title').textContent = `${S.deptCode} – ${S.className}`;
-  document.getElementById('tt-card-sub').textContent   =
-    `${S.deptName} Department · ${CAN_EDIT ? 'Editable' : 'View Only'}`;
+  const btn = document.getElementById('btn-load');
+  const orgBtnText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;vertical-align:middle;"></span> Loading…';
+  btn.disabled = true;
 
-  const data = await API.getTimetable(classId);
-  S.tt = data || {};
+  try {
+    const cls = S.classes.find(c => c._id === classId);
+    S.className = cls?.name || S.className || '—';
 
-  buildTTTable(classId);
-  buildCardActions(classId);
-  buildSummary();
+    document.getElementById('tt-card-title').textContent = `${S.deptCode} – ${S.className}`;
+    document.getElementById('tt-card-sub').textContent   =
+      `${S.deptName} Department · ${CAN_EDIT ? 'Editable' : 'View Only'}`;
 
-  document.getElementById('tt-placeholder').classList.add('hidden');
-  document.getElementById('tt-card').classList.remove('hidden');
+    const data = await API.getTimetable(classId);
+    S.tt = data || {};
+
+    buildTTTable(classId);
+    buildCardActions(classId);
+    buildSummary();
+
+    document.getElementById('tt-placeholder').classList.add('hidden');
+    document.getElementById('tt-card').classList.remove('hidden');
+    
+    // Update zoom property manually just in case
+    applyZoom();
+  } finally {
+    btn.innerHTML = orgBtnText;
+    btn.disabled = false;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -856,16 +916,17 @@ function buildTTTable(classId) {
   DAYS.forEach(day => {
     html += `<tr><td class="day-cell"><div class="day-n">${day}</div><div class="day-s">${day.substring(0,3).toUpperCase()}</div></td>`;
     PERIODS.forEach(p => {
-      if (p.isBreak) { html += `<td><div class="tt-cell brk"><span class="brk-lbl">☕ Lunch</span></div></td>`; return; }
+      if (p.isBreak) { html += `<td><div class="tt-cell brk"><span class="brk-lbl">${p.breakLbl || '☕ Break'}</span></div></td>`; return; }
       const key  = `${day}-${p.id}`;
       const cell = S.tt[key] || null;
       const click = CAN_EDIT
         ? `openEditCell('${key}','${day}','${p.label}','${p.time}')`
         : (cell?.subject ? `openDetailCell('${key}','${day}','${p.label}','${p.time}')` : '');
       if (cell?.subject) {
-        html += `<td onclick="${click}"><div class="tt-cell filled">
+        const col = hashSubjColor(cell.subject);
+        html += `<td onclick="${click}"><div class="tt-cell filled" style="background:${col.bg};border-left:3px solid ${col.border};">
           <span class="pno">${p.label}</span>
-          <div class="c-subj">${e(cell.subject)}</div>
+          <div class="c-subj" style="color:${col.text}">${e(cell.subject)}</div>
           ${cell.staff  ? `<div class="c-staff">👤 ${e(cell.staff)}</div>` : ''}
           ${cell.hall   ? `<div class="c-hall">📍 ${e(cell.hall)}</div>`  : ''}
           ${cell.type   ? `<span class="c-badge ${cell.type}">${cell.type.charAt(0).toUpperCase()+cell.type.slice(1)}</span>` : ''}
@@ -884,10 +945,35 @@ function buildTTTable(classId) {
 }
 
 /* ── CARD ACTIONS ─────────────────────────────────────────────────── */
+let currentZoom = 1;
+function applyZoom() {
+  const table = document.getElementById('tt-table');
+  if (table) {
+    table.style.zoom = currentZoom;
+  }
+}
+function zoomTT(delta) {
+  currentZoom += delta;
+  if (currentZoom < 0.5) currentZoom = 0.5;
+  if (currentZoom > 2) currentZoom = 2;
+  applyZoom();
+}
+
 function buildCardActions(classId) {
   const el = document.getElementById('tt-card-acts');
-  if (!CAN_EDIT) { el.innerHTML = ''; return; }
-  el.innerHTML = `
+  const zoomHtml = `
+    <div style="display:flex;align-items:center;background:var(--gLt);border-radius:10px;overflow:hidden;border:1.5px solid var(--br);margin-right:8px;">
+      <button class="btn btn-ghost btn-sm" style="border:none;border-radius:0;padding:6px 10px;" onclick="zoomTT(-0.1)">-</button>
+      <span style="font-size:11px;font-weight:700;color:var(--gD);padding:0 4px;" id="tt-zoom-lbl">Zoom</span>
+      <button class="btn btn-ghost btn-sm" style="border:none;border-radius:0;padding:6px 10px;" onclick="zoomTT(0.1)">+</button>
+    </div>
+  `;
+
+  if (!CAN_EDIT) { 
+    el.innerHTML = zoomHtml; 
+    return; 
+  }
+  el.innerHTML = zoomHtml + `
     <button class="btn btn-outline-white btn-sm" onclick="exportCSV()">⬇ Export</button>
     <button class="btn btn-amber btn-sm" onclick="openAutoGen()">⚡ Auto Gen</button>
     <button class="btn btn-white btn-sm" onclick="saveTT('${classId}')">💾 Save All</button>`;
@@ -1013,7 +1099,7 @@ function renderSubjDrop(list) {
   const dd = document.getElementById('sdrop');
   if (!list.length) { dd.innerHTML = `<div class="sdrop-empty">No subjects found</div>`; dd.classList.add('open'); return; }
   dd.innerHTML = list.slice(0,30).map(s =>
-    `<div class="sdrop-opt" onmousedown="pickSubj('${s._id}','${e(s.name)}','${e(s.code||'')}',${s.credits||3},'${s.type||'theory'}')">
+    `<div class="sdrop-opt" onmousedown="pickSubj('${s._id}')">
        <div class="sdrop-name">${e(s.name)}</div>
        <div class="sdrop-meta">${e(s.code||'—')} · ${e(s.deptName||'—')} · ${s.credits||'?'} cr · ${s.type||'Theory'}</div>
      </div>`
@@ -1021,12 +1107,20 @@ function renderSubjDrop(list) {
   dd.classList.add('open');
 }
 
-function pickSubj(id, name, code, credits, type) {
-  document.getElementById('edit-subj').value    = name;
-  document.getElementById('edit-subj-id').value = id;
-  document.getElementById('edit-subj-code').value = code;
-  document.getElementById('edit-credit').value  = credits;
-  document.getElementById('edit-type').value    = type.toLowerCase();
+function pickSubj(id) {
+  const subj = S.subjects.find(s => s._id === id);
+
+  if (!subj) return;
+  document.getElementById('edit-subj').value      = subj.name;
+  document.getElementById('edit-subj-id').value   = subj._id;
+  document.getElementById('edit-subj-code').value = subj.code || '';
+  document.getElementById('edit-credit').value    = subj.credits || '';
+  document.getElementById('edit-type').value      = (subj.type || 'theory').toLowerCase();
+  // Auto-fill staff and hall if the subject carries defaults
+  const staffVal = subj.staff || subj.staffName || subj.defaultStaff || '';
+  const hallVal  = subj.hall  || subj.hallNo    || subj.defaultHall  || '';
+  if (staffVal) document.getElementById('edit-staff').value = staffVal;
+  if (hallVal)  document.getElementById('edit-hall').value  = hallVal;
   document.getElementById('sdrop').classList.remove('open');
 }
 
@@ -1035,7 +1129,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   const key = S.activeCellKey;
   if (!key) return;
   const subjName = document.getElementById('edit-subj').value.trim();
-  if (!subjName) { toast('Subject name is required', 'error'); return; }
+  if (!subjName) { dbtoast('Subject name is required', 'error'); return; }
 
   const payload = {
     subject  : subjName,
@@ -1051,7 +1145,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   if (IS_COORD && S.coordIsService && S.subjects.length) {
     const allowed = S.subjects.find(s => s.name === subjName || s._id === payload.subjectId);
     if (!allowed) {
-      toast(`Only ${TT_DEPT} subjects can be assigned by this coordinator`, 'error');
+      dbtoast(`Only ${TT_DEPT} subjects can be assigned by this coordinator`, 'error');
       return;
     }
   }
@@ -1063,7 +1157,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   closeModal('modal-edit');
 
   const ok = await API.updateCell(classId, key, payload);
-  toast(ok ? 'Period saved ✓' : 'Saved locally (check connection)', ok ? 'success' : 'info');
+  dbtoast(ok ? 'Period saved ✓' : 'Saved locally (check connection)', ok ? 'success' : 'info');
 });
 
 document.getElementById('btn-clear').addEventListener('click', async () => {
@@ -1075,7 +1169,7 @@ document.getElementById('btn-clear').addEventListener('click', async () => {
   buildSummary();
   closeModal('modal-edit');
   await API.updateCell(classId, key, null);
-  toast('Period cleared', 'info');
+  dbtoast('Period cleared', 'info');
 });
 
 /* ── STUDENT DETAIL MODAL ────────────────────────────────────────── */
@@ -1094,9 +1188,9 @@ function openDetailCell(key, day, period, time) {
 /* ── SAVE ALL ────────────────────────────────────────────────────── */
 async function saveTT(classId) {
   if (!classId) classId = S.sectionId || S.classId;
-  if (!classId) { toast('No class selected', 'error'); return; }
+  if (!classId) { dbtoast('No class selected', 'error'); return; }
   const ok = await API.saveTimetable(classId, S.tt);
-  toast(ok ? 'Timetable saved to DB ✓' : 'Save failed – check connection', ok ? 'success' : 'error');
+  dbtoast(ok ? 'Timetable saved to DB ✓' : 'Save failed – check connection', ok ? 'success' : 'error');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1135,29 +1229,91 @@ function getAgSubjects() {
 
 document.getElementById('btn-conflicts').addEventListener('click', async () => {
   const subjects = getAgSubjects();
-  if (!subjects.length) { toast('Add at least one subject', 'error'); return; }
+  if (!subjects.length) { dbtoast('Add at least one subject', 'error'); return; }
   const log = document.getElementById('conflict-log');
   log.style.display = 'block'; log.innerHTML = '<span class="ok">↳ Checking conflicts…</span><br>';
   const res = await API.checkConflicts(S.deptId, document.getElementById('ag-year').value, subjects);
   log.innerHTML = res.map(r => `<span class="${r.ok?'ok':'err'}">${r.ok?'✓':'✗'} ${r.message}</span>`).join('<br>');
 });
 
+/* ── CLIENT-SIDE AUTO-GEN FALLBACK ──────────────────────────────── */
+function clientAutoGen(subjects, hall) {
+  const workPeriods = PERIODS.filter(p => !p.isBreak);
+  // Build full slot list: each day × each work period
+  const allSlots = [];
+  DAYS.forEach(day => workPeriods.forEach(p => allSlots.push({ day, pid: p.id })));
+  // Shuffle for natural distribution
+  for (let i = allSlots.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allSlots[i], allSlots[j]] = [allSlots[j], allSlots[i]];
+  }
+  // Assign subjects per their weekly hours
+  const generated = {};
+  let si = 0;
+  subjects.forEach(subj => {
+    for (let h = 0; h < subj.hours && si < allSlots.length; h++, si++) {
+      const { day, pid } = allSlots[si];
+      generated[`${day}-${pid}`] = {
+        subject  : subj.name,
+        subjectId: null,
+        code     : subj.code || '',
+        staff    : subj.staff || '',
+        hall     : hall || '',
+        credit   : subj.credit || null,
+        type     : (subj.type || 'theory').toLowerCase(),
+      };
+    }
+  });
+  return generated;
+}
+
 document.getElementById('btn-gen').addEventListener('click', async () => {
   const subjects = getAgSubjects();
   const year = document.getElementById('ag-year').value;
   const hall = document.getElementById('ag-hall').value.trim();
-  if (!subjects.length) { toast('Add at least one subject', 'error'); return; }
+  if (!subjects.length) { dbtoast('Add at least one subject', 'error'); return; }
   const log = document.getElementById('conflict-log');
   log.style.display = 'block'; log.innerHTML = '<span class="ok">⚡ Generating…</span>';
-  const res = await API.autoGenTT({ deptId: S.deptId, year, hall, subjects });
-  if (res.success) {
-    log.innerHTML += '<br><span class="ok">✓ Generated and saved!</span>';
-    toast('Auto-generated TT saved ✓', 'success');
-    setTimeout(() => closeModal('modal-ag'), 1100);
-    if (S.classId) await loadTT();
+
+  let generatedSlots = null;
+
+  try {
+    const r = await fetch(`${API_BASE}/timetable/auto-gen`, {
+      method: 'POST', headers: { ...ah(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deptId: S.deptId, year, hall, subjects }),
+    });
+    const res = await r.json();
+    if (res.success) {
+      generatedSlots = res.slots || null;   // server may return the slots map
+      log.innerHTML += '<br><span class="ok">✓ Server generated and saved!</span>';
+    } else {
+      log.innerHTML += `<br><span class="err">✗ ${res.error || 'Server error'} — using client gen</span>`;
+    }
+  } catch {
+    log.innerHTML += '<br><span class="ok">⚡ API unreachable — generating locally…</span>';
+  }
+
+  // If server didn't return slots, generate client-side
+  if (!generatedSlots) {
+    generatedSlots = clientAutoGen(subjects, hall);
+  }
+
+  // Apply to current TT state and re-render immediately
+  const classId = S.sectionId || S.classId;
+  if (classId && Object.keys(generatedSlots).length) {
+    S.tt = { ...S.tt, ...generatedSlots };
+    buildTTTable(classId);
+    buildSummary();
+    log.innerHTML += `<br><span class="ok">✓ Applied ${Object.keys(generatedSlots).length} slots to timetable!</span>`;
+    dbtoast(`⚡ Auto-generated ${Object.keys(generatedSlots).length} periods`, 'success');
+    // Persist to DB in background
+    API.saveTimetable(classId, S.tt).then(ok => {
+      if (ok) dbtoast('💾 Saved to MongoDB ✓', 'success');
+    });
+    setTimeout(() => closeModal('modal-ag'), 1400);
   } else {
-    log.innerHTML += `<br><span class="err">✗ ${res.error}</span>`;
-    toast('Generation failed', 'error');
+    log.innerHTML += '<br><span class="err">✗ No class selected – load a class first</span>';
+    dbtoast('Load a class first before generating', 'error');
   }
 });
 
@@ -1179,7 +1335,7 @@ function exportCSV() {
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
   a.download = `TT_${S.deptCode}_${S.className}_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  toast('Exported as CSV', 'info');
+  dbtoast('Exported as CSV', 'info');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1196,7 +1352,7 @@ function showView(id) {
 function goBack() {
   // Main-dept coordinators are locked to their dept — no dept grid to go back to
   if (IS_COORD && !IS_ADMIN && !S.coordIsService) {
-    toast('You are locked to your department', 'info'); return;
+    dbtoast('You are locked to your department', 'info'); return;
   }
   S.deptId = null; S.deptName = null; S.classId = null; S.sectionId = null; S.tt = {};
   renderDeptGrid(S.depts);
@@ -1215,15 +1371,24 @@ function initModals() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   TOAST
+   DBTOAST  (matches admin.html – supports HTML content, no escaping)
 ══════════════════════════════════════════════════════════════════ */
-function toast(msg, type='info', ms=3200) {
+function dbtoast(msg, type = 'info', ms = 4000) {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<div class="t-dot"></div><span>${e(msg)}</span>`;
-  document.getElementById('toast-wrap').appendChild(el);
-  setTimeout(() => el.remove(), ms);
+  el.className = `dbtoast ${type}`;
+  el.innerHTML = `<span class="dbt-icon">${icons[type] || 'ℹ️'}</span><div class="dbt-body">${msg}</div>`;
+  const wrap = document.getElementById('toast-wrap');
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s, transform .3s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(40px)';
+    setTimeout(() => el.remove(), 320);
+  }, ms);
 }
+// Legacy alias so any remaining toast() calls still work
+function toast(msg, type = 'info', ms = 3200) { dbtoast(msg, type, ms); }
 
 /* ══════════════════════════════════════════════════════════════════
    API LAYER
@@ -1254,24 +1419,42 @@ const API = {
   },
   async getTimetable(classId) {
     try {
-      // Try new section-based endpoint first
-      const r = await fetch(`${API_BASE}/timetable/section/${classId}`, { headers: ah() });
+      // Try new section-based endpoint first (no-cache for fresh student data)
+      const r = await fetch(`${API_BASE}/timetable/section/${classId}`, {
+        headers: ah(), cache: 'no-store'
+      });
       if (!r.ok) throw 0;
       const d = await r.json();
-      return d.slots || {};
+      // API may return { slots:{} } or the slots map directly
+      const slots = d.slots || (typeof d === 'object' && !Array.isArray(d) ? d : {});
+      if (Object.keys(slots).length > 0) return slots;
+      throw 0; // empty → try legacy
     } catch {
       // Fallback: legacy slot-array endpoint
       try {
-        const r = await fetch(`${API_BASE}/timetable?classId=${classId}`, { headers: ah() });
+        const r = await fetch(`${API_BASE}/timetable?classId=${classId}`, {
+          headers: ah(), cache: 'no-store'
+        });
         if (!r.ok) throw 0;
-        const slots = await r.json();
+        const payload = await r.json();
+        // Could be array of slots OR { slots:{} }
+        const slots = Array.isArray(payload) ? payload : (payload.slots || []);
+        if (!Array.isArray(slots)) return slots; // already a map
         const map = {};
         const dayMap = { Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday' };
         slots.forEach(sl => {
           const day = dayMap[sl.day] || sl.day;
           const per = PERIODS.find(p => p.time && p.time.replace('–','-') === `${sl.start}-${sl.end}`);
           const pid = per ? per.id : sl.start;
-          map[`${day}-${pid}`] = { subject: sl.subjectName, staff: sl.teacherName, type: 'theory' };
+          map[`${day}-${pid}`] = {
+            subject  : sl.subjectName || sl.subject,
+            staff    : sl.teacherName || sl.staff || '',
+            hall     : sl.hall || sl.room || '',
+            code     : sl.subjectCode || sl.code || '',
+            credit   : sl.credit || sl.credits || null,
+            type     : sl.type || 'theory',
+            subjectId: sl.subjectId || null,
+          };
         });
         return map;
       } catch { return {}; }

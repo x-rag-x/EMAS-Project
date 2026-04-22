@@ -3027,10 +3027,6 @@
         <div id="sv-dept">
           <div class="shd">
             <div class="stl"><span class="sdo"></span>Select Department</div>
-            <div style="display:flex;gap:8px;">
-              <!-- <button class="btn-pri" onclick="shiftToMenu('m-upload-struct', 'bulk')">📤 Upload Sheet</button> -->
-              <button class="btn-pri" onclick="om('m-add-class-quick')">+ Add Class</button>
-            </div>
           </div>
           <div id="sdg" class="tgrd"></div>
         </div>
@@ -3050,7 +3046,7 @@
             <div class="shd">
               <div class="stl"><span class="sdo"></span>Subjects</div>
               <div style="display:flex;gap:7px;">
-                <button class="btn-pri" onclick="om('m-upload-subj')">📤 Upload</button>
+                <!-- <button class="btn-pri" onclick="om('m-upload-subj')">📤 Upload</button> -->
                 <button class="btn-out" onclick="openAddSubj()">+ Add Subject</button>
               </div>
             </div>
@@ -4045,44 +4041,44 @@
         <div class="modal-close" onclick="closeModalBg('m-add-student')">✖</div>
       </div>
       <div class="form-grid" style="grid-template-columns:1.2fr 0.8fr;">
-        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="s-nm"
+        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="stu-name"
             placeholder="Student full name" required></div>
-        <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="s-rg"
+        <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="stu-regNo"
             placeholder="e.g. 714025xxxxxx"></div>
       </div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="s-ay"></select></div>
+        <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="stu-year"></select></div>
         <div class="fg"><label class="fl">Course Type</label>
-          <select class="fc2" id="s-ct" onchange="octc()">
+          <select class="fc2" id="stu-courseType" onchange="onCourseTypeChange()">
             <option value="">— Select —</option>
             <option>UG</option>
             <option>PG</option>
           </select>
         </div>
         <div class="fg"><label class="fl">Branch</label>
-          <select class="fc2" id="s-co" onchange="ococ()">
+          <select class="fc2" id="stu-branch">
             <option value="">— Select —</option>
           </select>
         </div>
       </div>
       <div class="form-grid" style="grid-template-columns:1.5fr 1fr 0.5fr;">
-        <div class="fg"><label class="fl">Department</label><select class="fc2" id="s-dp">
+        <div class="fg"><label class="fl">Department</label><select class="fc2" id="stu-dept">
             <option value="">— Select —</option>
           </select></div>
-        <div class="fg"><label class="fl">Class</label><select class="fc2" id="s-cl">
+        <div class="fg"><label class="fl">Class</label><select class="fc2" id="stu-class">
             <option value="">— Select —</option>
           </select></div>
           <div class="fg" style="margin-bottom:14px;"><label class="fl">Section</label><input type="text" class="fc2"
-          id="s-se" placeholder="A / B"></div>
+          id="stu-section" placeholder="A / B"></div>
       </div>
       <div class="fl">Student Login Details</div><br>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Email</label><input type="email" class="fc2"
+        <div class="fg"><label class="fl">Email</label><input type="email" class="fc2" id="stu-email"
             placeholder="College Email" required></div>
-        <div class="fg"><label class="fl">User Name</label><input type="text" class="fc2"
+        <div class="fg"><label class="fl">User Name</label><input type="text" class="fc2" id="stu-username"
             placeholder="Login Username" required></div>
-        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input type="password" class="fc2" id="t-pw" value="student123"><button type="button"
-              class="pw-eye" onclick="togglePwField('t-pw',this)" tabindex="-1">👁</button></div></div>
+        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input type="password" class="fc2" id="stu-password" value="student123"><button type="button"
+              class="pw-eye" onclick="togglePwField('stu-password',this)" tabindex="-1">👁</button></div></div>
       </div>
       <div class="form-actions">
         <button class="btn-form-ghost" onclick="closeModalBg('m-add-student')">Close</button>
@@ -4096,35 +4092,35 @@
       <div class="modal-hd">
         <div>
           <div class="modal-title">👨‍🎓 Edit Student</div>
-          <div class="modal-sub" id="se-subtitle"></div>
+          <div class="modal-sub" id="edit-subtitle"></div>
         </div>
         <div class="modal-close" onclick="closeModalBg('m-stu-edit')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="se-nm"></div>
-        <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="se-rg"></div>
+        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="edit-name"></div>
+        <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="edit-regNo"></div>
       </div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="se-ay"></select></div>
-        <div class="fg"><label class="fl">Course Type</label><select class="fc2" id="se-ct" onchange="seCtc()">
+        <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="edit-year"></select></div>
+        <div class="fg"><label class="fl">Course Type</label><select class="fc2" id="edit-courseType" onchange="onEditCourseTypeChange()">
             <option value="">— Select —</option>
             <option>UG</option>
             <option>PG</option>
           </select></div>
-        <div class="fg"><label class="fl">Branch</label><select class="fc2" id="se-co" onchange="seCoc()">
+        <div class="fg"><label class="fl">Branch</label><select class="fc2" id="edit-branch" onchange="onEditBranchChange()">
             <option value="">— Select —</option>
           </select></div>
       </div>
       <div class="form-grid" style="grid-template-columns:2fr 1fr;">
-        <div class="fg"><label class="fl">Department</label><select class="fc2" id="se-dp">
+        <div class="fg"><label class="fl">Department</label><select class="fc2" id="edit-dept">
             <option value="">— Select —</option>
           </select></div>
-        <div class="fg"><label class="fl">Class</label><select class="fc2" id="se-cl">
+        <div class="fg"><label class="fl">Class</label><select class="fc2" id="edit-class">
             <option value="">— Select —</option>
           </select></div>
       </div>
       <div class="fg" style="margin-bottom:14px;"><label class="fl">Section</label><input type="text" class="fc2"
-          id="se-se"></div>
+          id="edit-section"></div>
       <div class="form-actions">
         <button class="btn bdan bsm" onclick="dStuFromEdit()">🗑 Delete</button>
         <div style="display:flex;gap:8px;">
@@ -6309,14 +6305,14 @@
         .then(function(d) {
           if (!d || d.error) {
             dbToast('DB Error: ' + (d && d.error ? d.error : 'Unknown'), 'error');
-            showToast('Save failed: ' + (d && d.error ? d.error : 'check server'), 'warn');
+            // showToast('Save failed: ' + (d && d.error ? d.error : 'check server'), 'warn');
             return;
           }
 
-          dbToast('Saved to MongoDB ✓', 'success', d.count + ' section(s) written to DB');
+          dbToast('Saved to MongoDB', 'success', d.count + ' section(s) written to DB');
           closeModalBg('m-subj-assign');
           addLog('Assignments Bulk Saved', d.count + ' sections → ' + subj.name);
-          showToast('✅ ' + d.count + ' assignment(s) saved to DB!');
+          // showToast('✓ ' + d.count + ' assignment(s) saved to DB!');
 
           // Refresh subject grid: re-fetch assignment counts from DB, then re-render
           apiCall('GET', '/assignments')
@@ -6409,45 +6405,43 @@
       var student = DB.get('students').find(function (x) { return x._id === studentId; });
       if (!student) return;
 
-      document.getElementById('se-subtitle').textContent = student.regNo + ' · ' + (student.className || '');
-      document.getElementById('se-nm').value = student.name || '';
-      document.getElementById('se-rg').value = student.regNo || '';
+      document.getElementById('edit-subtitle').textContent = student.regNo + ' · ' + (student.className || '');
+      document.getElementById('edit-name').value = student.name || '';
+      document.getElementById('edit-regNo').value = student.regNo || '';
 
       var yearOptions = ['2025-26', '2024-25', '2023-24', '2022-23'];
-      ['se-ay', 's-ay'].forEach(function (id) {
+      ['edit-year', 'stu-year'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = yearOptions.map(function (y) {
           return '<option' + (y === student.academicYear ? ' selected' : '') + '>' + y + '</option>';
         }).join('');
       });
 
-      document.getElementById('se-ct').value = student.courseType || '';
-      seCtc(student.course);
+      document.getElementById('edit-courseType').value = student.courseType || '';
+      onEditCourseTypeChange(student.branch || student.course);
       setTimeout(function () {
-        document.getElementById('se-co').value = student.course || '';
-        seCoc(student.branch);
-        setTimeout(function () { document.getElementById('se-br').value = student.branch || ''; }, 50);
+        document.getElementById('edit-branch').value = student.branch || student.course || '';
       }, 50);
 
       var depts = DB.get('depts');
-      document.getElementById('se-dp').innerHTML = '<option value="">— Select —</option>'
+      document.getElementById('edit-dept').innerHTML = '<option value="">— Select —</option>'
         + depts.map(function (d) {
           return '<option value="' + d._id + '"' + (d._id === student.deptId ? ' selected' : '') + '>' + d.name + '</option>';
         }).join('');
 
       var classes = DB.get('classes');
-      document.getElementById('se-cl').innerHTML = '<option value="">— Select —</option>'
+      document.getElementById('edit-class').innerHTML = '<option value="">— Select —</option>'
         + classes.map(function (c) {
           return '<option value="' + c._id + '"' + (c._id === student.classId ? ' selected' : '') + '>' + c.name + '</option>';
         }).join('');
 
-      document.getElementById('se-se').value = student.section || '';
+      document.getElementById('edit-section').value = student.section || '';
       openModal_('m-stu-edit');
     }
 
-    function seCtc(selectedCourse) {
-      var courseType = document.getElementById('se-ct') ? document.getElementById('se-ct').value : '';
-      var el = document.getElementById('se-co');
+    function onEditCourseTypeChange(selectedCourse) {
+      var courseType = document.getElementById('edit-courseType') ? document.getElementById('edit-courseType').value : '';
+      var el = document.getElementById('edit-branch');
       if (!el) return;
       el.innerHTML = '<option value="">— Select —</option>'
         + (COURSES[courseType] ? Object.keys(COURSES[courseType]).map(function (c) {
@@ -6455,26 +6449,19 @@
         }).join('') : '');
     }
 
-    function seCoc(selectedBranch) {
-      var courseType = document.getElementById('se-ct') ? document.getElementById('se-ct').value : '';
-      var course = document.getElementById('se-co') ? document.getElementById('se-co').value : '';
-      var el = document.getElementById('se-br');
-      if (!el) return;
-      var branches = (COURSES[courseType] && COURSES[courseType][course]) ? COURSES[courseType][course] : [];
-      el.innerHTML = '<option value="">— Select —</option>'
-        + branches.map(function (b) { return '<option' + (b === selectedBranch ? ' selected' : '') + '>' + b + '</option>'; }).join('');
+    function onEditBranchChange(selectedBranch) {
+      // se-co IS the branch (BE/BTech/ME/MTech); no deeper sub-branch dropdown exists.
     }
 
     function saveStuEdit() {
-      var name = getFieldValue('se-nm');
-      var regNo = getFieldValue('se-rg');
-      var year = getFieldValue('se-ay');
-      var ct = getFieldValue('se-ct');
-      var course = getFieldValue('se-co');
-      var branch = getFieldValue('se-br');
-      var deptId = document.getElementById('se-dp').value;
-      var classId = document.getElementById('se-cl').value;
-      var section = getFieldValue('se-se');
+      var name = getFieldValue('edit-name');
+      var regNo = getFieldValue('edit-regNo');
+      var year = getFieldValue('edit-year');
+      var ct = getFieldValue('edit-courseType');
+      var branch = getFieldValue('edit-branch');
+      var deptId = document.getElementById('edit-dept').value;
+      var classId = document.getElementById('edit-class').value;
+      var section = getFieldValue('edit-section');
 
       if (!name || !regNo) { showToast('Name and Reg No required', 'warn'); return; }
 
@@ -6485,7 +6472,7 @@
       if (matchIndex < 0) { showToast('Student not found', 'warn'); return; }
 
       var studentId = allStudents[matchIndex]._id;
-      apiUpdateStudent(studentId, { name: name, regNo: regNo, academicYear: year, courseType: ct, course: course, branch: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', section: section }, name)
+      apiUpdateStudent(studentId, { name: name, regNo: regNo, academicYear: year, courseType: ct, course: branch, branch: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', section: section }, name)
         .then(function (d) {
           if (!d) return;
           addLog('Student Updated', '"' + name + '"');
@@ -6496,7 +6483,7 @@
     }
 
     function dStuFromEdit() {
-      var regNo = getFieldValue('se-rg');
+      var regNo = getFieldValue('edit-regNo');
       var student = DB.get('students').find(function (s) { return s.regNo === regNo; });
       if (!student) { showToast('Not found', 'warn'); return; }
       document.getElementById('dc-confirm-id').value = student._id;
@@ -6515,19 +6502,19 @@
     }
 
     function addStu() {
-      var name = getFieldValue('s-nm');
-      var regNo = getFieldValue('s-rn');
-      var year = getFieldValue('s-ay') || '2025-26';
-      var course = document.getElementById('s-ct') ? document.getElementById('s-ct').value : 'UG';
-      var branch = getFieldValue('s-br');
-      var deptId = document.getElementById('s-dp') ? document.getElementById('s-dp').value : '';
-      var classId = document.getElementById('s-cl') ? document.getElementById('s-cl').value : '';
-      var section = getFieldValue('s-se') || 'A';
-      var email = getFieldValue('s-em');
+      var name = getFieldValue('stu-name');
+      var regNo = getFieldValue('stu-regNo');
+      var year = getFieldValue('stu-year') || '2025-26';
+      var courseType = document.getElementById('stu-courseType') ? document.getElementById('stu-courseType').value : 'UG';
+      var branch = document.getElementById('stu-branch') ? document.getElementById('stu-branch').value : '';
+      var deptId = document.getElementById('stu-dept') ? document.getElementById('stu-dept').value : '';
+      var classId = document.getElementById('stu-class') ? document.getElementById('stu-class').value : '';
+      var section = getFieldValue('stu-section') || 'A';
+      var email = getFieldValue('stu-email');
       var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
       var cls = DB.get('classes').find(function (c) { return c._id === classId; });
       if (!name || !regNo) { showToast('Name and Register No required', 'warn'); return; }
-      apiAddStudent({ name: name, regNo: regNo, academicYear: year, courseType: course, branch: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', year: cls ? cls.year : '', section: section, email: email })
+      apiAddStudent({ name: name, regNo: regNo, academicYear: year, courseType: courseType, branch: branch, course: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', year: cls ? cls.year : '', section: section, email: email })
         .then(function (d) {
           if (!d) return;
           addLog('Student Added', '"' + name + '" (' + regNo + ')');
@@ -6535,26 +6522,20 @@
           renderStudents();
           updateStatCards();
           showToast('Student "' + name + '" added');
-          clearInputs(['s-nm', 's-rn', 's-br', 's-em']);
+          clearInputs(['stu-name', 'stu-regNo', 'stu-branch', 'stu-email']);
         });
     }
 
-    function octc() {
-      var courseType = document.getElementById('s-ct') ? document.getElementById('s-ct').value : '';
-      var el = document.getElementById('s-co');
+    function onCourseTypeChange() {
+      var courseType = document.getElementById('stu-courseType') ? document.getElementById('stu-courseType').value : '';
+      var el = document.getElementById('stu-branch');
       if (!el) return;
       el.innerHTML = '<option value="">— Select —</option>'
         + (COURSES[courseType] ? Object.keys(COURSES[courseType]).map(function (c) { return '<option>' + c + '</option>'; }).join('') : '');
     }
 
-    function ococ() {
-      var courseType = document.getElementById('s-ct') ? document.getElementById('s-ct').value : '';
-      var course = document.getElementById('s-co') ? document.getElementById('s-co').value : '';
-      var el = document.getElementById('s-br');
-      if (!el) return;
-      var branches = (COURSES[courseType] && COURSES[courseType][course]) ? COURSES[courseType][course] : [];
-      el.innerHTML = '<option value="">— Select —</option>'
-        + branches.map(function (b) { return '<option>' + b + '</option>'; }).join('');
+    function onBranchChange() {
+      // stu-branch IS the branch (BE/BTech/ME/MTech); no deeper sub-branch dropdown exists.
     }
 
     // ─── TEACHERS PAGE ───────────────────────────────────────────────────────────
@@ -6951,7 +6932,7 @@
 
     function parseStudentRows(rows) {
       var added = 0, skipped = 0, errors = [];
-      var VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'MBA', 'MCA', 'B.E', 'B.TECH', 'BE', 'BTECH'];
+      var VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'B.E', 'B.TECH'];
 
       rows.forEach(function (row, rowIndex) {
         var rowNum = rowIndex + 2; // 1-indexed + header
@@ -6966,7 +6947,7 @@
         var section = getCellValue(row, ['section', 'sec']) || 'A';
         var email = getCellValue(row, ['email', 'emailid', 'mail']);
         var username = getCellValue(row, ['username', 'user', 'loginid']);
-        var password = getCellValue(row, ['password', 'pass', 'pwd']) || 'Student@123';
+        var password = getCellValue(row, ['password', 'pass', 'pwd']) || 'student@123';
 
         // ── Validation ──────────────────────────────────────────
         var rowErrors = [];
@@ -7273,7 +7254,7 @@
       var classes = DB.get('classes');
       var years = ['2025-26', '2024-25', '2023-24', '2022-23'];
 
-      ['s-ay', 'se-ay'].forEach(function (id) {
+      ['stu-year', 'edit-year'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = years.map(function (y) { return '<option>' + y + '</option>'; }).join('');
       });
@@ -7284,13 +7265,13 @@
           + depts.map(function (d) { return '<option value="' + d.name + '">' + d.name + '</option>'; }).join('');
       });
 
-      ['s-dp', 'se-dp'].forEach(function (id) {
+      ['stu-dept', 'edit-dept'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = '<option value="">— Select —</option>'
           + depts.map(function (d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');
       });
 
-      ['s-cl', 'se-cl'].forEach(function (id) {
+      ['stu-class', 'edit-class'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = '<option value="">— Select —</option>'
           + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
@@ -7468,7 +7449,7 @@
     //  DB SYNC LAYER — All data fetched from MongoDB
     // ═══════════════════════════════════════════════════════
 
-        // DB Update Toast
+    // DB Update Toast
     var _dbToastTimer = null;
     var _dbToastDuration = 4000;
     function dbToast(msg, state, changes) {
@@ -7479,7 +7460,7 @@
       clearTimeout(_dbToastTimer);
       el.className = 'show ' + (state || 'saving');
 
-      var icon      = state === 'success' ? '✅' : state === 'error' ? '❌' : '';
+      var icon      = state === 'success' ? '✓' : state === 'error' ? '❌' : '';
       var spinHtml  = state === 'saving'  ? '<div class="db-spin"></div>' : '';
       var changesHtml = changes
         ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>'
@@ -7518,7 +7499,7 @@
         if (!barEl) return;
         barEl.style.transition = 'none';
         barEl.style.transform  = 'scaleX(1)';
-        barEl.getBoundingClientRect(); // force reflow
+        barEl.getBoundingClientRect();
         barEl.style.transition = 'transform ' + durationMs + 'ms linear';
         barEl.style.transform  = 'scaleX(0)';
       }

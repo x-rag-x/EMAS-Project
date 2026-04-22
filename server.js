@@ -878,9 +878,19 @@ app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req,res) 
       return res.status(403).json({ error:'You can only edit timetables for your own department' });
   }
 
+  const cls = await M.Class.findById(req.params.classId).lean();
+
   const update = payload
     ? { $set:{ [`slots.${slotKey}`]:payload }, updatedBy:u.name }
     : { $unset:{ [`slots.${slotKey}`]:'' }, updatedBy:u.name };
+    
+  if (cls) {
+    update.$setOnInsert = {
+      className: cls.name,
+      deptId: cls.deptId,
+      deptName: cls.deptName
+    };
+  }
 
   const doc = await M.SectionTimetable.findOneAndUpdate(
     { classId:req.params.classId },
@@ -900,10 +910,19 @@ app.put('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
     return res.status(403).json({ error:'TT Coordinator access required' });
 
   const { slots } = req.body;
+  const cls = await M.Class.findById(req.params.classId).lean();
+  const update = { slots, updatedBy:u.name };
+  if (cls) {
+    update.$setOnInsert = {
+      className: cls.name,
+      deptId: cls.deptId,
+      deptName: cls.deptName
+    };
+  }
 
   const doc = await M.SectionTimetable.findOneAndUpdate(
     { classId:req.params.classId },
-    { slots, updatedBy:u.name },
+    update,
     { upsert:true, new:true }
   );
 

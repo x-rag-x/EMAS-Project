@@ -62,24 +62,49 @@ const StudentUserSchema = new mongoose.Schema({
   lastName:     { type: String, default: '', trim: true },
   registerNo:   { type: String, default: '', trim: true },
   class:        { type: String, default: '' },
+  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
   section:      { type: String, default: '' },
-  branch:       { type: String, default: '' },
-  course:       { type: String, default: '' },
+  courseType:    { type: String, enum: ['UG','PG'], default: 'UG'  },
+  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
   department:   { type: String, default: '' },
-  currentYear:  { type: String, default: '' },
-  academicYear: { type: String, default: '' },
+  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
+  admissionYear: { type: String, default: '' },   // like ADM-2025
+  manageId:      { type: mongoose.Schema.Types.ObjectId, ref: 'DataManagement' },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
+  TrackED:      { type: String, default: '', unique: true, trim: true, required: true},
   isRep:        { type: Boolean, default: false },
   active:               { type: Boolean, default: true },
-  mustChangePassword:   { type: Boolean, default: false },
+  mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
   lastLogin:    { type: Date,   default: null },
   firstLogin:   { type: Date,   default: null },
   loginCount:   { type: Number, default: 0 },
   failedLogins: { type: Number, default: 0 },
   lockedUntil:  { type: Date,   default: null },
-}, { timestamps: true });
+}, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
+
+// Virtual properties to dynamically fetch from DataManagement
+StudentUserSchema.virtual('currentYear').get(function() {
+  if (this.manageId && this.manageId.value) {
+    return this.manageId.value.currentYear || '';
+  }
+  return '';
+});
+
+StudentUserSchema.virtual('currentSem').get(function() {
+  if (this.manageId && this.manageId.value) {
+    return this.manageId.value.currentSem || '';
+  }
+  return '';
+});
+
+StudentUserSchema.virtual('batch').get(function() {
+  if (this.manageId && this.manageId.value) {
+    return this.manageId.value.batch || '';
+  }
+  return '';
+});
 
 // ── LEGACY UserSchema ─────────────────────────────────
 const UserSchema = new mongoose.Schema({
@@ -148,6 +173,8 @@ const DepartmentSchema = new mongoose.Schema({
   icon:    { type: String, default: '🏛️' },
   hodId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   hodName: { type: String, default: '' },
+  courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
+  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
 }, { timestamps: true });
 
 const ClassSchema = new mongoose.Schema({
@@ -155,9 +182,9 @@ const ClassSchema = new mongoose.Schema({
   deptId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
   deptName: { type: String, required: true },
   deptCode: { type: String, required: true },
-  year:     { type: String, default: 'I Year' },
-  sem:      { type: String, default: 'I' },
-  section:  { type: String, default: 'A' },
+  year:     { type: String, default: '' },
+  sem:      { type: String, default: '' },
+  section:  { type: String, default: '' },
   hallNo:   { type: String, default: '' },
 }, { timestamps: true });
 
@@ -306,6 +333,16 @@ const SectionTimetableSchema = new mongoose.Schema({
   updatedBy : String,
 }, { timestamps:true });
 
+const DataManagementSchema = new mongoose.Schema({
+  key: { type: String, unique: true }, // "ADM-2025"
+  value: {
+    currentSem: Number,
+    currentYear: Number,
+    batch: String,  
+  },
+  updatedBy : String,
+}, { timestamps:true }); 
+
 module.exports = {
   Admin:        mongoose.model('Admin',        AdminSchema),
   Teacher:      mongoose.model('Teacher',      TeacherSchema),
@@ -326,4 +363,5 @@ module.exports = {
   UndoLog:      mongoose.model('UndoLog',      UndoLogSchema),
   LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
   SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
+  DataManagement: mongoose.model('DataManagement', DataManagementSchema),
 };
