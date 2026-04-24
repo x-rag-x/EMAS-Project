@@ -174,7 +174,7 @@ const DepartmentSchema = new mongoose.Schema({
   hodId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   hodName: { type: String, default: '' },
   courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
-  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
+  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: 'B.E' },
 }, { timestamps: true });
 
 const ClassSchema = new mongoose.Schema({
