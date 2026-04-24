@@ -1,7 +1,7 @@
 {
-  "name": "eams-backend",
+  "name": "eams",
   "version": "1.0.0",
-  "description": "EAMS – Sri Shakthi Institute Attendance Management System",
+  "description": "Electronic Attendance Management System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,15 +13,12 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^4.18.3",
-    "jsonwebtoken": "^9.0.2",
-    "mongodb": "^7.1.0",
-    "mongoose": "^8.4.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.0",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.0",
     "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
   }
 }
