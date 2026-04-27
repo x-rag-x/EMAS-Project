@@ -358,6 +358,153 @@
       display: flex;
     }
 
+    /* ── PAGE LOADER ─────────────────────────────── */
+    #page-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--gP);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+    }
+
+    #page-loader .loader-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--td);
+      letter-spacing: -.3px;
+    }
+
+    #page-loader .loader-msg {
+      font-size: 13px;
+      color: var(--tmu);
+      font-weight: 500;
+      letter-spacing: .2px;
+      transition: opacity .25s ease;
+    }
+
+    #page-loader .loader-msg.msg-fade {
+      opacity: 0;
+    }
+
+    #page-loader .loader-steps {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    #page-loader .loader-step {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gLr);
+      transition: background .3s ease, transform .3s ease;
+    }
+
+    #page-loader .loader-step.done {
+      background: var(--gD);
+      transform: scale(1.2);
+    }
+
+    #page-loader .loader-step.active {
+      background: var(--gB);
+      transform: scale(1.35);
+      box-shadow: 0 0 0 3px rgba(76,175,80,.2);
+    }
+
+    .three-body {
+      --uib-size: 70px;
+      --uib-speed: 0.8s;
+      --uib-color: #15c42d;
+      position: relative;
+      display: inline-block;
+      height: var(--uib-size);
+      width: var(--uib-size);
+      animation: spin78236 calc(var(--uib-speed) * 2.5) infinite linear;
+    }
+
+    .three-body__dot {
+      position: absolute;
+      height: 100%;
+      width: 30%;
+    }
+
+    .three-body__dot:after {
+      content: '';
+      position: absolute;
+      height: 0%;
+      width: 100%;
+      padding-bottom: 100%;
+      background-color: var(--uib-color);
+      border-radius: 50%;
+    }
+
+    .three-body__dot:nth-child(1) {
+      bottom: 5%;
+      left: 0;
+      transform: rotate(60deg);
+      transform-origin: 50% 85%;
+    }
+
+    .three-body__dot:nth-child(1)::after {
+      bottom: 0;
+      left: 0;
+      animation: wobble1 var(--uib-speed) infinite ease-in-out;
+      animation-delay: calc(var(--uib-speed) * -0.3);
+    }
+
+    .three-body__dot:nth-child(2) {
+      bottom: 5%;
+      right: 0;
+      transform: rotate(-60deg);
+      transform-origin: 50% 85%;
+    }
+
+    .three-body__dot:nth-child(2)::after {
+      bottom: 0;
+      left: 0;
+      animation: wobble1 var(--uib-speed) infinite calc(var(--uib-speed) * -0.15) ease-in-out;
+    }
+
+    .three-body__dot:nth-child(3) {
+      bottom: -5%;
+      left: 0;
+      transform: translateX(116.666%);
+    }
+
+    .three-body__dot:nth-child(3)::after {
+      top: 0;
+      left: 0;
+      animation: wobble2 var(--uib-speed) infinite ease-in-out;
+    }
+
+    @keyframes spin78236 {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes wobble1 {
+      0%, 100% { transform: translateY(0%) scale(1); opacity: 1; }
+      50%       { transform: translateY(-66%) scale(0.65); opacity: 0.8; }
+    }
+
+    @keyframes wobble2 {
+      0%, 100% { transform: translateY(0%) scale(1); opacity: 1; }
+      50%       { transform: translateY(66%) scale(0.65); opacity: 0.8; }
+    }
+
+    #page-loader.loader-fade {
+      animation: loaderFadeOut .35s ease forwards;
+    }
+
+    @keyframes loaderFadeOut {
+      to { opacity: 0; pointer-events: none; }
+    }
+
     /* ── TOP BAR ─────────────────────────────────── */
     .topbar {
       background: #fff;
@@ -858,6 +1005,37 @@
 
     .date-fc:focus {
       border-color: var(--gM);
+    }
+
+    /* Add Student - Email combined field */
+    .email-wrap {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .email-wrap input {
+      flex: 1;
+      height: 42px;
+      border-radius: 10px 0 0 10px;
+      border: 1px solid #dcdcdc;
+      border-right: none;
+      padding: 0 12px;
+      background: #f6f7f6;
+    }
+
+    .email-domain {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      background: var(--gLt);
+      border: 1px solid #dcdcdc;
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+      font-size: 13px;
+      color: var(--tmu);
+      white-space: nowrap;
     }
 
     /* Pill bar chart */
@@ -2690,10 +2868,42 @@
       /* optional polish */
       box-shadow: 0 0 6px rgba(134, 239, 172, 0.5);
     }
+
+    /* ── Clear Cache Model  ───────────────────────────────────────── */
+
+    .checkbx-btn {
+      display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;
+      padding:10px 14px;border-radius:12px;border:1.5px solid var(--br);
+      color:var(--tmu);background:#fff;transition:all .2s;font-weight:500;font-family:'Poppins',sans-serif;
+    }
+    .checkbx-btn:hover{background:var(--gLt);color:var(--gK);}
+
+    .chkbx-input {
+      accent-color:var(--p);width:14px;height:14px;
+    }
+
   </style>
 </head>
 
 <body>
+
+  <!-- ── PAGE LOADER ── shown until first DB sync completes -->
+  <div id="page-loader">
+    <div class="loader-brand">🌿 EAMS Admin</div>
+    <div class="three-body">
+      <div class="three-body__dot"></div>
+      <div class="three-body__dot"></div>
+      <div class="three-body__dot"></div>
+    </div>
+    <div class="loader-msg" id="loader-msg">Initializing EAMS…</div>
+    <div class="loader-steps">
+      <div class="loader-step active" id="lstep-0"></div>
+      <div class="loader-step" id="lstep-1"></div>
+      <div class="loader-step" id="lstep-2"></div>
+      <div class="loader-step" id="lstep-3"></div>
+      <div class="loader-step" id="lstep-4"></div>
+    </div>
+  </div>
 
   <!-- APP SHELL -->
   <div id="app-shell">
@@ -2725,7 +2935,7 @@
 
         <div class="sb-section-label">Reports & Logs</div>
         <button class="sb-item" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
-        <button class="sb-item" onclick="nav('bulk')"><span class="sbi-ic">📤</span>Bulk Upload</button>
+        <button class="sb-item" onclick="window.location.href='bulk.html'"><span class="sbi-ic">📤</span>Bulk Upload      🡭</button>
         <button class="sb-item" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity Logs</button>
 
 
@@ -3795,17 +4005,66 @@
         <div class="modal-title">🏛️ Add Department</div>
         <div class="modal-close" onclick="closeModalBg('m-add-dept')">✖</div>
       </div>
-      <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="dn"
-            placeholder="Enter Full Dept Name"></div>
-        <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="dc" placeholder="Short Code">
+      <div class="form-grid" style="grid-template-columns:1;">
+        <div class="fg"><label class="fl">Department Name</label>
+          <input type="text" class="fc2" id="dept-name" placeholder="Enter Full Dept Name">
         </div>
-        <div class="fg"><label class="fl">Icon (Optional)</label><input type="text" class="fc2" id="di" placeholder="💻"
-            maxlength="4"></div>
       </div>
-      <div class="form-actions"><button class="btn-form-ghost"
-          onclick="closeModalBg('m-add-dept')">Cancel</button><button class="btn-form-pri" onclick="addDept()">Add
-          Department</button></div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="fg"><label class="fl">Department Code</label>
+          <input type="text" class="fc2" id="dept-code" placeholder="e.g. AIML, CSE">
+        </div>
+        <div class="fg"><label class="fl">Department Number <span style="color:var(--red);">*</span></label>
+          <input type="text" class="fc2" id="dept-number" placeholder="3-digit e.g. 104" maxlength="3" oninput="this.value=this.value.replace(/\D/g,'')">
+        </div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">Course Type</label>
+          <select class="fc2" id="co-type" onchange="updateBranch()">
+            <option value="">— Select —</option>
+            <option>UG</option>
+            <option>PG</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Branch</label>
+          <select class="fc2" id="branch">
+            <option value="">— Select Course Type First —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <!-- HoD TrackID lookup -->
+        <div class="fg" style="position:relative;">
+          <label class="fl">HoD TrackID <span style="color:var(--red);">*</span></label>
+          <input type="text" class="fc2" id="hod-id"
+            placeholder="Enter HoD TrackID"
+            oninput="scheduleHodLookup(this.value,'')"
+            autocomplete="off"
+            style="padding-right:34px;">
+          <span id="hod-spin" style="
+              display:none; position:absolute; right:10px; top:28px;
+              width:16px; height:16px;
+              border:2.5px solid var(--gLr); border-top-color:var(--gD);
+              border-radius:50%; animation:dbspin .7s linear infinite;">
+          </span>
+          <span id="hod-ok"  style="display:none;position:absolute;right:10px;top:26px;color:var(--gD);font-size:17px;font-weight:700;line-height:1;">✓</span>
+          <span id="hod-err" style="display:none;position:absolute;right:10px;top:26px;color:var(--red);font-size:17px;font-weight:700;line-height:1;">✗</span>
+        </div>
+        <div class="fg">
+          <label class="fl">Head of Department Name <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="hod-name"
+            placeholder="Auto-filled from TrackID"
+            readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:default;">
+        </div>
+      </div>
+      <!-- status line below the grid -->
+      <div id="hod-lookup-msg" style="font-size:11px;min-height:16px;margin:-6px 0 10px;padding-left:2px;"></div>
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-add-dept')">Cancel</button>
+        <button class="btn-form-pri" onclick="addDept()">Add Department</button>
+      </div>
     </div>
   </div>
 
@@ -3817,14 +4076,67 @@
         <div class="modal-close" onclick="closeModalBg('m-edit-dept')">✖</div>
       </div>
       <input type="hidden" id="ed-id">
-      <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Department Name</label><input type="text" class="fc2" id="ed-nm"></div>
-        <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="ed-cd"></div>
-        <div class="fg"><label class="fl">Icon</label><input type="text" class="fc2" id="ed-ic" maxlength="1"></div>
+      <!-- Row 1: Name -->
+      <div class="form-grid" style="grid-template-columns:1fr;">
+        <div class="fg"><label class="fl">Department Name</label>
+          <input type="text" class="fc2" id="ed-nm" placeholder="Enter Full Dept Name">
+        </div>
       </div>
-      <div class="form-actions"><button class="btn-form-ghost"
-          onclick="closeModalBg('m-edit-dept')">Cancel</button><button class="btn-form-pri" onclick="saveEditDept()">💾
-          Save Changes</button></div>
+      <!-- Row 2: Code + Number -->
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">Department Code</label>
+          <input type="text" class="fc2" id="ed-cd" placeholder="e.g. AIML, CSE">
+        </div>
+        <div class="fg"><label class="fl">Department Number <span style="color:var(--red);">*</span></label>
+          <input type="text" class="fc2" id="ed-num" placeholder="3-digit e.g. 104" maxlength="3" oninput="this.value=this.value.replace(/\D/g,'')">
+        </div>
+      </div>
+      <!-- Row 3: Course Type + Branch -->
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">Course Type</label>
+          <select class="fc2" id="ed-cotype" onchange="edUpdateBranch()">
+            <option value="">— Select —</option>
+            <option>UG</option>
+            <option>PG</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Branch</label>
+          <select class="fc2" id="ed-branch">
+            <option value="">— Select Course Type First —</option>
+          </select>
+        </div>
+      </div>
+      <!-- Row 4: HoD TrackID + Name -->
+      <div class="form-grid form-grid-2">
+        <div class="fg" style="position:relative;">
+          <label class="fl">HoD TrackID</label>
+          <input type="text" class="fc2" id="ed-hod-id"
+            placeholder="Enter HoD TrackID"
+            oninput="scheduleHodLookup(this.value,'ed-')"
+            autocomplete="off"
+            style="padding-right:34px;">
+          <span id="ed-hod-spin" style="
+              display:none; position:absolute; right:10px; top:28px;
+              width:16px; height:16px;
+              border:2.5px solid var(--gLr); border-top-color:var(--gD);
+              border-radius:50%; animation:dbspin .7s linear infinite;">
+          </span>
+          <span id="ed-hod-ok"  style="display:none;position:absolute;right:10px;top:26px;color:var(--gD);font-size:17px;font-weight:700;line-height:1;">✓</span>
+          <span id="ed-hod-err" style="display:none;position:absolute;right:10px;top:26px;color:var(--red);font-size:17px;font-weight:700;line-height:1;">✗</span>
+        </div>
+        <div class="fg">
+          <label class="fl">Head of Department Name <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="ed-hod-name"
+            placeholder="Auto-filled from TrackID"
+            readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:default;">
+        </div>
+      </div>
+      <div id="ed-hod-lookup-msg" style="font-size:11px;min-height:16px;margin:-6px 0 10px;padding-left:2px;"></div>
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-edit-dept')">Cancel</button>
+        <button class="btn-form-pri" onclick="saveEditDept()">💾 Save Changes</button>
+      </div>
     </div>
   </div>
 
@@ -3869,7 +4181,7 @@
             placeholder="e.g. LH01"></div>
       </div>
       <div class="fg" style="margin-bottom:6px;"><label class="fl">Class Name <span
-            style="color:var(--tdi);font-size:10px;">(auto-generated)</span></label><input type="text" class="fc2"
+            style="color:var(--tdi);font-size:10px;">(auto)</span></label><input type="text" class="fc2"
           id="nc-name" readonly style="background:#f8fafc;color:var(--tmu);cursor:not-allowed;"
           placeholder="Select dept, sem & section"></div>
       <div id="nc-warn"
@@ -3960,31 +4272,6 @@
     </div>
   </div>
 
-  <!-- Edit Subject -->
-  <div class="modal-bg" id="m-edit-subj">
-    <div class="modal modal-sm">
-      <div class="modal-hd">
-        <div class="modal-title">✏️ Edit Subject</div>
-        <div class="modal-close" onclick="closeModalBg('m-edit-subj')">✖</div>
-      </div>
-      <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2"
-          id="es-nm"></div>
-      <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="es-cd"></div>
-        <div class="fg"><label class="fl">Credits</label><input type="number" class="fc2" id="es-cr" min="1" max="6">
-        </div>
-        <div class="fg"><label class="fl">Type</label><select class="fc2" id="es-tp">
-            <option>Theory</option>
-            <option>Lab</option>
-            <option>Elective</option>
-          </select></div>
-      </div>
-      <div class="form-actions"><button class="btn-form-ghost"
-          onclick="closeModalBg('m-edit-subj')">Cancel</button><button class="btn-form-pri" onclick="saveEditSubj()">💾
-          Save</button></div>
-    </div>
-  </div>
-
   <!-- Add Subject -->
   <div class="modal-bg" id="m-add-subj-ctx">
     <div class="modal modal-sm">
@@ -4014,6 +4301,31 @@
     </div>
   </div>
 
+  <!-- Edit Subject -->
+  <div class="modal-bg" id="m-edit-subj">
+    <div class="modal modal-sm">
+      <div class="modal-hd">
+        <div class="modal-title">✏️ Edit Subject</div>
+        <div class="modal-close" onclick="closeModalBg('m-edit-subj')">✖</div>
+      </div>
+      <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2"
+          id="es-nm"></div>
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="es-cd"></div>
+        <div class="fg"><label class="fl">Credits</label><input type="number" class="fc2" id="es-cr" min="1" max="6">
+        </div>
+        <div class="fg"><label class="fl">Type</label><select class="fc2" id="es-tp">
+            <option>Theory</option>
+            <option>Lab</option>
+            <option>Elective</option>
+          </select></div>
+      </div>
+      <div class="form-actions"><button class="btn-form-ghost"
+          onclick="closeModalBg('m-edit-subj')">Cancel</button><button class="btn-form-pri" onclick="saveEditSubj()">💾
+          Save</button></div>
+    </div>
+  </div>
+
   <!-- Assign Subject to Class -->
   <div class="modal-bg" id="m-asgn-subj">
     <div class="modal modal-sm">
@@ -4040,49 +4352,95 @@
         <div class="modal-title">👨‍🎓 Add Student</div>
         <div class="modal-close" onclick="closeModalBg('m-add-student')">✖</div>
       </div>
+      <!-- Row 1: Full Name + Register No -->
       <div class="form-grid" style="grid-template-columns:1.2fr 0.8fr;">
-        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="stu-name"
-            placeholder="Student full name" required></div>
-        <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="stu-regNo"
-            placeholder="e.g. 714025xxxxxx"></div>
+        <div class="fg"><label class="fl">Full Name</label>
+          <input type="text" class="fc2" id="stu-name" oninput="onStuNameInput()" placeholder="Student full name" required>
+        </div>
+        <div class="fg"><label class="fl">Register Number</label>
+          <input type="text" class="fc2" id="stu-regNo" value="7140" oninput="onStuRegNoChange()">
+        </div>
       </div>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+
+      <!-- Row 2: Department → auto-fills Course Type + Branch -->
+      <div class="form-grid" style="grid-template-columns:1.5fr 1fr 1fr;">
+        <div class="fg"><label class="fl">Department</label>
+          <select class="fc2" id="stu-dept" onchange="onStuDeptChange()">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Course Type <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-courseType" readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:not-allowed;" placeholder="Auto from register no">
+        </div>
+        <div class="fg"><label class="fl">Branch <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-branch" readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:not-allowed;" placeholder="Auto from register no">
+        </div>
+      </div>
+
+      <!-- Row 2b: Track ID -->
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">Track ID <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-trackId" readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:not-allowed;font-family:monospace;letter-spacing:1px;"
+            placeholder="Auto from register no">
+        </div>
+        <div class="fg"><label class="fl" style="font-size:9px;color:var(--tdi);padding-top:6px;">
+          TR + DeptCode + Year + Roll<br>e.g. <b>TRCS25208</b> for 714025<b>104</b>208
+        </label></div>
+      </div>
+      
+      <!-- Row 3: First Name + Last Name (auto-split) -->
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">First Name <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-firstName" placeholder="Auto-split from name">
+        </div>
+        <div class="fg"><label class="fl">Last Name <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-lastName" placeholder="Auto-split from name">
+        </div>
+      </div>
+
+      <!-- Row 4: Academic Year + Class + Section -->
+      <div class="form-grid" style="grid-template-columns:1fr 1.5fr 0.5fr;">
         <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="stu-year"></select></div>
-        <div class="fg"><label class="fl">Course Type</label>
-          <select class="fc2" id="stu-courseType" onchange="onCourseTypeChange()">
-            <option value="">— Select —</option>
-            <option>UG</option>
-            <option>PG</option>
-          </select>
-        </div>
-        <div class="fg"><label class="fl">Branch</label>
-          <select class="fc2" id="stu-branch">
+        <div class="fg"><label class="fl">Class</label>
+          <select class="fc2" id="stu-class" onchange="onStuClassChange()">
             <option value="">— Select —</option>
           </select>
         </div>
+        <div class="fg" style="margin-bottom:14px;"><label class="fl">Section <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-section" placeholder="Auto from class" readonly
+            style="background:var(--gLt);color:var(--tmu);cursor:not-allowed;">
+        </div>
       </div>
-      <div class="form-grid" style="grid-template-columns:1.5fr 1fr 0.5fr;">
-        <div class="fg"><label class="fl">Department</label><select class="fc2" id="stu-dept">
-            <option value="">— Select —</option>
-          </select></div>
-        <div class="fg"><label class="fl">Class</label><select class="fc2" id="stu-class">
-            <option value="">— Select —</option>
-          </select></div>
-          <div class="fg" style="margin-bottom:14px;"><label class="fl">Section</label><input type="text" class="fc2"
-          id="stu-section" placeholder="A / B"></div>
-      </div>
+
+      <!-- Row 5: Login details -->
       <div class="fl">Student Login Details</div><br>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="fg"><label class="fl">Email</label><input type="email" class="fc2" id="stu-email"
-            placeholder="College Email" required></div>
-        <div class="fg"><label class="fl">User Name</label><input type="text" class="fc2" id="stu-username"
-            placeholder="Login Username" required></div>
-        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input type="password" class="fc2" id="stu-password" value="student123"><button type="button"
-              class="pw-eye" onclick="togglePwField('stu-password',this)" tabindex="-1">👁</button></div></div>
+      <div class="fg">
+        <label class="fl">Email</label>
+        <div class="email-wrap">
+          <input type="text" id="stu-email" placeholder="Enter username" value = '' oninput="onUsernameInput()">
+
+          <span class="email-domain">@srishakthi.ac.in</span>
+        </div>
+      </div> 
+        <div class="fg" style="margin-bottom:14px;"><label class="fl">Username <span style="font-size:9px;color:var(--tdi);">(auto)</span></label>
+          <input type="text" class="fc2" id="stu-username" placeholder="Auto from email" readonly
+          style="background:var(--gLt);color:var(--tmu);cursor:not-allowed;" placeholder="Auto from email">
+        </div>
+        <div class="fg"><label class="fl">Password<span style="font-size:9px;color:var(--tdi);">(default)</span></label>
+          <div class="pw-wrap"><input type="password" class="fc2" id="stu-password" value="student123">
+            <button type="button" class="pw-eye" onclick="togglePwField('stu-password',this)" tabindex="-1">👁</button>
+          </div>
+        </div>
       </div>
+
       <div class="form-actions">
         <button class="btn-form-ghost" onclick="closeModalBg('m-add-student')">Close</button>
-        <button class="btn-form-pri" onclick="addStu()">Add Student</button></div>
+        <button class="btn-form-pri" onclick="addStu()">Add Student</button>
+      </div>
     </div>
   </div>
 
@@ -4097,8 +4455,14 @@
         <div class="modal-close" onclick="closeModalBg('m-stu-edit')">✖</div>
       </div>
       <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="edit-name"></div>
+        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fc2" id="edit-name" oninput="onEditNameInput()"></div>
         <div class="fg"><label class="fl">Register Number</label><input type="text" class="fc2" id="edit-regNo"></div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="fg"><label class="fl">First Name <span style="font-size:9px;color:var(--tdi);">(auto-split)</span></label>
+          <input type="text" class="fc2" id="edit-firstName" placeholder="Auto-split from name"></div>
+        <div class="fg"><label class="fl">Last Name <span style="font-size:9px;color:var(--tdi);">(auto-split)</span></label>
+          <input type="text" class="fc2" id="edit-lastName" placeholder="Auto-split from name"></div>
       </div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="fg"><label class="fl">Academic Year</label><select class="fc2" id="edit-year"></select></div>
@@ -4115,7 +4479,7 @@
         <div class="fg"><label class="fl">Department</label><select class="fc2" id="edit-dept">
             <option value="">— Select —</option>
           </select></div>
-        <div class="fg"><label class="fl">Class</label><select class="fc2" id="edit-class">
+        <div class="fg"><label class="fl">Class</label><select class="fc2" id="edit-class" onchange="onEditClassChange()">
             <option value="">— Select —</option>
           </select></div>
       </div>
@@ -4161,7 +4525,8 @@
         </div>
       </div>
       <div class="form-grid form-grid-2" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);">
-        <div class="fg"><label class="fl">Joining Date</label><input type="date" class="fc2" id="t-jd"></div>
+        <div class="fg"><label class="fl">Track ID</label><input type="text" class="fc2" id="t-ti"
+            value="TR-TEACH-XXX"></div>
         <div class="fg"><label class="fl">Experience</label><input type="text" class="fc2" id="t-exp"
             placeholder="e.g. 5 years"></div>
         <div class="fg"><label class="fl">Qualifications</label><input type="text" class="fc2" id="t-qual"
@@ -4487,8 +4852,7 @@
           <span
             style="background:#e8f5e9;border:1px solid var(--gLr);border-radius:5px;padding:2px 7px;">Password</span>
         </div>
-        <div style="margin-top:6px;color:var(--tdi);font-size:10px;">CourseType: UG or PG &nbsp;|&nbsp; Branch: B.E /
-          B.Tech / M.E etc.</div>
+        <div style="margin-top:6px;color:var(--tdi);font-size:10px;">CourseType: UG or PG &nbsp;|&nbsp; Branch: B.E / B.TECH / M.E / M.TECH</div>
       </div>
       <div id="tup2" style="margin-top:10px;"></div>
     </div>
@@ -4547,17 +4911,20 @@
     // ─── COURSE CATALOG ─────────────────────────────────────────────────────────
     const COURSES = {
       UG: {
-        'BE': ['Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering',
+        'B.E':    ['Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering',
           'Electronics & Communication Engineering', 'Computer Science Engineering',
           'Information Technology', 'Chemical Engineering', 'Biomedical Engineering'],
-        'BTech': ['Computer Science & Engineering', 'Information Technology',
+        'B.TECH': ['Computer Science & Engineering', 'Information Technology',
           'Electronics & Communication', 'Data Science', 'AI & ML', 'Cybersecurity'],
       },
       PG: {
-        'ME': ['Computer Science', 'VLSI Design', 'Power Systems', 'Structural Engineering'],
-        'MTech': ['Computer Science & Engineering', 'Data Science', 'AI & ML', 'Embedded Systems'],
+        'M.E':    ['Computer Science', 'VLSI Design', 'Power Systems', 'Structural Engineering'],
+        'M.TECH': ['Computer Science & Engineering', 'Data Science', 'AI & ML', 'Embedded Systems'],
       }
     };
+
+    // ─── Register No decode is DB-driven via getDeptByNumber() ─────────────────
+    // Set dept.number (3-digit), dept.twoLetterCode, dept.threeLetterCode when adding a dept.
 
     // ─── SEED / INITIAL DATA ────────────────────────────────────────────────────
     function initDB() {
@@ -4628,8 +4995,7 @@
     }
 
     function bootApp() {
-      document.getElementById('app-shell').classList.add('vis');
-
+      // Populate user info while loader is still shown (elements exist, just hidden behind loader)
       var avatarLetter = currentUser.name[0].toUpperCase();
       document.getElementById('sb-av').textContent = avatarLetter;
       document.getElementById('sb-name').textContent = currentUser.name;
@@ -4641,10 +5007,72 @@
         new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
       populateAdminDropdowns();
-      // Sync all data from MongoDB on boot
+
+      // ── Loader message sequence (3 s total) ─────────────
+      var LOADER_STEPS = [
+        { t:    0, msg: 'Initializing EAMS…' },
+        { t:  500, msg: 'Getting Info…' },
+        { t: 1000, msg: 'Connecting to Database…' },
+        { t: 1800, msg: 'Fetching from Database…' },
+        { t: 2800, msg: 'Almost ready…' },
+      ];
+
+      var loaderMsgEl = document.getElementById('loader-msg');
+
+      function setLoaderMsg(idx, text) {
+        if (!loaderMsgEl) return;
+        loaderMsgEl.classList.add('msg-fade');
+        setTimeout(function () {
+          loaderMsgEl.textContent = text;
+          loaderMsgEl.classList.remove('msg-fade');
+          // Advance step dots (5 dots, indices 0-4)
+          for (var s = 0; s < 5; s++) {
+            var dot = document.getElementById('lstep-' + s);
+            if (!dot) continue;
+            dot.className = 'loader-step' + (s < idx ? ' done' : s === idx ? ' active' : '');
+          }
+        }, 130);
+      }
+
+      LOADER_STEPS.forEach(function (step, i) {
+        if (i === 0) return; // first already set in HTML
+        setTimeout(function () { setLoaderMsg(i, step.msg); }, step.t);
+      });
+
+      // ── Gate: both 3 s timer AND real sync must finish ──────
+      var timerDone = false;
+      var fetchDone = false;
+      var fetchCb   = null; // store the nav callback until gate opens
+
+      function tryReveal() {
+        if (!timerDone || !fetchDone) return;
+        // Flush any toasts that fired during loading
+        _loaderActive = false;
+        var loader = document.getElementById('page-loader');
+        if (loader) {
+          loader.classList.add('loader-fade');
+          setTimeout(function () {
+            loader.style.display = 'none';
+            // Fire queued toasts after loader is visually gone
+            _toastQueue.forEach(function (a) { dbToast(a[0], a[1], a[2]); });
+            _toastQueue = [];
+          }, 360);
+        }
+        document.getElementById('app-shell').classList.add('vis');
+        if (fetchCb) fetchCb();
+      }
+
+      // 3-second minimum display
+      setTimeout(function () { timerDone = true; tryReveal(); }, 3000);
+
+      // Real DB sync
       syncAllFromDB(function () {
-        nav('dash');
-        populateAdminDropdowns();
+        fetchCb = function () {
+          nav('dash');
+          populateAdminDropdowns();
+        };
+        fetchDone = true;
+        tryReveal();
       });
     }
 
@@ -4874,7 +5302,7 @@
               renderLogs();
               addLog('Logs Cleared', 'All logs cleared from DB');
               closeModalBg('m-dc-confirm');
-              dbToast('All logs cleared', 'success', 'Removed from MongoDB + cache');
+              dbToast('All logs cleared', 'success', 'Removed from Database + cache');
             });
         });
       };
@@ -5632,39 +6060,81 @@
       var dept = DB.get('depts').find(function (x) { return x._id === deptId; });
       if (!dept) return;
       document.getElementById('ed-id').value = deptId;
-      document.getElementById('ed-nm').value = dept.name || '';
-      document.getElementById('ed-cd').value = dept.code || '';
-      document.getElementById('ed-ic').value = dept.icon || '🏛️';
+      document.getElementById('ed-nm').value  = dept.name   || '';
+      document.getElementById('ed-cd').value  = dept.code   || '';
+      document.getElementById('ed-num').value = dept.number || dept.deptNum || '';
+
+      // Course Type + Branch
+      var coEl = document.getElementById('ed-cotype');
+      var brEl = document.getElementById('ed-branch');
+      if (coEl) {
+        coEl.value = dept.courseType || '';
+        edUpdateBranch();                     // populate branch options first
+        if (brEl) brEl.value = dept.branch || '';
+      }
+
+      // HoD fields — pre-fill without re-triggering lookup
+      hodLookupReset('ed-');
+      var hodIdEl   = document.getElementById('ed-hod-id');
+      var hodNmEl   = document.getElementById('ed-hod-name');
+      if (hodIdEl) hodIdEl.value = dept.hodTrackId || dept.hodId || '';
+      if (hodNmEl) hodNmEl.value = dept.hodName    || '';
+      // If name already exists, show green tick
+      if (hodNmEl && hodNmEl.value) hodLookupBadge('ok', 'ed-');
+
       openModal_('m-edit-dept');
     }
 
     function saveEditDept() {
-      var id = document.getElementById('ed-id').value;
-      var name = getFieldValue('ed-nm');
-      var code = getFieldValue('ed-cd');
-      var icon = getFieldValue('ed-ic') || '🏛️';
-      if (!name || !code) { showToast('Name and Code required', 'warn'); return; }
-      DB.update('depts', id, { name: name, code: code, icon: icon });
-      addLog('Department Updated', '"' + name + '" (' + code + ')');
-      closeModalBg('m-edit-dept');
-      renderDepartments();
-      showToast('Department updated');
+      var id         = document.getElementById('ed-id').value;
+      var name       = getFieldValue('ed-nm');
+      var code       = getFieldValue('ed-cd');
+      var number     = getFieldValue('ed-num');
+      var courseType = document.getElementById('ed-cotype') ? document.getElementById('ed-cotype').value : '';
+      var branch     = document.getElementById('ed-branch')  ? document.getElementById('ed-branch').value  : '';
+      var hodId      = getFieldValue('ed-hod-id')   || null;
+      var hodName    = getFieldValue('ed-hod-name') || '';
+      if (!name || !code) { showToast('Department name and code are required', 'warn'); return; }
+      if (number && !/^\d{3}$/.test(number)) { showToast('Department Number must be exactly 3 digits', 'warn'); return; }
+      if (!courseType || !branch) { showToast('Course Type and Branch are required', 'warn'); return; }
+      if (hodId && !hodName) { showToast('Re-verify HoD TrackID — name not resolved', 'warn'); return; }
+      apiUpdateDept(id, name, code, number, courseType, branch, hodId, hodName).then(function (d) {
+        if (!d) return;
+        addLog('Department Updated', '"' + name + '" (' + code + ')');
+        closeModalBg('m-edit-dept');
+        renderDepartments();
+        hodLookupReset('ed-');
+        showToast('✅ Department updated');
+      });
     }
 
     function addDept() {
-      var name = getFieldValue('dn');
-      var code = getFieldValue('dc');
-      var icon = getFieldValue('di') || '🏛️';
-      if (!name || !code) { showToast('Name and Code required', 'warn'); return; }
-      apiAddDept(name, code, icon).then(function (d) {
+      var name       = getFieldValue('dept-name');
+      var code       = getFieldValue('dept-code');
+      var number     = getFieldValue('dept-number');
+      var courseType = document.getElementById('co-type') ? document.getElementById('co-type').value : 'UG';
+      var branch     = document.getElementById('branch')  ? document.getElementById('branch').value  : 'B.E';
+      var hodId      = getFieldValue('hod-id') || null;
+      var hodName    = getFieldValue('hod-name') || '';
+      if (!name || !code) { showToast('Department name and code are required', 'warn'); return; }
+      if (!number || !/^\d{3}$/.test(number)) { showToast('Department Number must be exactly 3 digits', 'warn'); return; }
+      if (!courseType || !branch) { showToast('Course Type and Branch are required', 'warn'); return; }
+      if (!hodId) { showToast('HoD TrackID is required', 'warn'); return; }
+      if (!hodName) { showToast('Verify the HoD TrackID first — name not resolved', 'warn'); return; }
+      // Check that lookup succeeded (hod-ok must be visible)
+      var okEl = document.getElementById('hod-ok');
+      if (!okEl || okEl.style.display === 'none') { showToast('HoD TrackID verification failed or pending', 'warn'); return; }
+      apiAddDept(name, code, number, courseType, branch, hodId, hodName).then(function (d) {
         if (!d) return;
         closeModalBg('m-add-dept');
         renderDepartments();
         populateAdminDropdowns();
         updateStatCards();
         addLog('Department Added', '"' + name + '" (' + code + ')');
-        showToast('Department "' + name + '" added');
-        clearInputs(['dn', 'dc', 'di']);
+        clearInputs(['dept-name', 'dept-code', 'dept-number', 'hod-id', 'hod-name']);
+        var coEl = document.getElementById('co-type');   if (coEl) coEl.value = '';
+        var brEl = document.getElementById('branch');    if (brEl) brEl.innerHTML = '<option value="">— Select Course First —</option>';
+        hodLookupReset('');
       });
     }
 
@@ -5683,6 +6153,7 @@
           renderDepartments();
           updateStatCards();
           showToast('Deleted', 'warn');
+          window.location.reload();
         });
       };
       openModal_('m-dc-confirm');
@@ -6155,7 +6626,7 @@
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--tmu);font-size:13px;">\u23f3 Loading from database…</td></tr>';
       openModal_('m-subj-assign');
 
-      // ✅ Fetch existing assignments DIRECTLY from MongoDB (no localStorage)
+      // ✅ Fetch existing assignments DIRECTLY from Database - MongoDB
       apiCall('GET', '/assignments?subjectId=' + encodeURIComponent(subjectId))
         .then(function(existing) {
           tbody.innerHTML = '';
@@ -6298,9 +6769,9 @@
       }
       if (rowErr) { showToast(rowErr, 'warn'); return; }
 
-      dbToast('Saving to MongoDB…', 'saving', enriched.length + ' section(s)');
+      dbToast('Saving to Database…', 'saving', enriched.length + ' section(s)');
 
-      // ✅ POST directly to MongoDB via API — zero localStorage writes
+      // ✅ POST directly to Database - MongoDB via API — zero localStorage writes
       apiCall('POST', '/assignments/bulk', { subjectId: subjectId, assignments: enriched })
         .then(function(d) {
           if (!d || d.error) {
@@ -6309,7 +6780,7 @@
             return;
           }
 
-          dbToast('Saved to MongoDB', 'success', d.count + ' section(s) written to DB');
+          dbToast('Saved to Database', 'success', d.count + ' section(s) written to DB');
           closeModalBg('m-subj-assign');
           addLog('Assignments Bulk Saved', d.count + ' sections → ' + subj.name);
           // showToast('✓ ' + d.count + ' assignment(s) saved to DB!');
@@ -6401,6 +6872,158 @@
     }
     var sfch = filterStudents; // alias
 
+    function updateBranch() {
+      const type = document.getElementById('co-type').value;
+      const branchDD = document.getElementById('branch');
+
+      let options = `<option value="">— Select —</option>`;
+
+      if (type === 'UG') {
+        options += `
+          <option value="B.E">B.E</option>
+          <option value="B.TECH">B.TECH</option>
+        `;
+      } 
+      else if (type === 'PG') {
+        options += `
+          <option value="M.E">M.E</option>
+          <option value="M.TECH">M.TECH</option>
+        `;
+      }
+
+      branchDD.innerHTML = options;
+    }
+
+    // ─── HOD TRACKID LOOKUP ──────────────────────────────────────────────────────
+    // Debounced 600 ms + 3 s minimum spinner. Checks isHod before accepting.
+    // API endpoint expected: GET /api/teachers/trackid/:id
+    //   Response: { fullName: "...", isHod: true|false }  OR  { error: "..." }
+    // pfx '' = Add Dept modal   |   pfx 'ed-' = Edit Dept modal
+
+    var _hodLookupTimer = null;   // debounce handle (add modal)
+    var _hodLookupMinTimer = null; // minimum 3-second spinner timer (add modal)
+    var _edHodLookupTimer = null;   // debounce handle (edit modal)
+    var _edHodLookupMinTimer = null; // minimum 3-second spinner timer (edit modal)
+
+    /** Reset all badge/message state — pfx '' = add modal, 'ed-' = edit modal */
+    function hodLookupReset(pfx) {
+      pfx = pfx || '';
+      [pfx+'hod-spin', pfx+'hod-ok', pfx+'hod-err'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      var msgId = pfx ? pfx+'hod-lookup-msg' : 'hod-lookup-msg';
+      var msg = document.getElementById(msgId);
+      if (msg) { msg.textContent = ''; msg.style.color = ''; }
+    }
+
+    /** Show one badge, hide the others */
+    function hodLookupBadge(which, pfx) {   // which: 'spin' | 'ok' | 'err'
+      pfx = pfx || '';
+      ['spin', 'ok', 'err'].forEach(function (k) {
+        var el = document.getElementById(pfx+'hod-' + k);
+        if (el) el.style.display = (k === which) ? 'inline-block' : 'none';
+      });
+    }
+
+    /** Called every keystroke — debounces 600 ms, then checks isHod + fetches name */
+    function scheduleHodLookup(rawId, pfx) {
+      pfx = pfx || '';
+      var timerKey    = pfx ? '_edHodLookupTimer'    : '_hodLookupTimer';
+      var minTimerKey = pfx ? '_edHodLookupMinTimer' : '_hodLookupMinTimer';
+      var id = (rawId || '').trim();
+
+      // Clear previous debounce + minimum timer
+      if (window[timerKey])    clearTimeout(window[timerKey]);
+      if (window[minTimerKey]) clearTimeout(window[minTimerKey]);
+
+      // Reset everything when field is empty
+      if (!id) {
+        hodLookupReset(pfx);
+        var hn = document.getElementById(pfx+'hod-name');
+        if (hn) hn.value = '';
+        return;
+      }
+
+      // Debounce: wait 600 ms of silence before starting
+      window[timerKey] = setTimeout(function () {
+        hodLookupBadge('spin', pfx);
+        var msgId = pfx ? pfx+'hod-lookup-msg' : 'hod-lookup-msg';
+        var msg = document.getElementById(msgId);
+        if (msg) { msg.textContent = 'Looking up TrackID…'; msg.style.color = 'var(--tmu)'; }
+
+        var tok = sessionStorage.getItem('eams_token');
+        var fetchDone   = false;
+        var minDone     = false;
+        var fetchResult = null; // { ok, name, error }
+
+        // Minimum 3-second spinner so it doesn't flash
+        window[minTimerKey] = setTimeout(function () {
+          minDone = true;
+          if (fetchDone) applyHodResult(fetchResult, pfx);
+        }, 3000);
+
+        // Actual API call — GET /api/teachers/trackid/:id
+        fetch('/api/teachers/trackid/' + encodeURIComponent(id), {
+          headers: { 'Authorization': tok ? 'Bearer ' + tok : '' }
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            fetchDone = true;
+            if (data && data.fullName) {
+              if (!data.isHod) {
+                fetchResult = { ok: false, error: 'TrackID found but this teacher is not assigned as HoD' };
+              } else {
+                fetchResult = { ok: true, name: data.fullName };
+              }
+            } else {
+              fetchResult = { ok: false, error: data && data.error ? data.error : 'TrackID not found' };
+            }
+            if (minDone) applyHodResult(fetchResult, pfx);
+          })
+          .catch(function () {
+            fetchDone = true;
+            fetchResult = { ok: false, error: 'Network error — check connection' };
+            if (minDone) applyHodResult(fetchResult, pfx);
+          });
+
+      }, 600);
+    }
+
+    /** Apply result after both fetch + 3-second minimum are done */
+    function applyHodResult(result, pfx) {
+      pfx = pfx || '';
+      var hn  = document.getElementById(pfx+'hod-name');
+      var msgId = pfx ? pfx+'hod-lookup-msg' : 'hod-lookup-msg';
+      var msg = document.getElementById(msgId);
+
+      if (result && result.ok) {
+        hodLookupBadge('ok', pfx);
+        if (hn)  hn.value = result.name;
+        if (msg) { msg.textContent = '✔ HoD verified: ' + result.name; msg.style.color = 'var(--gD)'; }
+        showToast('✔ HoD verified: ' + result.name);
+      } else {
+        hodLookupBadge('err', pfx);
+        if (hn)  hn.value = '';
+        var errTxt = result ? result.error : 'Unknown error';
+        if (msg) { msg.textContent = '✘ ' + errTxt; msg.style.color = 'var(--red)'; }
+        showToast(errTxt, 'warn');
+      }
+    }
+
+    /** Branch dropdown updater for Edit Dept modal */
+    function edUpdateBranch() {
+      var ct = document.getElementById('ed-cotype');
+      var br = document.getElementById('ed-branch');
+      if (!ct || !br) return;
+      var ugBranches = ['B.E','B.Tech','B.Sc','B.Com','B.B.A','B.C.A'];
+      var pgBranches = ['M.E','M.Tech','M.Sc','M.Com','M.B.A','M.C.A'];
+      var opts = ct.value === 'UG' ? ugBranches : ct.value === 'PG' ? pgBranches : [];
+      br.innerHTML = opts.length
+        ? opts.map(function(o){ return '<option value="'+o+'">'+o+'</option>'; }).join('')
+        : '<option value="">— Select Course Type First —</option>';
+    }
+
     function openStuEdit(studentId) {
       var student = DB.get('students').find(function (x) { return x._id === studentId; });
       if (!student) return;
@@ -6408,6 +7031,22 @@
       document.getElementById('edit-subtitle').textContent = student.regNo + ' · ' + (student.className || '');
       document.getElementById('edit-name').value = student.name || '';
       document.getElementById('edit-regNo').value = student.regNo || '';
+
+      // firstName / lastName — use stored values or auto-split from name
+      (function () {
+        var fnEl = document.getElementById('edit-firstName');
+        var lnEl = document.getElementById('edit-lastName');
+        if (!fnEl || !lnEl) return;
+        if (student.firstName || student.lastName) {
+          fnEl.value = student.firstName || '';
+          lnEl.value = student.lastName  || '';
+        } else {
+          var parts = (student.name || '').split(/\s+/).filter(Boolean);
+          if (parts.length === 1)      { fnEl.value = parts[0]; lnEl.value = ''; }
+          else if (parts.length === 2) { fnEl.value = parts[0]; lnEl.value = parts[1]; }
+          else if (parts.length >= 3)  { lnEl.value = parts[parts.length-1]; fnEl.value = parts.slice(0, parts.length-1).join(' '); }
+        }
+      }());
 
       var yearOptions = ['2025-26', '2024-25', '2023-24', '2022-23'];
       ['edit-year', 'stu-year'].forEach(function (id) {
@@ -6450,29 +7089,44 @@
     }
 
     function onEditBranchChange(selectedBranch) {
-      // se-co IS the branch (BE/BTech/ME/MTech); no deeper sub-branch dropdown exists.
+      // se-co IS the branch (B.E/B.TECH/M.E/M.TECH); no deeper sub-branch dropdown exists.
+    }
+
+    /** Auto-split full name into first/last when editing */
+    function onEditNameInput() {
+      var parts = getFieldValue('edit-name').split(/\s+/).filter(Boolean);
+      var fn = '', ln = '';
+      if (parts.length === 1)      { fn = parts[0]; ln = ''; }
+      else if (parts.length === 2) { fn = parts[0]; ln = parts[1]; }
+      else if (parts.length >= 3)  { ln = parts[parts.length-1]; fn = parts.slice(0, parts.length-1).join(' '); }
+      var fnEl = document.getElementById('edit-firstName');
+      var lnEl = document.getElementById('edit-lastName');
+      if (fnEl) fnEl.value = fn;
+      if (lnEl) lnEl.value = ln;
     }
 
     function saveStuEdit() {
-      var name = getFieldValue('edit-name');
-      var regNo = getFieldValue('edit-regNo');
-      var year = getFieldValue('edit-year');
-      var ct = getFieldValue('edit-courseType');
-      var branch = getFieldValue('edit-branch');
-      var deptId = document.getElementById('edit-dept').value;
-      var classId = document.getElementById('edit-class').value;
-      var section = getFieldValue('edit-section');
+      var name      = getFieldValue('edit-name');
+      var firstName = getFieldValue('edit-firstName');
+      var lastName  = getFieldValue('edit-lastName');
+      var regNo     = getFieldValue('edit-regNo');
+      var year      = getFieldValue('edit-year');
+      var ct        = getFieldValue('edit-courseType');
+      var branch    = getFieldValue('edit-branch');
+      var deptId    = document.getElementById('edit-dept').value;
+      var classId   = document.getElementById('edit-class').value;
+      var section   = getFieldValue('edit-section');
 
       if (!name || !regNo) { showToast('Name and Reg No required', 'warn'); return; }
 
       var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
-      var cls = DB.get('classes').find(function (c) { return c._id === classId; });
+      var cls  = DB.get('classes').find(function (c) { return c._id === classId; });
       var allStudents = DB.get('students');
-      var matchIndex = allStudents.findIndex(function (s) { return s.regNo === regNo || s.name === name; });
+      var matchIndex  = allStudents.findIndex(function (s) { return s.regNo === regNo || s.name === name; });
       if (matchIndex < 0) { showToast('Student not found', 'warn'); return; }
 
       var studentId = allStudents[matchIndex]._id;
-      apiUpdateStudent(studentId, { name: name, regNo: regNo, academicYear: year, courseType: ct, course: branch, branch: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', section: section }, name)
+      apiUpdateStudent(studentId, { name: name, firstName: firstName, lastName: lastName, regNo: regNo, academicYear: year, courseType: ct, course: branch, branch: branch, deptId: deptId, deptName: dept ? dept.name : '', classId: classId, className: cls ? cls.name : '', section: section }, name)
         .then(function (d) {
           if (!d) return;
           addLog('Student Updated', '"' + name + '"');
@@ -6509,7 +7163,7 @@
       var branch = document.getElementById('stu-branch') ? document.getElementById('stu-branch').value : '';
       var deptId = document.getElementById('stu-dept') ? document.getElementById('stu-dept').value : '';
       var classId = document.getElementById('stu-class') ? document.getElementById('stu-class').value : '';
-      var section = getFieldValue('stu-section') || 'A';
+      var section = getFieldValue('stu-section');
       var email = getFieldValue('stu-email');
       var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
       var cls = DB.get('classes').find(function (c) { return c._id === classId; });
@@ -6522,11 +7176,13 @@
           renderStudents();
           updateStatCards();
           showToast('Student "' + name + '" added');
-          clearInputs(['stu-name', 'stu-regNo', 'stu-branch', 'stu-email']);
+          clearInputs(['stu-name', 'stu-firstName', 'stu-lastName', 'stu-courseType', 'stu-branch', 'stu-section', 'stu-email']);
+          var rn = document.getElementById('stu-regNo'); if (rn) rn.value = '7140';
         });
     }
 
     function onCourseTypeChange() {
+      // kept for edit-student form compatibility
       var courseType = document.getElementById('stu-courseType') ? document.getElementById('stu-courseType').value : '';
       var el = document.getElementById('stu-branch');
       if (!el) return;
@@ -6534,8 +7190,167 @@
         + (COURSES[courseType] ? Object.keys(COURSES[courseType]).map(function (c) { return '<option>' + c + '</option>'; }).join('') : '');
     }
 
-    function onBranchChange() {
-      // stu-branch IS the branch (BE/BTech/ME/MTech); no deeper sub-branch dropdown exists.
+    function onBranchChange() { /* no-op — branch is set automatically from dept */ }
+
+    // ─── ADD-STUDENT AUTO-FILL HANDLERS ─────────────────────────────────────────
+
+    /** When dept changes → fill courseType + branch from DB, filter class list */
+    // ─── STUDENT AUTO-FILL HELPERS ───────────────────────────────────────────────
+    // Register No format: 7140 | YY | DDD | RRR
+    //  7140 = institute, YY = year (25→2025-26), DDD = 3-digit dept register code, RRR = roll
+
+    /** Build email prefix: "Arun M" + "25" + "cs" → "arunm25cs" */
+    function buildStuEmailPrefix(name, yearCode, twoCode) {
+      var namePart = (name || '').trim().split(/\s+/).map(function(p){ return p.toLowerCase(); }).join('');
+      if (!namePart) return '';
+      return namePart + (yearCode || '') + (twoCode || '').toLowerCase();
+    }
+
+    /** Build TrackId: yearCode="25", twoCode="cs", roll="208" → "TRCS25208" */
+    function buildStuTrackId(yearCode, twoCode, roll) {
+      if (!yearCode || !twoCode || !roll) return '';
+      return 'TR' + twoCode.toUpperCase() + yearCode + String(roll).padStart(3,'0').slice(-3);
+    }
+
+    /** Find dept from DB by 3-digit register code (dept.number field) */
+    function getDeptByNumber(deptCode) {
+      return DB.get('depts').find(function(d){ return d.number === deptCode; }) || null;
+    }
+
+    /** Dept dropdown changed manually → fill courseType/branch, filter class list */
+    function onStuDeptChange() {
+      var deptId = document.getElementById('stu-dept') ? document.getElementById('stu-dept').value : '';
+      var dept   = DB.get('depts').find(function(d){ return d._id === deptId; });
+      var ctEl   = document.getElementById('stu-courseType');
+      var brEl   = document.getElementById('stu-branch');
+      if (ctEl) ctEl.value = dept ? (dept.courseType || '') : '';
+      if (brEl) brEl.value = dept ? (dept.branch    || '') : '';
+      var clsEl = document.getElementById('stu-class');
+      if (clsEl) {
+        var classes = DB.get('classes').filter(function(c){ return !deptId || c.deptId === deptId; });
+        clsEl.innerHTML = '<option value="">— Select —</option>'
+          + classes.map(function(c){ return '<option value="'+c._id+'">'+c.name+'</option>'; }).join('');
+        var secEl = document.getElementById('stu-section');
+        if (secEl) secEl.value = '';
+      }
+    }
+
+    /** Class changed → auto-fill section */
+    function onStuClassChange() {
+      var classId = document.getElementById('stu-class') ? document.getElementById('stu-class').value : '';
+      var cls     = DB.get('classes').find(function(c){ return c._id === classId; });
+      var secEl   = document.getElementById('stu-section');
+      if (secEl) secEl.value = cls && cls.section ? cls.section : '';
+    }
+
+    /** Same for edit modal */
+    function onEditClassChange() {
+      var classId = document.getElementById('edit-class') ? document.getElementById('edit-class').value : '';
+      var cls     = DB.get('classes').find(function(c){ return c._id === classId; });
+      var secEl   = document.getElementById('edit-section');
+      if (secEl && cls && cls.section) secEl.value = cls.section;
+    }
+
+    /**
+     * Email input edited by user → keep username in sync.
+     * The domain "@srishakthi.ac.in" is shown as a suffix span — do NOT write it into the input.
+     */
+    function onUsernameInput() {
+      var emailEl = document.getElementById('stu-email');
+      var userEl  = document.getElementById('stu-username');
+      if (!emailEl || !userEl) return;
+      var val = emailEl.value.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
+      emailEl.value = val;
+      userEl.value  = val;
+    }
+
+    /**
+     * Register No typed → decode: academic year, dept, courseType, branch, trackId, email.
+     * Needs dept.number (3-digit) and dept.twoLetterCode to be set when dept was created.
+     */
+    function onStuRegNoChange() {
+      var regNo = getFieldValue('stu-regNo');
+      if (regNo.length < 12) return;
+
+      var yearCode = regNo.substring(4, 6);  // "25"
+      var deptCode = regNo.substring(6, 9);  // "104"
+      var roll     = regNo.substring(9, 12); // "208"
+
+      // ── Academic year ─────────────────────────────────
+      var acYear = '20' + yearCode + '-' + (parseInt(yearCode, 10) + 1);
+      var yearEl = document.getElementById('stu-year');
+      if (yearEl) {
+        for (var i = 0; i < yearEl.options.length; i++) {
+          if (yearEl.options[i].value === acYear || yearEl.options[i].text === acYear) {
+            yearEl.value = acYear; break;
+          }
+        }
+      }
+
+      // ── Dept from DB using 3-digit register code ───────
+      var dept = getDeptByNumber(deptCode);
+      if (dept) {
+        var deptEl = document.getElementById('stu-dept');
+        if (deptEl) { deptEl.value = dept._id; onStuDeptChange(); }
+        // courseType + branch (authoritative from DB)
+        var ctEl = document.getElementById('stu-courseType');
+        var brEl = document.getElementById('stu-branch');
+        if (ctEl) ctEl.value = dept.courseType || '';
+        if (brEl) brEl.value = dept.branch     || '';
+      }
+
+      var twoCode = dept ? (dept.twoLetterCode || '') : '';
+
+      // ── TrackId ────────────────────────────────────────
+      var tidEl = document.getElementById('stu-trackId');
+      if (tidEl) tidEl.value = buildStuTrackId(yearCode, twoCode, roll);
+
+      // ── Email ──────────────────────────────────────────
+      var name       = getFieldValue('stu-name');
+      var prefix     = buildStuEmailPrefix(name, yearCode, twoCode);
+      var emailEl    = document.getElementById('stu-email');
+      var userEl     = document.getElementById('stu-username');
+      if (emailEl) emailEl.value = prefix;
+      if (userEl)  userEl.value  = prefix;
+    }
+
+    /** Name typed → split firstName/lastName + update email if regNo already decoded */
+    function onStuNameInput() {
+      var name = document.getElementById('stu-name').value;
+      var trimmed = name.trim();
+
+      // Validate only letters + spaces (allow partial entry while typing)
+      if (trimmed && !/^[A-Za-z ]+$/.test(trimmed)) {
+        showToast('Name can only contain letters and spaces', 'error');
+        document.getElementById('stu-name').value = '';
+        return;
+      }
+
+      // ── firstName / lastName split ─────────────────────
+      var parts = trimmed.split(/\s+/).filter(Boolean);
+      var fn = '', ln = '';
+      if (parts.length === 1)      { fn = parts[0]; ln = ''; }
+      else if (parts.length === 2) { fn = parts[0]; ln = parts[1]; }
+      else if (parts.length >= 3)  { ln = parts[parts.length-1]; fn = parts.slice(0,-1).join(' '); }
+      var fnEl = document.getElementById('stu-firstName');
+      var lnEl = document.getElementById('stu-lastName');
+      if (fnEl) fnEl.value = fn;
+      if (lnEl) lnEl.value = ln;
+
+      // ── Update email if regNo is already decoded ───────
+      var regNo = getFieldValue('stu-regNo');
+      if (regNo.length >= 12) {
+        var yearCode = regNo.substring(4, 6);
+        var deptCode = regNo.substring(6, 9);
+        var dept     = getDeptByNumber(deptCode);
+        if (dept && dept.twoLetterCode) {
+          var prefix = buildStuEmailPrefix(trimmed, yearCode, dept.twoLetterCode);
+          var emailEl = document.getElementById('stu-email');
+          var userEl  = document.getElementById('stu-username');
+          if (emailEl) emailEl.value = prefix;
+          if (userEl)  userEl.value  = prefix;
+        }
+      }
     }
 
     // ─── TEACHERS PAGE ───────────────────────────────────────────────────────────
@@ -6612,25 +7427,31 @@
         : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No assignments.</div>';
 
       document.getElementById('td-del').onclick = function () {
-        document.getElementById('dc-confirm-msg').textContent =
-          'Delete teacher "' + teacher.name + '"? This permanently removes them from the database. Restorable via Undo for 10 days.';
-        document.getElementById('dc-confirm-btn').onclick = function () {
-          var btn = document.getElementById('dc-confirm-btn');
-          btn.disabled = true;
-          apiDeleteTeacher(teacherId, teacher.name).then(function () {
-            DB.delete('users', teacherId);
-            DB.get('assignments').filter(function (a) { return a.teacherId === teacherId; })
-              .forEach(function (a) { DB.delete('assignments', a._id); });
-            addLog('Teacher Deleted', '"' + teacher.name + '"');
-            closeModalBg('m-dc-confirm');
-            closeModalBg('m-tch-detail');
-            renderTeachers();
-            showToast('Teacher deleted — restorable via Undo for 10 days', 'warn');
-          }).catch(function (err) {
-            showToast('Delete failed: ' + (err.message || 'server error'), 'error');
-          }).finally(function () { btn.disabled = false; });
-        };
-        openModal_('m-dc-confirm');
+        requireSpecialPw(function () {
+          document.getElementById('dc-confirm-msg').textContent =
+            'Delete teacher "' + teacher.name + '"? This permanently removes them and all their assignments. Restorable via Undo for 10 days.';
+          document.getElementById('dc-confirm-btn').textContent = 'Confirm Delete';
+          document.getElementById('dc-confirm-btn').onclick = function () {
+            var btn = document.getElementById('dc-confirm-btn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting…';
+            apiDeleteTeacher(teacherId, teacher.name).then(function () {
+              DB.delete('users', teacherId);
+              DB.get('assignments').filter(function (a) { return a.teacherId === teacherId; })
+                .forEach(function (a) { DB.delete('assignments', a._id); });
+              addLog('Teacher Deleted', '"' + teacher.name + '"');
+              closeModalBg('m-dc-confirm');
+              closeModalBg('m-tch-detail');
+              renderTeachers();
+            }).catch(function (err) {
+              dbToast('Delete failed: ' + (err.message || 'server error'), 'error');
+            }).finally(function () {
+              btn.disabled = false;
+              btn.textContent = 'Confirm Delete';
+            });
+          };
+          openModal_('m-dc-confirm');
+        });
       };
 
       openModal_('m-tch-detail');
@@ -6660,7 +7481,8 @@
       var desig = getFieldValue('t-dg');
       var uname = getFieldValue('t-us');
       var passwd = getFieldValue('t-pw') || 'teacher123';
-      var jd = getFieldValue('t-jd');
+      var ti = getFieldValue('t-ti') || '';
+      showToast(ti);
       var exp = getFieldValue('t-exp');
       var qual = getFieldValue('t-qual');
       var phone = getFieldValue('t-ph');
@@ -6670,7 +7492,7 @@
       var isExam = document.getElementById('t-examcoord') ? document.getElementById('t-examcoord').checked : false;
       var isPl = document.getElementById('t-placecoord') ? document.getElementById('t-placecoord').checked : false;
       if (!name || !uname) { showToast('Name and username required', 'warn'); return; }
-      apiAddTeacher({ name: name, empId: empId, dept: dept, desig: desig, username: uname, password: passwd, joiningDate: jd, experience: exp, qualifications: qual, phone: phone, isHOD: isHOD, isClassAdvisor: isAdv, isWarden: isWar, isExamCoordinator: isExam, isPlacementCoord: isPl })
+      apiAddTeacher({ name: name, empId: empId, dept: dept, desig: desig, username: uname, password: passwd, trackId: ti, experience: exp, qualifications: qual, phone: phone, isHOD: isHOD, isClassAdvisor: isAdv, isWarden: isWar, isExamCoordinator: isExam, isPlacementCoord: isPl })
         .then(function (d) {
           if (!d) return;
           addLog('Teacher Added', '"' + name + '" (' + dept + ')');
@@ -6778,7 +7600,7 @@
         teacher: [['Name', 'EmployeeID', 'Department', 'Designation', 'Username', 'Password'], ['John Doe', 'EMP001', 'CSE', 'Assistant Professor', 'johndoe', 'teacher123']],
         class: [['Department', 'HallNo', 'Year', 'Semester', 'Section'], ['CSE', 'LH01', 'I Year', 'I', 'A']],
         subject: [['Name', 'Code', 'Department', 'Credits', 'Type', 'Teacher'], ['Data Structures', 'CS201', 'CSE', '4', 'Theory', '']],
-        student: [['FullName', 'RegisterNo', 'AcademicYear', 'CourseType', 'Branch', 'Department', 'Year', 'Class', 'Section', 'Email', 'Username', 'Password'], ['Arun Kumar', 'CSE25001', '2025-26', 'UG', 'B.E', 'Computer Science Engineering', 'I Year', 'CSE-I-A', 'A', 'arun@eams.edu', 'arun25', 'Student@123']],
+        student: [['FullName', 'RegisterNo', 'AcademicYear', 'CourseType', 'Branch', 'Department', 'Year', 'Class', 'Section', 'Email', 'Username', 'Password'], ['Arun Kumar', '714025104001', '2025-26', 'UG', 'B.E', 'Computer Science Engineering', 'I Year', 'CSE-I-A', 'A', 'arun@eams.edu', 'arun25', 'Student@123']],
         admin: [['Name', 'Department', 'Email', 'Username', 'Password'], ['Admin User', 'Admin', 'admin@eams.edu', 'admin2', 'Admin@123']],
       };
       var data = templates[type] || [['No template']];
@@ -6957,7 +7779,7 @@
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) rowErrors.push('Invalid email');
         if (username && username.length < 3) rowErrors.push('Username too short');
         if (VALID_COURSE_TYPES.indexOf(courseType) === -1 && courseType !== '')
-          rowErrors.push('CourseType "' + courseType + '" unknown (use UG/PG)');
+          rowErrors.push('CourseType "' + courseType + '" unknown (use only UG/PG)');
         if (DB.one('students', { regNo: regNo })) rowErrors.push('RegisterNo ' + regNo + ' already exists');
         if (username && DB.one('users', { username: username })) rowErrors.push('Username "' + username + '" already taken');
 
@@ -6977,9 +7799,16 @@
           return c.name === className || (c.deptName.toLowerCase() === deptName.toLowerCase() && c.section === section);
         });
 
+        // ── Auto-split name → firstName + lastName ───────────────
+        var nameParts = name.split(/\s+/).filter(Boolean);
+        var bulkFN = '', bulkLN = '';
+        if (nameParts.length === 1)      { bulkFN = nameParts[0]; bulkLN = ''; }
+        else if (nameParts.length === 2) { bulkFN = nameParts[0]; bulkLN = nameParts[1]; }
+        else if (nameParts.length >= 3)  { bulkLN = nameParts[nameParts.length-1]; bulkFN = nameParts.slice(0, nameParts.length-1).join(' '); }
+
         // ── Insert Student ───────────────────────────────────────
         DB.insert('students', {
-          name: name, regNo: regNo, academicYear: acadYear,
+          name: name, firstName: bulkFN, lastName: bulkLN, regNo: regNo, academicYear: acadYear,
           courseType: courseType, branch: branch,
           deptId: dept ? dept._id : '', deptName: dept ? dept.name : deptName,
           classId: cls ? cls._id : '', className: cls ? cls.name : className,
@@ -6989,7 +7818,7 @@
         // ── Create login account if username provided ────────────
         if (username) {
           DB.insert('users', {
-            name: name, username: username, password: password,
+            name: name, firstName: bulkFN, lastName: bulkLN, username: username, password: password,
             role: 'student', regNo: regNo,
             deptName: dept ? dept.name : deptName, email: email
           });
@@ -7446,13 +8275,20 @@
     });
 
     // ═══════════════════════════════════════════════════════
-    //  DB SYNC LAYER — All data fetched from MongoDB
+    //  DB SYNC LAYER — All data fetched from Database - MongoDB
     // ═══════════════════════════════════════════════════════
 
     // DB Update Toast
     var _dbToastTimer = null;
     var _dbToastDuration = 4000;
+    // ── Toast queue — suppress popups while loader is active ──
+    var _loaderActive = true;
+    var _toastQueue   = [];
+
     function dbToast(msg, state, changes) {
+      // Queue the call if the page loader is still showing
+      if (_loaderActive) { _toastQueue.push([msg, state, changes]); return; }
+
       // state: 'saving' | 'success' | 'error'
       var el = document.getElementById('db-toast');
       if (!el) return;
@@ -7579,7 +8415,7 @@
 
     // Sync all collections
     function syncAllFromDB(cb) {
-      dbToast('Fetching from MongoDB…', 'saving');
+      dbToast('Fetching from Database…', 'saving');
       Promise.all([
         syncFromAPI('depts', '/depts'),
         syncFromAPI('classes', '/classes'),
@@ -7588,7 +8424,7 @@
         syncFromAPI('users', '/users'),
         syncFromAPI('assignments', '/assignments'),
       ]).then(function (results) {
-        dbToast('Synced from MongoDB', 'success', results.map(function (r, i) {
+        dbToast('Synced from Database', 'success', results.map(function (r, i) {
           var names = ['depts', 'classes', 'subjects', 'students', 'users', 'assignments'];
           return r.length + ' ' + names[i];
         }).join(' · '));
@@ -7600,26 +8436,30 @@
     }
 
     // ── DEPT OPERATIONS ──────────────────────────────────
-    function apiAddDept(name, code, icon) {
+    function apiAddDept(name, code, number, courseType, branch, hodId, hodName) {
       dbToast('Adding department…', 'saving', '"' + name + '"');
-      return apiCall('POST', '/depts', { name: name, code: code, icon: icon || '🏛️' })
+      var payload = { name: name, code: code, number: number, courseType: courseType, branch: branch, hodName: hodName || '' };
+      if (hodId) payload.hodId = hodId; // only include hodId when non-empty — empty string breaks ObjectId cast
+      return apiCall('POST', '/depts', payload)
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           // Sync depts to localStorage
           return syncFromAPI('depts', '/depts').then(function () {
-            dbToast('Department added', 'success', '"' + name + '" → MongoDB');
+            dbToast('Department added', 'success', '"' + name + '" → Database');
             return d;
           });
         });
     }
 
-    function apiUpdateDept(id, name, code, icon) {
+    function apiUpdateDept(id, name, code, number, courseType, branch, hodId, hodName) {
       dbToast('Updating department…', 'saving', '"' + name + '"');
-      return apiCall('PUT', '/depts/' + id, { name: name, code: code, icon: icon })
+      var payload = { name: name, code: code, number: number, courseType: courseType, branch: branch, hodName: hodName || '' };
+      if (hodId) payload.hodId = hodId; // only include hodId when non-empty
+      return apiCall('PUT', '/depts/' + id, payload)
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('depts', '/depts').then(function () {
-            dbToast('Department updated', 'success', '"' + name + '" → MongoDB');
+            dbToast('Department updated', 'success', '"' + name + '" → Database');
             return d;
           });
         });
@@ -7630,7 +8470,7 @@
       return apiCall('DELETE', '/depts/' + id)
         .then(function () {
           return syncFromAPI('depts', '/depts').then(function () {
-            dbToast('Department deleted', 'success', '"' + name + '" removed from MongoDB');
+            dbToast('Department deleted', 'success', '"' + name + '" removed from Database');
           });
         });
     }
@@ -7642,7 +8482,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('classes', '/classes').then(function () {
-            dbToast('Class added', 'success', '"' + data.name + '" → MongoDB');
+            dbToast('Class added', 'success', '"' + data.name + '" → Database');
             return d;
           });
         });
@@ -7664,7 +8504,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('classes', '/classes').then(function () {
-            dbToast('Class updated', 'success', '"' + data.name + '" → MongoDB');
+            dbToast('Class updated', 'success', '"' + data.name + '" → Database');
             return d;
           });
         });
@@ -7677,7 +8517,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('subjects', '/subjects').then(function () {
-            dbToast('Subject added', 'success', '"' + data.name + '" → MongoDB');
+            dbToast('Subject added', 'success', '"' + data.name + '" → Database');
             return d;
           });
         });
@@ -7689,7 +8529,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('subjects', '/subjects').then(function () {
-            dbToast('Subject updated', 'success', '"' + data.name + '" → MongoDB');
+            dbToast('Subject updated', 'success', '"' + data.name + '" → Database');
             return d;
           });
         });
@@ -7712,7 +8552,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('users', '/users').then(function () {
-            dbToast('Teacher added', 'success', '"' + data.name + '" (' + data.username + ') → MongoDB\nPassword: ' + data.password);
+            dbToast('Teacher added', 'success', '"' + data.name + '" (' + data.username + ') → Database\nPassword: ' + data.password);
             return d;
           });
         });
@@ -7735,7 +8575,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('users', '/users').then(function () {
-            dbToast('Teacher updated', 'success', '"' + name + '" → MongoDB');
+            dbToast('Teacher updated', 'success', '"' + name + '" → Database');
             return d;
           });
         });
@@ -7748,7 +8588,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('students', '/students').then(function () {
-            dbToast('Student added', 'success', '"' + data.name + '" → MongoDB');
+            dbToast('Student added', 'success', '"' + data.name + '" → Database');
             return d;
           });
         });
@@ -7770,7 +8610,7 @@
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           return syncFromAPI('students', '/students').then(function () {
-            dbToast('Student updated', 'success', '"' + name + '" → MongoDB');
+            dbToast('Student updated', 'success', '"' + name + '" → Database');
             return d;
           });
         });
@@ -7790,7 +8630,7 @@
         .then(function (d) {
           if (d && d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
           localStorage.setItem('eams_setting_' + key, JSON.stringify(value));
-          dbToast((label || key) + ' saved', 'success', 'Updated in MongoDB');
+          dbToast((label || key) + ' saved', 'success', 'Updated in Database');
           return d;
         });
     }
@@ -7817,8 +8657,8 @@
       apiCall('POST', '/settings/verify-delete-password', { password: pw })
         .then(function (d) {
           if (d.valid) {
-            dbToast('Verified', 'success');
             closeModalBg('m-special-pw');
+            dbToast('Verified', 'success');
             if (_specialPwCallback) { _specialPwCallback(); _specialPwCallback = null; }
           } else {
             errEl.textContent = d.error || 'Incorrect password.';
@@ -7832,7 +8672,6 @@
     }
 
     // Wrap confirm dialog to require special password for deletions
-    var _originalDcBtn = null;
     function openDangerConfirm(id, msg, cb) {
       requireSpecialPw(function () {
         document.getElementById('dc-confirm-id').value = id || '';
@@ -7899,7 +8738,7 @@
         return;
       }
 
-      // If all main localStorage collections were cleared, auto-resync from MongoDB
+      // If all main localStorage collections were cleared, auto-resync from Database - MongoDB
       var allMain = ['depts','classes','subjects','students','users','assignments','attendance','notifications','logs'];
       var clearedAllMain = allMain.every(function (k) { return checked.indexOf(k) !== -1; });
       if (clearedAllMain) {
@@ -7962,7 +8801,7 @@
         <div class="modal-close" onclick="closeModalBg('m-clear-storage')">✖</div>
       </div>
       <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>browser storage</strong>.</div>
-      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from MongoDB on next sync.</div>
+      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from Database on next sync.</div>
 
       <!-- Select All + localStorage collections -->
       <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;">
@@ -7972,23 +8811,23 @@
           <span style="color:#ef4444;">Select All</span>
         </label>
         <hr style="border:none;border-top:1px solid var(--br);margin:0;">
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="depts"         style="accent-color:var(--p);width:14px;height:14px;"> 🏛️ Departments</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="classes"       style="accent-color:var(--p);width:14px;height:14px;"> 🏫 Classes</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="subjects"      style="accent-color:var(--p);width:14px;height:14px;"> 📚 Subjects</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="students"      style="accent-color:var(--p);width:14px;height:14px;"> 👨‍🎓 Students</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="users"         style="accent-color:var(--p);width:14px;height:14px;"> 👩‍🏫 Users / Teachers</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="assignments"   style="accent-color:var(--p);width:14px;height:14px;"> 📋 Assignments</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="attendance"    style="accent-color:var(--p);width:14px;height:14px;"> 📅 Attendance Records</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="notifications" style="accent-color:var(--p);width:14px;height:14px;"> 🔔 Notifications</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="logs"          style="accent-color:var(--p);width:14px;height:14px;"> 📋 Activity Logs</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="settings"      style="accent-color:var(--p);width:14px;height:14px;"> ⚙️ Cached Settings</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="depts"         > 🏛️ Departments</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="classes"       > 🏫 Classes</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="subjects"      > 📚 Subjects</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="students"      > 👨‍🎓 Students</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="users"         > 👩‍🏫 Users / Teachers</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="assignments"   > 📋 Assignments</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="attendance"    > 📅 Attendance Records</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="notifications" > 🔔 Notifications</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="logs"          > 📋 Activity Logs</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ls chkbx-input" value="settings"      > ⚙️ Cached Settings</label>
       </div>
 
       <!-- sessionStorage section -->
       <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
         <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">sessionStorage (session data)</div>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ss" value="session_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
+        <label class = "checkbx-btn"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
       </div>
 
       <div class="form-actions">

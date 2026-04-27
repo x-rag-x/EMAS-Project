@@ -239,9 +239,51 @@ select.form-input{cursor:pointer;}
 .progress-bar-bg{background:#e2e8f0;border-radius:8px;height:8px;overflow:hidden;}
 .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--gD),var(--gB));border-radius:8px;width:0%;transition:width .4s ease;}
 .progress-label{font-size:11px;color:var(--tmu);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+/* ── PAGE LOADER ── */
+#page-loader{position:fixed;inset:0;z-index:99999;background:var(--gP);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;}
+#page-loader .loader-brand{font-size:20px;font-weight:800;color:var(--td);letter-spacing:-.2px;}
+#page-loader .loader-msg{font-size:13px;color:var(--tmu);font-weight:500;transition:opacity .25s ease;}
+#page-loader .loader-msg.msg-fade{opacity:0;}
+#page-loader .loader-steps{display:flex;gap:6px;align-items:center;}
+#page-loader .loader-step{width:6px;height:6px;border-radius:50%;background:var(--gLr);transition:background .3s ease,transform .3s ease;}
+#page-loader .loader-step.done{background:var(--gD);transform:scale(1.2);}
+#page-loader .loader-step.active{background:var(--gB);transform:scale(1.35);box-shadow:0 0 0 3px rgba(76,175,80,.2);}
+#page-loader.loader-fade{animation:loaderFadeOut .35s ease forwards;}
+@keyframes loaderFadeOut{to{opacity:0;pointer-events:none;}}
+.three-body{--uib-size:70px;--uib-speed:0.8s;--uib-color:#15c42d;position:relative;display:inline-block;height:var(--uib-size);width:var(--uib-size);animation:spin78236 calc(var(--uib-speed)*2.5) infinite linear;}
+.three-body__dot{position:absolute;height:100%;width:30%;}
+.three-body__dot:after{content:'';position:absolute;height:0%;width:100%;padding-bottom:100%;background-color:var(--uib-color);border-radius:50%;}
+.three-body__dot:nth-child(1){bottom:5%;left:0;transform:rotate(60deg);transform-origin:50% 85%;}
+.three-body__dot:nth-child(1)::after{bottom:0;left:0;animation:wobble1 var(--uib-speed) infinite ease-in-out;animation-delay:calc(var(--uib-speed)*-0.3);}
+.three-body__dot:nth-child(2){bottom:5%;right:0;transform:rotate(-60deg);transform-origin:50% 85%;}
+.three-body__dot:nth-child(2)::after{bottom:0;left:0;animation:wobble1 var(--uib-speed) infinite calc(var(--uib-speed)*-0.15) ease-in-out;}
+.three-body__dot:nth-child(3){bottom:-5%;left:0;transform:translateX(116.666%);}
+.three-body__dot:nth-child(3)::after{top:0;left:0;animation:wobble2 var(--uib-speed) infinite ease-in-out;}
+@keyframes spin78236{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes wobble1{0%,100%{transform:translateY(0%) scale(1);opacity:1}50%{transform:translateY(-66%) scale(0.65);opacity:0.8}}
+@keyframes wobble2{0%,100%{transform:translateY(0%) scale(1);opacity:1}50%{transform:translateY(66%) scale(0.65);opacity:0.8}}
 </style>
 </head>
 <body>
+
+<!-- ── PAGE LOADER ── shown until initial DB fetch completes -->
+<div id="page-loader">
+  <div class="loader-brand">⚙️ EAMS Control Panel</div>
+  <div class="three-body">
+    <div class="three-body__dot"></div>
+    <div class="three-body__dot"></div>
+    <div class="three-body__dot"></div>
+  </div>
+  <div class="loader-msg" id="loader-msg">Initializing EAMS…</div>
+  <div class="loader-steps">
+    <div class="loader-step active" id="lstep-0"></div>
+    <div class="loader-step" id="lstep-1"></div>
+    <div class="loader-step" id="lstep-2"></div>
+    <div class="loader-step" id="lstep-3"></div>
+    <div class="loader-step" id="lstep-4"></div>
+  </div>
+</div>
 
 <!-- ── SIDEBAR ── -->
 <nav class="sb">
@@ -344,7 +386,7 @@ select.form-input{cursor:pointer;}
           <button onclick="setErrorsMode('n')" id="err-btn-n" style="padding:5px 12px;background:var(--gLt);border:1px solid var(--gLr);color:var(--gD);border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Last <span id="err-n-disp">20</span></button>
         </div>
       </div>
-      <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding-right:4px;"></div>
     </div>
 
     <div id="maint-banner" class="maint-banner hidden">
@@ -355,11 +397,6 @@ select.form-input{cursor:pointer;}
       </div>
     </div>
 
-    <!-- DB Memory/Storage Cards -->
-    <div class="stats-strip">
-      <div class="stat-chip"><span class="stat-chip-ic">🗂️</span><div><div class="stat-chip-val" id="ov-index-size">—</div><div class="stat-chip-label">Index Size (MB)</div></div></div>
-      <div class="stat-chip"><span class="stat-chip-ic">📄</span><div><div class="stat-chip-val" id="ov-total-docs">—</div><div class="stat-chip-label">Total Documents</div></div></div>
-    </div>
     <!-- DB Collection Breakdown -->
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd">
@@ -395,9 +432,10 @@ select.form-input{cursor:pointer;}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <!-- Role Tabs -->
         <div style="display:flex;gap:4px;background:var(--gLt);border-radius:10px;padding:3px;">
-          <button class="ug-tab act" id="ugt-student" onclick="ugSetRole('student',this)">🎓 Students</button>
-          <button class="ug-tab" id="ugt-teacher" onclick="ugSetRole('teacher',this)">👩‍🏫 Teachers</button>
-          <button class="ug-tab" id="ugt-attendance" onclick="ugSetRole('attendance',this)">📅 Attendance</button>
+          <button class="ug-tab act" id="ugt-student"    onclick="ugSetRole('student',this)">🎓 Students</button>
+          <button class="ug-tab"     id="ugt-teacher"    onclick="ugSetRole('teacher',this)">👩‍🏫 Teachers</button>
+          <button class="ug-tab"     id="ugt-admin"      onclick="ugSetRole('admin',this)">🔑 Admins</button>
+          <button class="ug-tab"     id="ugt-attendance" onclick="ugSetRole('attendance',this)">📅 Attendance</button>
         </div>
         <!-- Class filter (shows when student/attendance selected) -->
         <select id="ug-class-filter" class="form-input" style="max-width:200px;padding:7px 12px;font-size:12px;" onchange="ugApplyFilters()">
@@ -1058,14 +1096,39 @@ select.form-input{cursor:pointer;}
     <div class="modal-icon" id="m-icon">⚠️</div>
     <div class="modal-title" id="m-title">Are you sure?</div>
     <div class="modal-body" id="m-body">This action cannot be undone.</div>
-    <input type="text" class="modal-confirm-input" id="m-input" placeholder='Type "CONFIRM" to proceed'>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:16px;text-align:left;">
+      🔐 You will be asked to enter your admin password on the next step.
+    </div>
     <div id="m-progress" class="progress-wrap">
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="m-progress-fill"></div></div>
       <div class="progress-label" id="m-progress-label">Processing…</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-out" onclick="closeConfirm()">Cancel</button>
-      <button class="btn btn-danger" id="m-confirm-btn" onclick="executeAction()">Confirm</button>
+      <button class="btn btn-danger" id="m-confirm-btn" onclick="executeAction()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SPECIAL DELETE PASSWORD MODAL ══ -->
+<div class="modal-overlay" id="m-special-pw" style="display:none;align-items:center;justify-content:center;z-index:10001;">
+  <div class="modal-box" style="width:400px;padding:32px 28px;text-align:center;">
+    <div style="font-size:2.4rem;margin-bottom:10px;">🔐</div>
+    <div class="modal-title" style="margin-bottom:6px;">Authentication Required</div>
+    <div style="font-size:13px;color:var(--tmu);margin-bottom:4px;">⚠️ Data Management actions require authentication.</div>
+    <div style="font-size:12px;color:var(--tdi);margin-bottom:18px;">Enter your admin login password or the special management password.</div>
+    <div id="sppw-err" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:12px;text-align:left;"></div>
+    <div style="position:relative;margin-bottom:18px;">
+      <input type="password" id="sppw-input" class="form-input" placeholder="Enter password"
+        style="width:100%;padding-right:42px;"
+        onkeydown="if(event.key==='Enter')verifySpecialPw()">
+      <button type="button" onclick="toggleSppwEye()" tabindex="-1"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--tmu);"
+        id="sppw-eye-btn">👁</button>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-out" style="flex:1;justify-content:center;" onclick="closeModalBg('m-special-pw')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" id="sppw-submit-btn" onclick="verifySpecialPw()">Verify →</button>
     </div>
   </div>
 </div>
@@ -1093,12 +1156,24 @@ select.form-input{cursor:pointer;}
 </div>
 
 <!-- ══ TOAST ══ -->
-<div class="toast" id="toast">
-  <div class="modal-bg" id="m-clear-storage">
-    <div class="modal modal-sm" style="text-align:center;">
-      <div class="modal-hd" style="justify-content:center;">
-        <div class="modal-title">🗑️ Clear Browser Cache</div>
-      </div>
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<!-- ══ DB SYNC TOAST ══ -->
+<div id="db-sync-toast" style="position:fixed;bottom:80px;right:28px;background:#1a2e1a;color:#fff;padding:14px 20px;border-radius:14px;font-size:13px;font-weight:600;z-index:10000;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);transform:translateY(100px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);">
+  <span style="font-size:16px;">✅</span>
+  <div>
+    <div style="font-weight:700;font-size:13px;">Synced from MongoDB</div>
+    <div style="font-size:11px;opacity:.8;margin-top:2px;"><span id="db-sync-settings">—</span> &nbsp;·&nbsp; <span id="db-sync-docs">—</span></div>
+  </div>
+</div>
+
+<!-- ══ CLEAR CACHE MODAL ══ -->
+<div class="modal-overlay" id="m-clear-storage" style="display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:800;color:var(--td);">🗑️ Clear Browser Cache</div>
+      <button onclick="closeModalBg('m-clear-storage')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tmu);">✖</button>
+    </div>
       <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>browser storage</strong>.</div>
       <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from MongoDB on next sync.</div>
 
@@ -1129,11 +1204,10 @@ select.form-input{cursor:pointer;}
         <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
       </div>
 
-      <div class="form-actions">
-        <button class="btn-form-ghost" onclick="closeModalBg('m-clear-storage')">Cancel</button>
-        <button class="btn-form-pri" style="background:#ef4444;border-color:#ef4444;" onclick="confirmClearStorage()">🗑️ Clear Selected</button>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn btn-out" style="flex:1;justify-content:center;" onclick="closeModalBg('m-clear-storage')">Cancel</button>
+        <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="confirmClearStorage()">🗑️ Clear Selected</button>
       </div>
-    </div>
   </div>
 </div>
 
@@ -1157,10 +1231,82 @@ var MAINT_KEY     = 'eams_maintenance';
   document.getElementById('sb-name').textContent = currentUser.name || 'Administrator';
   document.getElementById('srv-url').value       = window.location.origin;
   document.getElementById('srv-session').value   = TOKEN ? TOKEN.slice(0,20)+'...' : 'Session active (no token)';
-  // Load overview after auth confirmed
+
+  // ── Loader message sequence (3 s total) ──────────────
+  var LOADER_STEPS = [
+    { t:    0, msg: 'Initializing EAMS…' },
+    { t:  500, msg: 'Getting Info…' },
+    { t: 1000, msg: 'Connecting to Database…' },
+    { t: 1800, msg: 'Fetching from Database…' },
+    { t: 2800, msg: 'Almost ready…' },
+  ];
+
+  var loaderMsgEl = document.getElementById('loader-msg');
+
+  function setLoaderMsg(idx, text) {
+    if (!loaderMsgEl) return;
+    loaderMsgEl.classList.add('msg-fade');
+    setTimeout(function () {
+      loaderMsgEl.textContent = text;
+      loaderMsgEl.classList.remove('msg-fade');
+      // Advance step dots (5 dots, indices 0-4)
+      for (var s = 0; s < 5; s++) {
+        var dot = document.getElementById('lstep-' + s);
+        if (!dot) continue;
+        dot.className = 'loader-step' + (s < idx ? ' done' : s === idx ? ' active' : '');
+      }
+    }, 130);
+  }
+
+  LOADER_STEPS.forEach(function (step, i) {
+    if (i === 0) return;
+    setTimeout(function () { setLoaderMsg(i, step.msg); }, step.t);
+  });
+
+  // ── Gate: both 3 s timer AND real fetch must finish ──
+  var timerDone    = false;
+  var fetchDone    = false;
+  var fetchPayload = null;
+
+  function revealPage() {
+    if (!timerDone || !fetchDone) return;
+    var loader = document.getElementById('page-loader');
+    if (loader) {
+      loader.classList.add('loader-fade');
+      setTimeout(function () {
+        loader.style.display = 'none';
+        // Show db sync toast only after loader is fully gone
+        if (fetchPayload) showDbSyncToast(fetchPayload.settingsCount, fetchPayload.totalDocs);
+      }, 360);
+    }
+  }
+
+  // 3-second minimum display
+  setTimeout(function () { timerDone = true; revealPage(); }, 3000);
+
+  // Load data while loader is shown (runs in background)
   loadOverview();
   loadHealth();
   refreshExportCount();
+
+  // DB sync fetch — gate this as the "fetch done" signal
+  var tok0 = sessionStorage.getItem('eams_token') || '';
+  Promise.all([
+    fetch('/api/settings', { headers: { 'Authorization': 'Bearer ' + tok0 } }).then(function(r){return r.json();}).catch(function(){return {};}),
+    fetch('/api/system/dbstats', { headers: { 'Authorization': 'Bearer ' + tok0 } }).then(function(r){return r.json();}).catch(function(){return {};})
+  ]).then(function(results) {
+    var sData = results[0] || {};
+    var dData = results[1] || {};
+    fetchPayload = {
+      settingsCount: Object.keys(sData).filter(function(k){ return k !== 'error'; }).length,
+      totalDocs: dData.totalDocs || '—'
+    };
+    fetchDone = true;
+    revealPage();
+  }).catch(function() {
+    fetchDone = true;
+    revealPage();
+  });
 })();
 
 // ── Clock ──────────────────────────────────────────────
@@ -1238,13 +1384,13 @@ function loadOverview() {
       return r.json();
     })
     .then(function(d) {
-      if (d.error) { logLine('DB stats error: ' + d.error, 'danger'); document.getElementById('ov-storage-desc').textContent = 'Error: ' + d.error; return; }
+      if (d.error) { logLine('DB stats error: ' + d.error, 'danger'); var osd = document.getElementById('ov-storage-desc'); if (osd) osd.textContent = 'Error: ' + d.error; return; }
 
-      // Top cards
-      document.getElementById('ov-data-size').textContent    = d.dataSize    + ' MB';
-      document.getElementById('ov-storage-size').textContent = d.storageSize + ' MB';
-      document.getElementById('ov-index-size').textContent   = d.indexSize   + ' MB';
-      document.getElementById('ov-total-docs').textContent   = d.totalDocs;
+      // Top stat chips — null-guarded
+      var oDs  = document.getElementById('ov-data-size');    if (oDs)  oDs.textContent  = (d.dataSize    || '—') + ' MB';
+      var oSs  = document.getElementById('ov-storage-size'); if (oSs)  oSs.textContent  = (d.storageSize || '—') + ' MB';
+      var oIs  = document.getElementById('ov-index-size');   if (oIs)  oIs.textContent  = (d.indexSize   || '—') + ' MB';
+      var oTd  = document.getElementById('ov-total-docs');   if (oTd)  oTd.textContent  = d.totalDocs || '—';
 
       // Storage bar
       var used  = parseFloat(d.storageSize);
@@ -1252,44 +1398,49 @@ function loadOverview() {
       var free  = total ? (total - parseFloat(d.fsUsedSize || used)) : null;
       var pct   = total ? Math.min(100, (parseFloat(d.fsUsedSize || used) / total * 100)).toFixed(1) : null;
 
-      var bar  = document.getElementById('ov-storage-bar');
-      var desc = document.getElementById('ov-storage-desc');
+      var bar      = document.getElementById('ov-storage-bar');
+      var desc     = document.getElementById('ov-storage-desc');
       var usedLbl  = document.getElementById('ov-used-label');
       var freeLbl  = document.getElementById('ov-free-label');
       var totalLbl = document.getElementById('ov-total-label');
 
       if (total) {
-        bar.style.width = pct + '%';
-        bar.style.background = pct > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)'
-                              : pct > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)'
-                              : 'linear-gradient(90deg,#2e7d32,#66bb6a)';
-        desc.textContent = 'Disk: ' + pct + '% used of ' + total + ' MB total';
-        usedLbl.textContent  = 'Used: '  + parseFloat(d.fsUsedSize).toFixed(0)  + ' MB';
-        freeLbl.textContent  = 'Free: '  + free.toFixed(0)  + ' MB';
-        totalLbl.textContent = 'Total: ' + total + ' MB';
+        if (bar)      { bar.style.width = pct + '%'; bar.style.background = pct > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : pct > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)' : 'linear-gradient(90deg,#2e7d32,#66bb6a)'; }
+        if (desc)     desc.textContent = 'Disk: ' + pct + '% used of ' + total + ' MB total';
+        if (usedLbl)  usedLbl.textContent  = 'Used: '  + parseFloat(d.fsUsedSize).toFixed(0) + ' MB';
+        if (freeLbl)  freeLbl.textContent  = 'Free: '  + (free || 0).toFixed(0) + ' MB';
+        if (totalLbl) totalLbl.textContent = 'Total: ' + total + ' MB';
       } else {
-        // Atlas free tier — show data size vs 512MB limit
-        var limit = 512;
-        var usedMB = parseFloat(d.storageSize);
+        var limit   = 512;
+        var usedMB  = parseFloat(d.storageSize) || 0;
         var pctUsed = Math.min(100, (usedMB / limit * 100)).toFixed(1);
-        bar.style.width = pctUsed + '%';
-        bar.style.background = pctUsed > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)'
-                              : pctUsed > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)'
-                              : 'linear-gradient(90deg,#2e7d32,#66bb6a)';
-        desc.textContent     = 'Atlas Free Tier — ' + pctUsed + '% of 512 MB used';
-        usedLbl.textContent  = 'Used: '  + usedMB.toFixed(2) + ' MB';
-        freeLbl.textContent  = 'Free: '  + (limit - usedMB).toFixed(2) + ' MB';
-        totalLbl.textContent = 'Total: ' + limit + ' MB (Atlas Free Tier)';
+        if (bar)      { bar.style.width = pctUsed + '%'; bar.style.background = pctUsed > 80 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : pctUsed > 60 ? 'linear-gradient(90deg,#d97706,#fbbf24)' : 'linear-gradient(90deg,#2e7d32,#66bb6a)'; }
+        if (desc)     desc.textContent     = 'Atlas Free Tier — ' + pctUsed + '% of 512 MB used';
+        if (usedLbl)  usedLbl.textContent  = 'Used: '  + usedMB.toFixed(2) + ' MB';
+        if (freeLbl)  freeLbl.textContent  = 'Free: '  + (limit - usedMB).toFixed(2) + ' MB';
+        if (totalLbl) totalLbl.textContent = 'Total: ' + limit + ' MB (Atlas Free Tier)';
       }
 
       // Collection breakdown grid
       var grid = document.getElementById('collection-grid');
-      if (grid && d.collStats) {
-        grid.innerHTML = d.collStats.map(function(c) {
-          return '<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;">'
-            + '<div><div style="font-size:11px;color:var(--tmu);font-weight:600;text-transform:capitalize;">' + c.name + '</div>'
-            + '<div style="font-size:20px;font-weight:800;color:var(--td);">' + c.count + '</div></div></div>';
-        }).join('');
+      if (grid) {
+        var collIcons = { students:'👨‍🎓', teachers:'👩‍🏫', admins:'🔑', users:'👤', departments:'🏛️', classes:'🏫', subjects:'📚', assignments:'📋', attendance:'📅', logs:'🗒️', sessions:'🔐', notifications:'🔔', grievances:'📝', timetables:'📆', livesessions:'📡', sectiontimetables:'📆', datamanagements:'⚙️', undologs:'↩️', settings:'⚙️' };
+        if (d.collStats && d.collStats.length) {
+          var total = d.collStats.reduce(function(s,c){ return s + (c.count||0); }, 0);
+          grid.innerHTML = d.collStats.map(function(c) {
+            var icon = collIcons[c.name.toLowerCase()] || '📄';
+            return '<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;">'
+              + '<span style="font-size:18px;">' + icon + '</span>'
+              + '<div><div style="font-size:10px;color:var(--tmu);font-weight:600;text-transform:capitalize;">' + c.name + '</div>'
+              + '<div style="font-size:20px;font-weight:800;color:var(--td);line-height:1;">' + (c.count || 0) + '</div></div></div>';
+          }).join('')
+          + '<div style="background:var(--gLt);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;border:1px solid var(--gLr);">'
+          + '<span style="font-size:18px;">📊</span>'
+          + '<div><div style="font-size:10px;color:var(--gD);font-weight:700;text-transform:uppercase;">Total Documents</div>'
+          + '<div style="font-size:20px;font-weight:800;color:var(--gD);line-height:1;">' + total + '</div></div></div>';
+        } else {
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--tdi);font-size:13px;">No collection data available — check /api/system/dbstats returns collStats array</div>';
+        }
       }
 
       logLine('DB stats loaded — ' + d.totalDocs + ' docs, ' + d.dataSize + ' MB data', 'success');
@@ -1725,6 +1876,9 @@ function loadServerLogs() {
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function escAttr(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function formatUptime(secs) {
   if (!secs) return '—';
@@ -2008,46 +2162,99 @@ function openConfirm(action) {
   document.getElementById('m-icon').textContent  = cfg.icon  || '⚠️';
   document.getElementById('m-title').textContent = cfg.title || 'Are you sure?';
   document.getElementById('m-body').textContent  = cfg.body  || 'This cannot be undone.';
-  document.getElementById('m-input').value = '';
   document.getElementById('m-progress').style.display = 'none';
   var btn = document.getElementById('m-confirm-btn');
-  btn.textContent = cfg.btn || 'Confirm';
+  btn.textContent = cfg.btn || 'Continue →';
   btn.className   = 'btn ' + (cfg.cls || 'btn-danger');
+  btn.disabled    = false;
   document.getElementById('confirm-modal').classList.add('open');
 }
 
 function closeConfirm() {
   document.getElementById('confirm-modal').classList.remove('open');
+  document.getElementById('m-confirm-btn').disabled = false;
+  document.getElementById('m-confirm-btn').textContent = 'Continue →';
   currentAction = null;
 }
 
+// ── Special-password auth (used by all destructive actions) ───────────
+var _specialPwCallback = null;
+
+function requireSpecialPw(cb) {
+  _specialPwCallback = cb;
+  document.getElementById('sppw-input').value = '';
+  document.getElementById('sppw-err').style.display = 'none';
+  document.getElementById('sppw-err').textContent   = '';
+  var btn = document.getElementById('sppw-submit-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Verify →'; }
+  document.getElementById('m-special-pw').style.display = 'flex';
+  setTimeout(function() { document.getElementById('sppw-input').focus(); }, 80);
+}
+
+function verifySpecialPw() {
+  var pw    = document.getElementById('sppw-input').value.trim();
+  var errEl = document.getElementById('sppw-err');
+  var btn   = document.getElementById('sppw-submit-btn');
+  errEl.style.display = 'none';
+  if (!pw) { errEl.textContent = 'Please enter a password.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Verifying…';
+  showToast('⏳ Verifying password…');
+  api('POST', '/settings/verify-delete-password', { password: pw })
+    .then(function(d) {
+      if (d && d.valid) {
+        document.getElementById('m-special-pw').style.display = 'none';
+        btn.disabled = false; btn.textContent = 'Verify →';
+        if (_specialPwCallback) { var cb = _specialPwCallback; _specialPwCallback = null; cb(); }
+      } else {
+        errEl.textContent = (d && d.error) ? d.error : 'Incorrect password.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Verify →';
+        document.getElementById('sppw-input').value = '';
+        document.getElementById('sppw-input').focus();
+        showToast('❌ Wrong password');
+        logLine('Destructive action blocked — wrong delete password', 'danger');
+      }
+    }).catch(function() {
+      errEl.textContent = 'Server error — could not verify.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Verify →';
+    });
+}
+
+function toggleSppwEye() {
+  var inp = document.getElementById('sppw-input');
+  var btn = document.getElementById('sppw-eye-btn');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Confirm modal ──────────────────────────────────────
 function executeAction() {
-  var input = document.getElementById('m-input').value.trim().toUpperCase();
-  if (input !== 'CONFIRM') { showToast('⚠️ Type CONFIRM to proceed', 'warn'); return; }
-  document.getElementById('m-confirm-btn').disabled = true;
-  showProgress('Processing…', 10);
+  var action = currentAction;   // capture BEFORE closeConfirm() nulls it
+  closeConfirm();
+  if (!action) return;
+  requireSpecialPw(function() {
+    showProgress('Processing…', 10);
+    if (action === 'resetSettings') { _doResetSettings(); return; }
+    currentAction = action;           // restore so runSteps completion log can read it
+    runSteps(getDeleteSteps(action), 0);
+  });
+}
 
-  if (currentAction === 'resetSettings') {
-    var tok2 = sessionStorage.getItem('eams_token') || TOKEN || '';
-    fetch('/api/settings/reset', { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok2 } })
-      .then(function() {
-        localStorage.removeItem(SETTINGS_KEY);
-        loadAllSettings();
-        closeConfirm();
-        logLine('All settings reset to defaults (DB + cache)', 'warn');
-        showToast('↩ Settings reset to defaults');
-      }).catch(function() {
-        localStorage.removeItem(SETTINGS_KEY);
-        loadAllSettings();
-        closeConfirm();
-        logLine('All settings reset to defaults (cache only)', 'warn');
-        showToast('↩ Settings reset (cache only — server unreachable)');
-      });
-    return;
-  }
-
-  var steps = getDeleteSteps(currentAction);
-  runSteps(steps, 0);
+function _doResetSettings() {
+  var tok2 = sessionStorage.getItem('eams_token') || TOKEN || '';
+  fetch('/api/settings/reset', { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok2 } })
+    .then(function() {
+      localStorage.removeItem(SETTINGS_KEY);
+      loadAllSettings(); closeConfirm();
+      logLine('All settings reset to defaults (DB + cache)', 'warn');
+      showToast('↩ Settings reset to defaults');
+    }).catch(function() {
+      localStorage.removeItem(SETTINGS_KEY);
+      loadAllSettings(); closeConfirm();
+      logLine('All settings reset to defaults (cache only)', 'warn');
+      showToast('↩ Settings reset (cache only — server unreachable)');
+    });
 }
 
 function getDeleteSteps(action) {
@@ -2283,10 +2490,25 @@ function clearCache() {
 // ── Toast ──────────────────────────────────────────────
 function showToast(msg) {
   var el = document.getElementById('toast');
-  el.textContent = msg;
+  var msgEl = document.getElementById('toast-msg');
+  if (msgEl) msgEl.textContent = msg;
   el.classList.add('show');
   clearTimeout(el._t);
   el._t = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+function showDbSyncToast(settingsCount, totalDocs) {
+  var el = document.getElementById('db-sync-toast');
+  if (!el) return;
+  document.getElementById('db-sync-settings').textContent = settingsCount + ' setting' + (settingsCount !== 1 ? 's' : '');
+  document.getElementById('db-sync-docs').textContent = totalDocs + ' document' + (totalDocs !== 1 ? 's' : '');
+  el.style.transform = 'translateY(0)';
+  el.style.opacity   = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(function() {
+    el.style.transform = 'translateY(100px)';
+    el.style.opacity   = '0';
+  }, 4500);
 }
 
 // ── Navigation utils ───────────────────────────────────
@@ -2339,12 +2561,30 @@ function loadHealth() {
         : 'Last <span id="errors-count-label">' + _errorsN + '</span> error-level log entries';
       if (card && list && errors.length) {
         card.style.display = 'block';
-        list.innerHTML = errors.map(function(e) {
-          var col = e.severity === 'critical' ? '#dc2626' : e.severity === 'warning' ? '#d97706' : '#64748b';
-          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:#fff8f0;border-radius:8px;border-left:3px solid '+col+';">'
-            + '<span style="font-size:12px;font-weight:700;color:'+col+';white-space:nowrap;">['+e.severity.toUpperCase()+']</span>'
-            + '<div><div style="font-size:12.5px;font-weight:600;color:var(--td);">'+e.action+' — '+e.details+'</div>'
-            + '<div style="font-size:11px;color:var(--tmu);">'+new Date(e.time).toLocaleString('en-IN')+'</div></div></div>';
+        list.innerHTML = errors.map(function(e, idx) {
+          var col  = e.severity === 'critical' ? '#dc2626' : e.severity === 'warning' ? '#d97706' : '#64748b';
+          var bg   = e.severity === 'critical' ? '#fff0f0' : e.severity === 'warning'  ? '#fff8f0' : '#f8fafc';
+          var ts   = new Date(e.time).toLocaleString('en-IN');
+          var det  = [
+            e.category ? '📁 Category: ' + e.category       : '',
+            e.role     ? '👤 Role: '     + e.role            : '',
+            e.ip       ? '🌐 IP: '       + e.ip              : '',
+            e.sessionId ? '🔑 Session: ' + e.sessionId       : '',
+            e.details  ? '📝 Details: '  + e.details         : '',
+          ].filter(Boolean).join('<br>');
+          return '<div id="err-item-'+idx+'" style="background:'+bg+';border-radius:8px;border-left:3px solid '+col+';cursor:pointer;overflow:hidden;transition:all .2s;" onclick="toggleErrDetail('+idx+')">'
+            + '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;">'
+            + '<span style="font-size:11px;font-weight:700;color:'+col+';white-space:nowrap;padding-top:1px;">[' + (e.severity||'info').toUpperCase()+']</span>'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:12.5px;font-weight:600;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(e.action||'—')+(e.details ? ' — '+e.details : '')+'</div>'
+            + '<div style="font-size:11px;color:var(--tmu);margin-top:2px;">'+(e.userName||'')+(e.role?' · '+e.role:'')+' &nbsp;·&nbsp; '+ts+'</div>'
+            + '</div>'
+            + '<span style="font-size:12px;color:'+col+';flex-shrink:0;margin-top:1px;" id="err-arrow-'+idx+'">▸</span>'
+            + '</div>'
+            + '<div id="err-detail-'+idx+'" style="display:none;padding:10px 14px 12px 38px;border-top:1px solid rgba(0,0,0,.06);font-size:11.5px;color:var(--tmu);line-height:1.8;">'
+            + (det || '<em style="color:var(--tdi)">No additional details</em>')
+            + '</div>'
+            + '</div>';
         }).join('');
       } else if (card) {
         card.style.display = errors.length || d.errorCount > 0 ? 'block' : 'none';
@@ -2359,6 +2599,16 @@ function loadHealth() {
       if (dbDot) dbDot.className = 'health-dot red';
       logLine('Health check failed: ' + (err.message || 'network error'), 'danger');
     });
+}
+
+// ── Error detail expand/collapse ───────────────────────
+function toggleErrDetail(idx) {
+  var detail = document.getElementById('err-detail-' + idx);
+  var arrow  = document.getElementById('err-arrow-'  + idx);
+  if (!detail) return;
+  var isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
 }
 
 // ── Backup page ────────────────────────────────────────
@@ -2587,11 +2837,11 @@ function dismissUndo(id, btn) {
 // ── Modal helpers (for Clear Cache modal) ─────────────
 function openModal_(id) {
   var el = document.getElementById(id);
-  if (el) { el.style.display = 'flex'; el.style.alignItems = 'center'; el.style.justifyContent = 'center'; }
+  if (el) { el.style.display = 'flex'; }
 }
 function closeModalBg(id) {
   var el = document.getElementById(id);
-  if (el) el.style.display = 'none';
+  if (el) { el.style.display = 'none'; }
 }
 function dbToast(msg) { showToast(msg); }
 function syncAllFromDB() { /* no-op in control panel — data reloads on nav */ }
@@ -2610,37 +2860,76 @@ var _ugChanged   = {};          // {id: {field: newVal, …}}
 var _ugEditId    = null;        // ID being edited in modal
 var _ugEditRole  = null;
 
-// Column definitions per role
+// Column definitions per role — full schema from models.js
 var UG_COLS = {
   student: [
-    { key: 'name',         label: 'Full Name',     editable: true },
-    { key: 'regNo',        label: 'Reg No',        editable: true },
-    { key: 'academicYear', label: 'Acad. Year',    editable: true },
-    { key: 'courseType',   label: 'Course',        editable: true },
-    { key: 'branch',       label: 'Branch',        editable: true },
-    { key: 'deptName',     label: 'Department',    editable: false },
-    { key: 'className',    label: 'Class',         editable: false },
-    { key: 'section',      label: 'Section',       editable: true },
-    { key: 'year',         label: 'Year',          editable: true },
-    { key: 'email',        label: 'Email',         editable: true },
+    { key: 'fullName',        label: 'Full Name',        editable: true },
+    { key: 'firstName',       label: 'First Name',       editable: true },
+    { key: 'lastName',        label: 'Last Name',         editable: true },
+    { key: 'registerNo',      label: 'Register No',       editable: true },
+    { key: 'username',        label: 'Username',          editable: false },
+    { key: 'email',           label: 'Email',             editable: true },
+    { key: 'class',           label: 'Class',             editable: true },
+    { key: 'section',         label: 'Section',           editable: true },
+    { key: 'department',      label: 'Department',        editable: true },
+    { key: 'courseType',      label: 'Course Type',       editable: true, type: 'select', options: ['UG','PG'] },
+    { key: 'branch',          label: 'Branch',            editable: true, type: 'select', options: ['B.E','B.TECH','M.E','M.TECH'] },
+    { key: 'admissionYear',   label: 'Admission Year',    editable: true },
+    { key: 'isRep',           label: 'Class Rep',         editable: true, type: 'select', options: ['true','false'] },
+    { key: 'active',          label: 'Active',            editable: true, type: 'select', options: ['true','false'] },
+    { key: 'mustChangePassword', label: 'Must Change PW', editable: true, type: 'select', options: ['true','false'] },
+    { key: 'loginCount',      label: 'Login Count',       editable: false },
+    { key: 'failedLogins',    label: 'Failed Logins',     editable: false },
+    { key: 'lastLogin',       label: 'Last Login',        editable: false },
+    { key: 'firstLogin',      label: 'First Login',       editable: false },
   ],
   teacher: [
-    { key: 'name',        label: 'Full Name',    editable: true },
-    { key: 'empId',       label: 'Emp ID',       editable: true },
-    { key: 'dept',        label: 'Department',   editable: true },
-    { key: 'designation', label: 'Designation',  editable: true },
-    { key: 'username',    label: 'Username',     editable: true },
-    { key: 'phone',       label: 'Phone',        editable: true },
-    { key: 'email',       label: 'Email',        editable: true },
+    { key: 'fullName',        label: 'Full Name',         editable: true },
+    { key: 'firstName',       label: 'First Name',        editable: true },
+    { key: 'lastName',        label: 'Last Name',         editable: true },
+    { key: 'employeeNo',      label: 'Employee No',       editable: true },
+    { key: 'username',        label: 'Username',          editable: false },
+    { key: 'email',           label: 'Email',             editable: true },
+    { key: 'department',      label: 'Department',        editable: true },
+    { key: 'designation',     label: 'Designation',       editable: true },
+    { key: 'isHod',           label: 'Is HOD',            editable: true, type: 'select', options: ['true','false'] },
+    { key: 'HoddeptName',     label: 'HOD Dept',          editable: true },
+    { key: 'isClassAdvisor',  label: 'Class Advisor',     editable: true, type: 'select', options: ['true','false'] },
+    { key: 'className',       label: 'Advisor Class',     editable: true },
+    { key: 'isTimeTableCoordinator', label: 'TT Coordinator', editable: true, type: 'select', options: ['true','false'] },
+    { key: 'TTdeptName',      label: 'TT Dept',           editable: true },
+    { key: 'isAdmin',         label: 'Is Admin',          editable: true, type: 'select', options: ['true','false'] },
+    { key: 'active',          label: 'Active',            editable: true, type: 'select', options: ['true','false'] },
+    { key: 'mustChangePassword', label: 'Must Change PW', editable: true, type: 'select', options: ['true','false'] },
+    { key: 'loginCount',      label: 'Login Count',       editable: false },
+    { key: 'failedLogins',    label: 'Failed Logins',     editable: false },
+    { key: 'lastLogin',       label: 'Last Login',        editable: false },
+    { key: 'firstLogin',      label: 'First Login',       editable: false },
+  ],
+  admin: [
+    { key: 'fullName',        label: 'Full Name',         editable: true },
+    { key: 'firstName',       label: 'First Name',        editable: true },
+    { key: 'lastName',        label: 'Last Name',         editable: true },
+    { key: 'employeeNo',      label: 'Employee No',       editable: true },
+    { key: 'username',        label: 'Username',          editable: false },
+    { key: 'email',           label: 'Email',             editable: true },
+    { key: 'department',      label: 'Department',        editable: true },
+    { key: 'adminRights',     label: 'Admin Rights',      editable: true },
+    { key: 'active',          label: 'Active',            editable: true, type: 'select', options: ['true','false'] },
+    { key: 'mustChangePassword', label: 'Must Change PW', editable: true, type: 'select', options: ['true','false'] },
+    { key: 'loginCount',      label: 'Login Count',       editable: false },
+    { key: 'failedLogins',    label: 'Failed Logins',     editable: false },
+    { key: 'lastLogin',       label: 'Last Login',        editable: false },
+    { key: 'firstLogin',      label: 'First Login',       editable: false },
   ],
   attendance: [
-    { key: 'studentName', label: 'Student',    editable: false },
-    { key: 'regNo',       label: 'Reg No',     editable: false },
-    { key: 'className',   label: 'Class',      editable: false },
-    { key: 'subjectName', label: 'Subject',    editable: false },
-    { key: 'date',        label: 'Date',       editable: false },
-    { key: 'status',      label: 'Status',     editable: true, type: 'select', options: ['present','absent','late'] },
-    { key: 'markedBy',    label: 'Marked By',  editable: false },
+    { key: 'teacherName',  label: 'Teacher',     editable: false },
+    { key: 'className',    label: 'Class',        editable: false },
+    { key: 'subjectName',  label: 'Subject',      editable: false },
+    { key: 'date',         label: 'Date',         editable: false },
+    { key: 'totalPresent', label: 'Present',      editable: false },
+    { key: 'totalAbsent',  label: 'Absent',       editable: false },
+    { key: 'markedAt',     label: 'Marked At',    editable: false },
   ]
 };
 
@@ -2663,8 +2952,9 @@ function ugLoadData() {
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
   var status = document.getElementById('ug-status');
   if (status) status.textContent = '⏳ Loading from database…';
-  var endpoint = _ugRole === 'student' ? '/students'
-               : _ugRole === 'teacher' ? '/users?role=teacher'
+  var endpoint = _ugRole === 'student'    ? '/students'
+               : _ugRole === 'teacher'    ? '/teachers'
+               : _ugRole === 'admin'      ? '/admins'
                : '/attendance';
   fetch('/api' + endpoint, { headers: { 'Authorization': 'Bearer ' + tok } })
     .then(function(r) { return r.json(); })
@@ -2750,20 +3040,26 @@ function ugRenderGrid() {
       + 'onmouseout="if(!this.classList.contains(\'ug-row-changed\'))this.style.background=\'\'">'
       + cols.map(function(c) {
           var val = (row[c.key] !== undefined && row[c.key] !== null) ? row[c.key] : '';
+          var valStr = String(val);
           if (c.editable) {
             if (c.type === 'select') {
               return '<td style="padding:6px 10px;">'
                 + '<select class="ug-cell-input" data-id="'+id+'" data-field="'+c.key+'" onchange="ugCellChange(this)">'
-                + (c.options || []).map(function(o) { return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('')
+                + (c.options || []).map(function(o) { return '<option value="'+o+'"'+(o===valStr?' selected':'')+'>'+o+'</option>'; }).join('')
                 + '</select></td>';
             }
             return '<td style="padding:6px 10px;">'
-              + '<input class="ug-cell-input" type="text" value="'+String(val).replace(/"/g,'&quot;')+'" '
+              + '<input class="ug-cell-input" type="text" value="'+escAttr(valStr)+'" '
               + 'data-id="'+id+'" data-field="'+c.key+'" '
               + 'onchange="ugCellChange(this)" oninput="ugCellChange(this)">'
               + '</td>';
           }
-          return '<td style="padding:8px 12px;color:var(--td);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="'+String(val).replace(/"/g,'&quot;')+'">'+val+'</td>';
+          // Read-only display — format dates
+          var display = valStr;
+          if ((c.key === 'lastLogin' || c.key === 'firstLogin' || c.key === 'markedAt') && val) {
+            try { display = new Date(val).toLocaleDateString('en-IN'); } catch(e) {}
+          }
+          return '<td style="padding:8px 12px;color:var(--td);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="'+escAttr(display)+'">'+escHtml(display)+'</td>';
         }).join('')
       + '<td style="padding:6px 10px;white-space:nowrap;">'
       + '<button onclick="ugOpenEdit(\''+id+'\')" style="padding:4px 10px;background:var(--gLt);border:1px solid var(--gLr);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:var(--gD);font-family:Poppins,sans-serif;margin-right:4px;">✏ Edit</button>'
@@ -2790,8 +3086,9 @@ function ugCellChange(input) {
 function ugSaveRow(id) {
   if (!_ugChanged[id]) return;
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  var endpoint = _ugRole === 'student' ? '/students/' + id
-               : _ugRole === 'teacher' ? '/teachers/' + id
+  var endpoint = _ugRole === 'student'    ? '/students/' + id
+               : _ugRole === 'teacher'    ? '/teachers/' + id
+               : _ugRole === 'admin'      ? '/admins/'   + id
                : '/attendance/' + id;
   showToast('⏳ Saving…');
   fetch('/api' + endpoint, {
@@ -2827,20 +3124,31 @@ function ugOpenEdit(id) {
   _ugEditRole = _ugRole;
   var rec  = _ugData.find(function(r) { return (r._id || r.id) === id; }) || {};
   var cols = UG_COLS[_ugRole] || [];
-  document.getElementById('ug-modal-title').textContent = '✏️ Edit ' + (_ugRole === 'student' ? rec.name || 'Student' : _ugRole === 'teacher' ? rec.name || 'Teacher' : 'Attendance Record');
+  document.getElementById('ug-modal-title').textContent = '✏️ Edit ' + (
+    _ugRole === 'student'    ? rec.fullName || rec.name || 'Student'
+    : _ugRole === 'teacher'  ? rec.fullName || rec.name || 'Teacher'
+    : _ugRole === 'admin'    ? rec.fullName || rec.name || 'Admin'
+    : 'Attendance Record'
+  );
   document.getElementById('ug-modal-fields').innerHTML = cols.map(function(c) {
-    var val = (rec[c.key] !== undefined && rec[c.key] !== null) ? rec[c.key] : '';
+    var raw = (rec[c.key] !== undefined && rec[c.key] !== null) ? rec[c.key] : '';
+    var val = String(raw);
     var inputHtml;
     if (!c.editable) {
-      inputHtml = '<input type="text" class="form-input" value="'+String(val).replace(/"/g,'&quot;')+'" readonly style="background:#f8fafc;color:var(--tmu);">';
+      // Format dates nicely
+      var display = val;
+      if ((c.key === 'lastLogin' || c.key === 'firstLogin' || c.key === 'markedAt') && raw) {
+        try { display = new Date(raw).toLocaleString('en-IN'); } catch(e) {}
+      }
+      inputHtml = '<input type="text" class="form-input" value="'+escAttr(display)+'" readonly style="background:#f8fafc;color:var(--tmu);">';
     } else if (c.type === 'select') {
       inputHtml = '<select class="form-input" id="ugm-'+c.key+'">'
-        + (c.options||[]).map(function(o){return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
+        + (c.options||[]).map(function(o){ return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('')+'</select>';
     } else {
-      inputHtml = '<input type="text" class="form-input" id="ugm-'+c.key+'" value="'+String(val).replace(/"/g,'&quot;')+'">';
+      inputHtml = '<input type="text" class="form-input" id="ugm-'+c.key+'" value="'+escAttr(val)+'">';
     }
     var colspan = (cols.indexOf(c) === cols.length - 1 && cols.length % 2 !== 0) ? 'grid-column:1/-1;' : '';
-    return '<div class="form-group" style="'+colspan+'"><label class="form-label">'+c.label+(c.editable?'':' (read-only)')+'</label>'+inputHtml+'</div>';
+    return '<div class="form-group" style="'+colspan+'"><label class="form-label">'+c.label+(c.editable?'':' <span style="opacity:.6;font-size:9px;">(read-only)</span>')+'</label>'+inputHtml+'</div>';
   }).join('');
   document.getElementById('ug-edit-modal').style.display = 'flex';
 }
@@ -2860,8 +3168,9 @@ function ugSaveEdit() {
     if (el) updates[c.key] = el.value;
   });
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  var endpoint = _ugEditRole === 'student' ? '/students/' + _ugEditId
-               : _ugEditRole === 'teacher' ? '/teachers/' + _ugEditId
+  var endpoint = _ugEditRole === 'student'    ? '/students/' + _ugEditId
+               : _ugEditRole === 'teacher'    ? '/teachers/' + _ugEditId
+               : _ugEditRole === 'admin'      ? '/admins/'   + _ugEditId
                : '/attendance/' + _ugEditId;
   showToast('⏳ Saving to DB…');
   fetch('/api' + endpoint, {
@@ -2876,7 +3185,7 @@ function ugSaveEdit() {
       ugCloseEdit();
       ugApplyFilters();
       showToast('✅ Saved to database');
-      logLine('User record updated: ' + (_ugEditRole) + ' id=' + _ugEditId, 'success');
+      logLine('User record updated: [' + _ugEditRole + '] ' + (updates.fullName || updates.name || _ugEditId), 'success');
     }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
 }
 

@@ -65,7 +65,7 @@ async function seedDefaults() {
   // Seed default settings
   const defaults = [
     { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher','student'], endTime: null, startedAt: null } },
-    { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SSIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
+    { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
     { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 6 } },
     { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
     { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
@@ -75,6 +75,17 @@ async function seedDefaults() {
     const exists = await M.Settings.findOne({ key: d.key });
     if (!exists) await M.Settings.create(d);
   }
+  // Seed Manage settings (portal toggles)
+  const manageExists = await M.Manage.findOne();
+  if (!manageExists) {
+    await M.Manage.create({
+      StudentsPortal: true, TeachersPortal: true, TimeTablePortal: true,
+      LiveSessionFunctionality: true, StudentsViewAttendance: true,
+      ForwardToRep: true, updatedBy: 'system'
+    });
+    console.log('✅ Manage settings seeded');
+  }
+
   // ── Migrate: patch any old maintenance record missing new fields (runs once, harmless after)
   await M.Settings.findOneAndUpdate(
     { key: 'maintenance', 'value.affectedRoles': { $exists: false } },
@@ -509,6 +520,19 @@ app.post('/api/students/bulk-upload', authMiddleware, adminOnly, upload.single('
 // ════════════════════════════════════════════════════════
 //  TEACHERS
 // ════════════════════════════════════════════════════════
+
+app.get('/api/teachers/trackid/:trackId', authMiddleware, async (req, res) => {
+  try {
+    const teacher = await M.Teacher.findOne(
+      { trackId: req.params.trackId.trim(), active: true },
+      'name isHOD trackId'
+    ).lean();
+    if (!teacher) return res.status(404).json({ error: 'TrackID not found' });
+    res.json({ fullName: teacher.name, isHod: !!teacher.isHOD, trackId: teacher.trackId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/api/teachers', authMiddleware, async (req, res) => {
   const teachers = await M.User.find({ role: 'teacher', active: true }, '-password').sort({ name: 1 });
@@ -972,6 +996,33 @@ app.delete('/api/logs', authMiddleware, adminOnly, async (req, res) => {
   await M.Log.deleteMany({});
   await logAction(req.user._id, req.user.name, req.user.role, 'Logs Cleared', 'All logs deleted', 'settings', 'warning', req.ip);
   res.json({ deleted: true });
+});
+
+app.get('/api/logs/count', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const filter = {};
+
+    if (req.query.role)     filter.role     = req.query.role;
+    if (req.query.category) filter.category = req.query.category;
+    if (req.query.severity) filter.severity = req.query.severity;
+
+    if (req.query.from) {
+      filter.time = { $gte: new Date(req.query.from) };
+    }
+
+    if (req.query.to) {
+      filter.time = {
+        ...filter.time,
+        $lte: new Date(req.query.to + 'T23:59:59')
+      };
+    }
+
+    const count = await M.Log.countDocuments(filter);
+
+    res.json({ count });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to get logs count' });
+  }
 });
 
 // GET /api/logs/users — list distinct users who have logs
@@ -1539,6 +1590,33 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
       `Type: ${type} — password mailed (stub)`, 'data', 'info', req.ip);
     res.json({ ok: true, payload, exportPassword, totalStudents: studentCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/manage', async (req, res) => {
+  try {
+    let manage = await M.Manage.findOne();
+    if (!manage) manage = await M.Manage.create({});
+    res.json(manage);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/manage', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const allowed = ['StudentsPortal','TeachersPortal','TimeTablePortal','LiveSessionFunctionality','StudentsViewAttendance','ForwardToRep'];
+    const update = {};
+    for (const key of allowed) {
+      if (typeof req.body[key] === 'boolean') update[key] = req.body[key];
+    }
+    update.updatedBy = req.user.name;
+    const manage = await M.Manage.findOneAndUpdate({}, { $set: update }, { new: true, upsert: true });
+    await logAction(req.user._id, req.user.name, req.user.role, 'Manage Settings Updated',
+      JSON.stringify(update), 'admin', 'info', req.ip);
+    res.json(manage);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Start Server ──────────────────────────────────────

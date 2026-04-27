@@ -175,17 +175,45 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .wiz-bar-fill{height:100%;background:rgba(255,255,255,.85);border-radius:8px;width:0%;transition:width .5s;}
 .wiz-bar-lbl{font-size:10.5px;color:rgba(255,255,255,.75);margin-top:5px;}
 
+.fixed-card {
+  width: 550px;          
+  height: 300px;         
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ── PANELS ───────────────────────────────── */
 .bulk-panel.pg{padding:0;animation:pi .25s ease;}
 @keyframes pi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── SECTION HEADER ───────────────────────── */
-.shd{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:4px;flex-wrap:wrap;gap:8px;
+
+.shd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.stl{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:var(--td);}
-.sdo{width:10px;height:10px;border-radius:50%;background:var(--gB);display:inline-block;flex-shrink:0;}
+
+.stl {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--td);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.sdo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gB);
+  display: inline-block;
+}
 
 /* ── BUTTONS ──────────────────────────────── */
 .btn-out{
@@ -438,7 +466,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('depts')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> DeptName | Code | Icon (optional)
@@ -466,7 +494,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('users','teacher')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> Name | EmployeeID | Department | Designation | Username | Password
@@ -494,7 +522,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('classes')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> Department | HallNo | Year | Semester | Section — ClassName auto-generated as DEPTCODE-SEM-SECTION
@@ -522,7 +550,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('subjects')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> Name | Code | Department | Credits | Type | Teacher (optional)
@@ -550,7 +578,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('students')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> FullName | RegisterNo | AcademicYear | CourseType | Branch | Department | Year | Class | Section | Email | Username | Password
@@ -578,7 +606,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <button class="btn-out" onclick="dlUploaded('users','admin')">⬇ Exported</button>
             </div>
           </div>
-          <div class="card" style="margin-top:20px;">
+          <div class="card fixed-card" style="margin-top:20px; ">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
                 <b>Required Columns:</b> Name | Department | Email | Username | Password

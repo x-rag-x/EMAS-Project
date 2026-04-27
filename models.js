@@ -38,6 +38,7 @@ const TeacherSchema = new mongoose.Schema({
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
+  trackId:      { type: String, default: '', trim: true },
   isHod:              { type: Boolean, default: false },
   HoddeptName:        { type: String,  default: '' },
   isClassAdvisor:     { type: Boolean, default: false },
@@ -73,7 +74,6 @@ const StudentUserSchema = new mongoose.Schema({
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
-  TrackED:      { type: String, default: '', unique: true, trim: true, required: true},
   isRep:        { type: Boolean, default: false },
   active:               { type: Boolean, default: true },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
@@ -120,7 +120,8 @@ const UserSchema = new mongoose.Schema({
   regNo:      { type: String, default: '' },
   deptName:   { type: String, default: '' },
   active:             { type: Boolean, default: true },
-  mustChangePassword: { type: Boolean, default: false },
+  mustChangePassword: { type: Boolean, default: true },
+  trackId:      { type: String,  default: '', trim: true },
   isHOD:            { type: Boolean, default: false },
   HoddeptName:      { type: String,  default: '' },
   isClassAdvisor:   { type: Boolean, default: false },
@@ -168,9 +169,11 @@ const SettingsSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const DepartmentSchema = new mongoose.Schema({
-  name:    { type: String, required: true, unique: true, trim: true },
-  code:    { type: String, required: true, unique: true, trim: true, uppercase: true },
-  icon:    { type: String, default: '🏛️' },
+  name:            { type: String, required: true, unique: true, trim: true },
+  code:            { type: String, required: true, unique: true, trim: true, uppercase: true },
+  number:          { type: String, default: '', trim: true },         // 3-digit register code e.g. "104"
+  twoLetterCode:   { type: String, default: '', trim: true, lowercase: true }, // e.g. "cs"
+  threeLetterCode: { type: String, default: '', trim: true, uppercase: true }, // e.g. "CSE"
   hodId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   hodName: { type: String, default: '' },
   courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
@@ -190,7 +193,10 @@ const ClassSchema = new mongoose.Schema({
 
 const StudentSchema = new mongoose.Schema({
   name:         { type: String, required: true, trim: true },
+  firstName:    { type: String, default: '', trim: true },
+  lastName:     { type: String, default: '', trim: true },
   regNo:        { type: String, required: true, unique: true, trim: true },
+  trackId:      { type: String, default: '', trim: true, unique: true, sparse: true }, // e.g. TRCS25208
   academicYear: { type: String, default: '' },
   courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
   branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
@@ -343,6 +349,17 @@ const DataManagementSchema = new mongoose.Schema({
   updatedBy : String,
 }, { timestamps:true }); 
 
+const ManageSchema = new mongoose.Schema({
+  StudentsPortal  : {type: Boolean, default: true},
+  TeachersPortal  : {type: Boolean, default: true},
+  TimeTablePortal : {type: Boolean, default: true},
+  LiveSessionFunctionality : {type: Boolean, default: true},
+  StudentsViewAttendance : {type: Boolean, default: true},
+  ForwardToRep      : {type: Boolean, default: true},
+
+  updatedBy : String,
+}, { timestamps:true }); 
+
 module.exports = {
   Admin:        mongoose.model('Admin',        AdminSchema),
   Teacher:      mongoose.model('Teacher',      TeacherSchema),
@@ -362,6 +379,7 @@ module.exports = {
   Log:          mongoose.model('Log',          LogSchema),
   UndoLog:      mongoose.model('UndoLog',      UndoLogSchema),
   LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
+  Manage:       mongoose.model('Manage',       ManageSchema),
   SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
   DataManagement: mongoose.model('DataManagement', DataManagementSchema),
 };
