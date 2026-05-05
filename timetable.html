@@ -214,6 +214,20 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--brl);border-top-color:var(--gM);animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ── ANIMATED LOGOUT BUTTON ─────────────────────── */
+.sb-logout-btn { display:flex; align-items:center; justify-content:flex-start; width:45px; height:45px; border:none; border-radius:50%; 
+  cursor:pointer; position:relative; overflow:hidden; transition:width .3s ease,border-radius .3s ease; box-shadow:2px 2px 10px rgba(239,68,68,.25); 
+  background:#ff4141; margin:0 auto; padding:0; flex-shrink:0; }
+.sb-logout-btn .logout-sign { width:100%; transition:width .3s,padding .3s; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sb-logout-btn .logout-sign svg { width:17px; flex-shrink:0; }
+.sb-logout-btn .logout-sign svg path { fill:#fff; }
+.sb-logout-btn .logout-text { position:absolute; right:0; width:0; opacity:0; color:#fff; font-size:13px; font-weight:600; transition:opacity .3s,width .3s,padding .3s; 
+  white-space:nowrap; font-family:'Poppins',sans-serif; overflow:hidden; }
+.sb-logout-btn:hover { width:130px; border-radius:40px; }
+.sb-logout-btn:hover .logout-sign { width:35%; padding-left:18px; }
+.sb-logout-btn:hover .logout-text { opacity:1; width:65%; padding-right:12px; }
+.sb-logout-btn:active { transform:translate(2px,2px); }
+
 /* DBTOAST (DB-synced notifications — matches admin.html style) */
 .toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
 .dbtoast{background:#fff;border:1px solid var(--br);border-radius:14px;padding:13px 18px 13px 14px;display:flex;align-items:flex-start;gap:11px;font-size:13px;box-shadow:0 10px 36px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.07);animation:tIn .3s cubic-bezier(.34,1.56,.64,1);max-width:340px;pointer-events:all;border-left:4px solid var(--gM);}
@@ -231,6 +245,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .fade-in{animation:fi .28s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media(max-width:768px){.sb{transform:translateX(-100%)}.sb.open{transform:none}.mc{margin-left:0!important}.sb-toggle{left:12px}.fr{grid-template-columns:1fr}.det-grid{grid-template-columns:1fr}.ag-row{grid-template-columns:1fr 58px 48px 1fr 24px}}
+
 </style>
 </head>
 <body>
@@ -258,13 +273,11 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         <div class="sb-ur" id="sb-role-lbl">—</div>
       </div>
     </div>
-    <button class="sb-logout" onclick="doLogout()">
-      <div class="lg-icon">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-        </svg>
+    <button class="sb-logout-btn" onclick="doLogout()" title="Logout">
+      <div class="logout-sign">
+        <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
       </div>
-      <span class="lg-txt">Logout</span>
+      <div class="logout-text">Logout</div>
     </button>
   </div>
 </div>

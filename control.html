@@ -1490,7 +1490,7 @@ function loadMaintenance() {
     '<div style="text-align:center;padding:20px;color:var(--tdi);font-size:13px;">⏳ Loading logs from database…</div>';
 
   api('GET', '/settings/maintenance').then(function(d) {
-    if (!d || d.error) { showToast('⚠️ ' + (d && d.error ? d.error : 'Load failed')); return; }
+    if (!d || d.error) { dbToast('⚠️ ' + (d && d.error ? d.error : 'Load failed'), 'error'); return;}
     _maintData = d;
     renderMaintUI(d);
     // Start expiry polling if already active with an end time
@@ -1502,7 +1502,7 @@ function loadMaintenance() {
       }
     }
   }).catch(function(e) {
-    showToast('❌ Failed to load: ' + e.message);
+    dbToast('❌ Failed to load: ' + e.message, 'error');
     document.getElementById('ms-active-val').textContent = 'Error';
     document.getElementById('ms-active-val').style.color = '#dc2626';
     tb.textContent = 'Retry';
@@ -3172,7 +3172,7 @@ function ugSaveEdit() {
                : _ugEditRole === 'teacher'    ? '/teachers/' + _ugEditId
                : _ugEditRole === 'admin'      ? '/admins/'   + _ugEditId
                : '/attendance/' + _ugEditId;
-  showToast('⏳ Saving to DB…');
+  dbToast('⏳ Saving to DB…', 'saving');
   fetch('/api' + endpoint, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
@@ -3184,9 +3184,9 @@ function ugSaveEdit() {
       if (rec) Object.assign(rec, updates);
       ugCloseEdit();
       ugApplyFilters();
-      showToast('✅ Saved to database');
+      dbToast('✅ Saved to database', 'success');
       logLine('User record updated: [' + _ugEditRole + '] ' + (updates.fullName || updates.name || _ugEditId), 'success');
-    }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
+    }).catch(function(err) { dbToast('❌ Save failed: ' + (err.message || 'network'), 'error'); });
 }
 
 // Trigger load when page is navigated to

@@ -186,6 +186,7 @@ const ClassSchema = new mongoose.Schema({
   deptName: { type: String, required: true },
   deptCode: { type: String, required: true },
   year:     { type: String, default: '' },
+  batch:    { type: String, default: '' },
   sem:      { type: String, default: '' },
   section:  { type: String, default: '' },
   hallNo:   { type: String, default: '' },
@@ -198,6 +199,7 @@ const StudentSchema = new mongoose.Schema({
   regNo:        { type: String, required: true, unique: true, trim: true },
   trackId:      { type: String, default: '', trim: true, unique: true, sparse: true }, // e.g. TRCS25208
   academicYear: { type: String, default: '' },
+  batch:        { type: String, default: '' },
   courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
   branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
   deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
@@ -211,6 +213,7 @@ const StudentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const SubjectSchema = new mongoose.Schema({
+  subjectCode:  { type: String, required: true, trim: true, unique: true, sparse: true },
   name:     { type: String, required: true, trim: true },
   code:     { type: String, required: true, trim: true },
   credits:  { type: Number, default: 3 },

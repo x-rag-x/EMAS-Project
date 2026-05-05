@@ -448,7 +448,7 @@ app.delete('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
 //  STUDENTS
 // ════════════════════════════════════════════════════════
 
-app.get('/api/students', authMiddleware, async (req, res) => {
+app.get('/api', authMiddleware, async (req, res) => {
   const filter = {};
   if (req.query.deptId)  filter.deptId  = req.query.deptId;
   if (req.query.classId) filter.classId = req.query.classId;
@@ -1592,6 +1592,10 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ════════════════════════════════════════════════════════
+//  MANAGE
+// ════════════════════════════════════════════════════════
+
 app.get('/api/manage', async (req, res) => {
   try {
     let manage = await M.Manage.findOne();
@@ -1614,6 +1618,29 @@ app.post('/api/manage', authMiddleware, adminOnly, async (req, res) => {
     await logAction(req.user._id, req.user.name, req.user.role, 'Manage Settings Updated',
       JSON.stringify(update), 'admin', 'info', req.ip);
     res.json(manage);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/manage', async (req, res) => {
+  try {
+    const data = await M.Manage.find();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/manage/:field', async (req, res) => {
+  try {
+    const field = req.params.field; 
+
+    const data = await Manage.findOne().select(field);
+
+    if (!data) return res.json({ value: false });
+
+    res.json({ value: data[field] }); // dynamic access
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

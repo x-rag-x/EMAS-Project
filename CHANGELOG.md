@@ -1,4 +1,29 @@
-## 🔹 v2.0.0 — 28 Apr 2026
+## 🔹 v2.1.0 — 05 May 2026
+
+- `admin.html`
+    - CSS converted to compact format.
+    - Updated toast functions (`showToast`, `dbToast`)
+    - Removed Old bulk Menu . 
+- `bulk.html`
+    - Remove 'Add Admin' Menu, Because No special admin id for any one.
+    
+### ✨ Added
+- Add Clear button in Add Department Menu, Add Student Menu, Add Teacher Menu.
+
+### 🔧 Updated
+- Restructure with 2-digit code field in Add Department Menu
+- Teacher trackId definition
+- Changed showToast to dbToast for database actions.
+- First step towards Setup wizard update.
+
+### 🐛 Fixed
+- Track Id generation bugs.
+
+### ⚠️ Yet to Finish
+- Bug in class & section page, clicking on department is not functioning
+
+----------------------------------
+## 🔹 v2.0.0 — 27 Apr 2026
 
 ### ✨ Added
 - Introduction of Track ID generation

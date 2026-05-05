@@ -382,12 +382,10 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       </div>
 
       <div class="nav-section" style="flex:1;overflow-y:auto;padding:6px 0;">
-        <!-- FIX #1: Dashboard button should not call bulkTab – it navigates away -->
         <button class="sb-item" onclick="goBack()"><span class="sbi-ic">📊</span>Dashboard</button>
+        <button class="sb-item bulk-tab" onclick="bulkTab(this,'wizard')" id="wz-tab-wizard" style="display:none;"></button>
 
         <div class="sb-section-label">Add</div>
-        <!-- FIX #2: Added 'bulk-tab' class to all tab buttons so bulkTab()'s querySelectorAll('.bulk-tab') 
-             correctly finds and toggles the 'act' class on them. -->
         <button class="sb-item bulk-tab act" onclick="bulkTab(this,'dept')" id="wz-tab-dept"><span
             class="sbi-ic">🏛️</span>Department</button>
         <button class="sb-item bulk-tab" onclick="bulkTab(this,'teacher')" id="wz-tab-teacher"><span
@@ -398,8 +396,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
             class="sbi-ic">📚</span>Subject</button>
         <button class="sb-item bulk-tab" onclick="bulkTab(this,'student')" id="wz-tab-student"><span
             class="sbi-ic">👨‍🎓</span>Students</button>
-        <button class="sb-item bulk-tab" onclick="bulkTab(this,'admin')" id="wz-tab-admin"><span
-            class="sbi-ic">👤</span>Admins</button>
       </div>
 
       <div class="sb-bottom">
@@ -429,31 +425,63 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         </div>
         <div class="topbar-right">
           <span id="wizard-badge"
-            style="display:none;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;animation:badge-pulse 2s infinite;">🧙
+            style="display:none;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;background:linear-gradient(135deg,#14a429,#69ce77);color:#fff;animation:badge-pulse 2s infinite;">🧙
             Setup Wizard Active</span>
         </div>
       </div>
 
       <div class="main" style="max-width:860px;margin:0 auto;padding:24px 20px 56px;">
 
-        <!-- WIZARD BANNER -->
-        <div class="wizard-banner" id="wizard-banner" style="display:none;">
-          <div class="wiz-top">
-            <div style="font-size:40px;position:relative;z-index:1;">🧙‍♂️</div>
-            <div style="flex:1;position:relative;z-index:1;">
-              <div style="font-size:17px;font-weight:800;margin-bottom:3px;">Welcome! Let's set up your institution.
-              </div>
-              <div style="font-size:12.5px;opacity:.85;line-height:1.6;">Database is empty. Follow the wizard in order —
-                complete each step to unlock the next. All 6 steps required.</div>
+        <!-- WIZARD PAGE -->
+        <div id="bulk-wizard" class="bulk-panel pg" style="display:none;">
+          <div class="shd">
+            <div class="stl">
+              <span class="sdo"></span>Setup Wizard
             </div>
-            <button class="wiz-dismiss" onclick="dismissWizard()">Dismiss</button>
+            <div>
+              <button class="btn-out" onclick="dismissWizard()">Skip</button>
+            </div>
           </div>
-          <div class="wiz-steps" id="wiz-steps-row"></div>
-          <div class="wiz-progress">
-            <div class="wiz-bar-bg">
-              <div class="wiz-bar-fill" id="wiz-bar-fill"></div>
+
+          <div class="card fixed-card" style="margin-top:20px;">
+            <div class="card-body">
+
+              <!-- TOP INTRO -->
+              <div class="wizard-banner" id="wizard-banner">
+                <div class="wiz-top">
+                  <div style="font-size:40px;">🧙‍♂️</div>
+                  <div style="flex:1;">
+                    <div style="font-size:17px;font-weight:800;margin-bottom:3px;">
+                      Welcome! Let's set up your institution.
+                    </div>
+                    <div style="font-size:12.5px;opacity:.85;">
+                      Follow all 5 steps to complete setup.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STEPS -->
+                <div class="wiz-steps" id="wiz-steps-row"></div>
+
+                <!-- PROGRESS -->
+                <div class="wiz-progress">
+                  <div class="wiz-bar-bg">
+                    <div class="wiz-bar-fill" id="wiz-bar-fill"></div>
+                  </div>
+                  <div class="wiz-bar-lbl" id="wiz-bar-lbl">
+                    Step 0 of 5 complete
+                  </div>
+                </div>
+              </div>
+
+              <!-- STEP CONTENT -->
+              <div id="wizard-content" style="margin-top:20px;"></div>
+              <div style="margin-top:20px; display:flex; gap:10px;">
+                <button class="btn-out" onclick="wizGoTo('dept')">
+                  Start Setup →
+                </button>
+              </div>
             </div>
-            <div class="wiz-bar-lbl" id="wiz-bar-lbl">Step 0 of 6 complete</div>
           </div>
         </div>
 
@@ -491,7 +519,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
             <div class="stl"><span class="sdo"></span>Add Teacher</div>
             <div style="display:flex;gap:8px;">
               <button class="btn-out" onclick="dlTemplate('teacher')">⬇ Template</button>
-              <button class="btn-out" onclick="dlUploaded('users','teacher')">⬇ Exported</button>
+              <button class="btn-out" onclick="dlUploaded('teacher')">⬇ Exported</button>
             </div>
           </div>
           <div class="card fixed-card" style="margin-top:20px;">
@@ -597,34 +625,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
           </div>
         </div>
 
-        <!-- ADMINS -->
-        <div id="bulk-admin" class="bulk-panel pg" style="display:none;">
-          <div class="shd">
-            <div class="stl"><span class="sdo"></span>Add Admin</div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn-out" onclick="dlTemplate('admin')">⬇ Template</button>
-              <button class="btn-out" onclick="dlUploaded('users','admin')">⬇ Exported</button>
-            </div>
-          </div>
-          <div class="card fixed-card" style="margin-top:20px; ">
-            <div class="card-body">
-              <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
-                <b>Required Columns:</b> Name | Department | Email | Username | Password
-              </div>
-              <div class="uz" onclick="document.getElementById('uf-adm').click()"
-                ondragover="event.preventDefault();this.classList.add('dg')"
-                ondragleave="this.classList.remove('dg')"
-                ondrop="hd(event,'admins')">
-                <input type="file" id="uf-adm" accept=".xlsx,.xls,.csv" onchange="hu(this,'admins')">
-                <span class="uz-icon">👤</span>
-                <div class="uz-title">Click or drag &amp; drop your file here</div>
-                <div class="uz-sub">.xlsx · .xls · .csv</div>
-              </div>
-              <div id="admup" style="margin-top:14px;"></div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
@@ -726,12 +726,12 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 
     // ── WIZARD ──────────────────────────────────────────────────────────────────
     var WIZARD_STEPS = [
+      { key: 'wizard', icon:'🧙‍♂️', label:'Start', tab:'wizard' },
       { key: 'dept',    icon: '🏛️',  label: 'Departments', tab: 'dept'    },
       { key: 'teacher', icon: '👩‍🏫', label: 'Teachers',    tab: 'teacher' },
       { key: 'class',   icon: '🏫',  label: 'Classes',     tab: 'class'   },
       { key: 'subject', icon: '📚',  label: 'Subjects',    tab: 'subject' },
       { key: 'student', icon: '👨‍🎓', label: 'Students',    tab: 'student' },
-      { key: 'admin',   icon: '👤',  label: 'Admins',      tab: 'admin'   },
     ];
     var _wizDone = {}, _wizActive = '';
 
@@ -744,13 +744,24 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       if (avEl)   avEl.textContent   = adminName.charAt(0).toUpperCase();
 
       var isEmpty = DB.get('depts').length === 0 && DB.get('classes').length === 0;
+      var isDeptEmpty = DB.get('depts').length === 0;
       document.getElementById('wizard-banner').style.display = isEmpty ? 'block' : 'none';
       document.getElementById('wizard-badge').style.display  = isEmpty ? 'inline-flex' : 'none';
       if (isEmpty) renderWizSteps();
 
-      // FIX #4: Show the default panel (dept) on load
-      var firstBtn = document.getElementById('wz-tab-dept');
-      if (firstBtn) bulkTab(firstBtn, 'dept');
+      if (isDeptEmpty) {
+        var wizBtn = document.getElementById('wz-tab-wizard');
+        if (wizBtn) bulkTab(wizBtn, 'wizard');
+      } else {
+        var deptBtn = document.getElementById('wz-tab-dept');
+        if (deptBtn) bulkTab(deptBtn, 'dept');
+      }
+
+      var wizTab = document.getElementById('wz-tab-wizard');
+
+      if (wizTab) {
+        wizTab.style.display = isDeptEmpty ? '' : 'none';
+      }
     }
 
     function dismissWizard() {
@@ -834,14 +845,15 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     }
 
     // ── TAB ─────────────────────────────────────────────────────────────────────
-    // FIX #6: Selector changed from '.bulk-tab' to '.sb-item.bulk-tab' which now
-    // correctly targets the sidebar navigation buttons (they have both classes).
     function bulkTab(btn, tab) {
       document.querySelectorAll('.sb-item.bulk-tab').forEach(function (b) { b.classList.remove('act'); });
       btn.classList.add('act');
       document.querySelectorAll('.bulk-panel').forEach(function (p) { p.style.display = 'none'; });
       var p = document.getElementById('bulk-' + tab);
       if (p) p.style.display = '';
+      if (tab === 'wizard') {
+        document.getElementById('wizard-banner').style.display = 'block';
+      }
       _wizActive = tab;
       renderWizSteps();
     }
@@ -930,7 +942,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         class:   [['Department', 'HallNo', 'Year', 'Semester', 'Section'],                                                             ['CSE', 'LH01', 'I Year', 'I', 'A']],
         subject: [['Name', 'Code', 'Department', 'Credits', 'Type', 'Teacher'],                                                        ['Data Structures', 'CS201', 'CSE', '4', 'Theory', '']],
         student: [['FullName', 'RegisterNo', 'AcademicYear', 'CourseType', 'Branch', 'Department', 'Year', 'Class', 'Section', 'Email', 'Username', 'Password'], ['Arun Kumar', '714025104000', '2025-26', 'UG', 'B.E', 'Computer Science Engineering', 'I Year', 'CSE-I-A', 'A', 'arun@eams.edu', 'arun25', 'Student@123']],
-        admin:   [['Name', 'Department', 'Email', 'Username', 'Password'],                                                             ['Admin User', 'Admin', 'admin@eams.edu', 'admin2', 'Admin@123']],
       };
       var data = T[type] || [['No template']];
       var ws = XLSX.utils.aoa_to_sheet(data), wb = XLSX.utils.book_new();
@@ -978,7 +989,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
           else if (type === 'subjects') parseSubjectRows(rows);
           else if (type === 'students') parseStudentRows(rows);
           else if (type === 'teachers') parseTeacherRows(rows);
-          else if (type === 'admins')   parseAdminRows(rows);
         } catch (err) {
           showToast('Error reading file: ' + err.message, 'warn');
         }
@@ -1114,22 +1124,22 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     // ── PARSE: STUDENTS ──────────────────────────────────────────────────────────
     function parseStudentRows(rows) {
       var added = 0, skipped = 0, errors = [];
-      var VALID = ['UG', 'PG', 'M.E', 'M.TECH', 'MBA', 'MCA', 'B.E', 'B.TECH', 'BE', 'BTECH'];
+      var VALID = ['UG', 'PG', 'M.E', 'M.TECH', 'B.E', 'B.TECH'];
 
       rows.forEach(function (row, ri) {
         var rn     = ri + 2;
         var name   = cv(row, ['fullname', 'name', 'studentname']);
         var regNo  = cv(row, ['registerno', 'regno', 'registernum', 'rollno', 'roll']);
-        var ay     = cv(row, ['academicyear', 'academicyr', 'ay']) || '2025-26';
-        var ct     = cv(row, ['coursetype', 'course', 'type']).toUpperCase() || 'UG';
+        var ay     = cv(row, ['academicyear', 'academicyr', 'ay']) || '';
+        var ct     = cv(row, ['coursetype', 'course', 'type']).toUpperCase() || '';
         var branch = cv(row, ['branch', 'branchname']);
         var dn     = cv(row, ['department', 'dept', 'deptname']);
         var yr     = cv(row, ['year', 'studyyear', 'yr']);
         var cn     = cv(row, ['class', 'classname', 'classid']);
-        var sec    = cv(row, ['section', 'sec']) || 'A';
+        var sec    = cv(row, ['section', 'sec']);
         var email  = cv(row, ['email', 'emailid', 'mail']);
         var user   = cv(row, ['username', 'user', 'loginid']);
-        var pass   = cv(row, ['password', 'pass', 'pwd']) || 'Student@123';
+        var pass   = cv(row, ['password', 'pass', 'pwd']) || 'student@123';
 
         var errs = [];
         if (!name)  errs.push('FullName missing');
@@ -1197,7 +1207,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         var dept  = cv(row, ['dept', 'department']);
         var desig = cv(row, ['desig', 'designation']) || 'Assistant Professor';
         var user  = cv(row, ['user', 'username']);
-        var pass  = cv(row, ['pass', 'password']) || 'teacher';
+        var pass  = cv(row, ['pass', 'password']) || 'teacher123';
 
         if (!name || !user) { skipped++; return; }
         if (DB.one('users', { username: user })) { skipped++; return; }
@@ -1218,38 +1228,9 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       if (added > 0) wizMarkDone('teacher');
     }
 
-    // ── PARSE: ADMINS ────────────────────────────────────────────────────────────
-    function parseAdminRows(rows) {
-      var added = 0, skipped = 0;
-      rows.forEach(function (row) {
-        var name  = cv(row, ['name']);
-        var dept  = cv(row, ['dept', 'department']);
-        var email = cv(row, ['email']);
-        var user  = cv(row, ['username', 'user']);
-        var pass  = cv(row, ['password', 'pass']) || 'Admin@123';
-
-        if (!name || !user) { skipped++; return; }
-        if (DB.one('users', { username: user })) { skipped++; return; }
-
-        DB.insert('users', {
-          name:     name,
-          dept:     dept,
-          email:    email,
-          username: user,
-          password: pass,
-          role:     'admin',
-        });
-        added++;
-      });
-      showUploadPreview('admup', added, skipped);
-      showToast('Admins: ' + added + ' added, ' + skipped + ' skipped');
-      if (added > 0) wizMarkDone('admin');
-    }
-
     // ── BOOT ─────────────────────────────────────────────────────────────────────
     initWizard();
     document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   </script>
 </body>
-
 </html>
