@@ -7,19 +7,19 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 require('dotenv').config();
 
-const express    = require('express');
-const mongoose   = require('mongoose');
-const bcrypt     = require('bcryptjs');
-const jwt        = require('jsonwebtoken');
-const cors       = require('cors');
-const multer     = require('multer');
-const XLSX       = require('xlsx');
-const path       = require('path');
-const crypto     = require('crypto');
-const cfg        = require('./config');
-const M          = require('./models');
+const express = require('express');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const multer = require('multer');
+const XLSX = require('xlsx');
+const path = require('path');
+const crypto = require('crypto');
+const cfg = require('./config');
+const M = require('./models');
 
-const app    = express();
+const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
@@ -37,37 +37,21 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
 
 // ── Seed Defaults ─────────────────────────────────────
 async function seedDefaults() {
+  // Seed a single admin account only if none exists (first-boot)
   const adminExists = await M.User.findOne({ role: 'admin' });
   if (!adminExists) {
     const hash = await bcrypt.hash('admin123', cfg.BCRYPT_ROUNDS);
     await M.User.create({ name: 'Administrator', username: 'admin', password: hash, role: 'admin', mustChangePassword: true });
-
+    console.log('✅ Default admin account created — please change the password after first login.');
   }
-  const teacherExists = await M.User.findOne({ role: 'teacher' });
-  if (!teacherExists) {
-    const plainPw = 'teacher123';
-    const hash = await bcrypt.hash(plainPw, cfg.BCRYPT_ROUNDS);
-    await M.User.create({ name: 'Default Teacher', username: 'teacher', password: hash, role: 'teacher', empId: 'EMP001', dept: 'Computer Science Engineering', desig: 'Assistant Professor', mustChangePassword: true });
 
-
-
-  } else {
-    // Verify existing teacher's hash is valid
-    const testMatch = await bcrypt.compare('teacher123', teacherExists.password);
-
-    if (!testMatch) {
-      // Auto-reset teacher password if hash is broken
-      const newHash = await bcrypt.hash('teacher123', cfg.BCRYPT_ROUNDS);
-      await M.User.findByIdAndUpdate(teacherExists._id, { password: newHash, active: true, failedLogins: 0, lockedUntil: null });
-
-    }
-  }
+  
   // Seed default settings
   const defaults = [
-    { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher','student'], endTime: null, startedAt: null } },
+    { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher', 'student'], endTime: null, startedAt: null } },
     { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
     { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 6 } },
-    { key: 'security', value: { maxLoginAttempts: 5, sessionTimeoutMins: 480, forcePwChange: true } },
+    { key: 'security', value: { maxLoginAttempts: 3, sessionTimeoutMins: 480, forcePwChange: true } },
     { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
     { key: 'college_ips', value: ['127.0.0.1', '::1', '192.', '10.'] },
   ];
@@ -75,6 +59,7 @@ async function seedDefaults() {
     const exists = await M.Settings.findOne({ key: d.key });
     if (!exists) await M.Settings.create(d);
   }
+
   // Seed Manage settings (portal toggles)
   const manageExists = await M.Manage.findOne();
   if (!manageExists) {
@@ -89,20 +74,14 @@ async function seedDefaults() {
   // ── Migrate: patch any old maintenance record missing new fields (runs once, harmless after)
   await M.Settings.findOneAndUpdate(
     { key: 'maintenance', 'value.affectedRoles': { $exists: false } },
-    { $set: { 'value.affectedRoles': ['teacher','student'], 'value.endTime': null, 'value.startedAt': null } }
+    { $set: { 'value.affectedRoles': ['teacher', 'student'], 'value.endTime': null, 'value.startedAt': null } }
   );
 
-  // Log current credentials to DB (visible in Logs menu, not terminal)
-  const adminUser2   = await M.User.findOne({ role: 'admin' });
-  const teacherUser2 = await M.User.findOne({ role: 'teacher' });
-  const adminPwSetting   = await M.Settings.findOne({ key: 'default_admin_pw' });
-  const teacherPwSetting = await M.Settings.findOne({ key: 'default_teacher_pw' });
-  const adminPw   = adminPwSetting?.value   || 'admin123';
-  const teacherPw = teacherPwSetting?.value || 'teacher123';
+  // Log server start (no credentials logged)
   await M.Log.create({
-    userId: adminUser2?._id, userName: 'SYSTEM', role: 'system',
+    userName: 'SYSTEM', role: 'system',
     action: 'Server Started',
-    details: `Admin: ${adminUser2?.username} | pwd: ${adminPw} || Teacher: ${teacherUser2?.username} | pwd: ${teacherPw}`,
+    details: 'EAMS server started successfully.',
     category: 'system', severity: 'info', ip: 'localhost',
     time: new Date()
   });
@@ -116,7 +95,7 @@ async function logAction(userId, userName, role, action, details, category = 'ge
       ip: ip || '', sessionId: sessionId || '',
       time: new Date()
     });
-  } catch(e) {}
+  } catch (e) { }
 }
 
 // ── Auth Middleware ───────────────────────────────────
@@ -144,7 +123,7 @@ async function checkMaintenance(req, res, next) {
   const setting = await M.Settings.findOne({ key: 'maintenance' });
   if (setting?.value?.active && req.user?.role !== 'admin') {
     const v = setting.value;
-    const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher','student'];
+    const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher', 'student'];
     if (affected.includes(req.user?.role)) {
       return res.status(503).json({
         error: v.message || 'System is under maintenance.',
@@ -210,7 +189,7 @@ app.post('/api/auth/login', async (req, res) => {
       const maint = await M.Settings.findOne({ key: 'maintenance' });
       if (maint?.value?.active) {
         const v = maint.value;
-        const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher','student'];
+        const affected = v.affectedRoles?.length ? v.affectedRoles : ['teacher', 'student'];
         if (affected.includes(role)) {
           return res.status(503).json({
             error: v.message || 'System under maintenance.',
@@ -274,7 +253,7 @@ app.post('/api/auth/logout', authMiddleware, async (req, res) => {
     await M.Session.findOneAndUpdate({ token }, { active: false });
     await logAction(req.user._id, req.user.name, req.user.role, 'Logout', 'User logged out', 'login', 'info', req.ip);
     res.json({ message: 'Logged out' });
-  } catch(e) { res.json({ message: 'Logged out' }); }
+  } catch (e) { res.json({ message: 'Logged out' }); }
 });
 
 app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
@@ -330,7 +309,7 @@ app.put('/api/settings/:key', authMiddleware, adminOnly, async (req, res) => {
     const action = v.active ? 'Maintenance Mode Enabled' : 'Maintenance Mode Disabled';
     const affected = (v.affectedRoles || []).join(', ') || 'none';
     const endInfo = v.endTime ? ` | End: ${new Date(v.endTime).toLocaleString('en-IN')}` : '';
-    const details = `Roles blocked: ${affected}${endInfo} | Msg: "${(v.message||'').slice(0,60)}"`;
+    const details = `Roles blocked: ${affected}${endInfo} | Msg: "${(v.message || '').slice(0, 60)}"`;
     await logAction(req.user._id, req.user.name, req.user.role, action, details, 'maintenance', v.active ? 'warning' : 'info', req.ip);
   } else {
     await logAction(req.user._id, req.user.name, req.user.role, 'Settings Updated', `Key: ${req.params.key}`, 'settings', 'info', req.ip);
@@ -379,8 +358,10 @@ app.put('/api/departments/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/departments/:id', authMiddleware, adminOnly, async (req, res) => {
   const dept = await M.Department.findById(req.params.id).lean();
   if (dept) {
-    await M.UndoLog.create({ collectionName: 'departments', label: `Department: ${dept.name}`,
-      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.UndoLog.create({
+      collectionName: 'departments', label: `Department: ${dept.name}`,
+      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
     await M.Department.findByIdAndDelete(req.params.id);
   }
   await logAction(req.user._id, req.user.name, req.user.role, 'Department Deleted', dept?.name || req.params.id, 'data', 'warning', req.ip);
@@ -404,8 +385,10 @@ app.put('/api/depts/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/depts/:id', authMiddleware, adminOnly, async (req, res) => {
   const dept = await M.Department.findById(req.params.id).lean();
   if (dept) {
-    await M.UndoLog.create({ collectionName: 'departments', label: `Department: ${dept.name}`,
-      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.UndoLog.create({
+      collectionName: 'departments', label: `Department: ${dept.name}`,
+      snapshot: dept, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
     await M.Department.findByIdAndDelete(req.params.id);
   }
   await logAction(req.user._id, req.user.name, req.user.role, 'Department Deleted', dept?.name, 'data', 'warning', req.ip);
@@ -436,8 +419,10 @@ app.put('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
   const cls = await M.Class.findById(req.params.id).lean();
   if (cls) {
-    await M.UndoLog.create({ collectionName: 'classes', label: `Class: ${cls.name}`,
-      snapshot: cls, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.UndoLog.create({
+      collectionName: 'classes', label: `Class: ${cls.name}`,
+      snapshot: cls, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
     await M.Class.findByIdAndDelete(req.params.id);
   }
   await logAction(req.user._id, req.user.name, req.user.role, 'Class Deleted', cls?.name, 'data', 'warning', req.ip);
@@ -450,7 +435,15 @@ app.delete('/api/classes/:id', authMiddleware, adminOnly, async (req, res) => {
 
 app.get('/api', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.deptId)  filter.deptId  = req.query.deptId;
+  if (req.query.deptId) filter.deptId = req.query.deptId;
+  if (req.query.classId) filter.classId = req.query.classId;
+  if (req.query.section) filter.section = req.query.section;
+  res.json(await M.Student.find(filter).sort({ name: 1 }));
+});
+// Alias: GET /api/students (consistent with other routes)
+app.get('/api/students', authMiddleware, async (req, res) => {
+  const filter = {};
+  if (req.query.deptId) filter.deptId = req.query.deptId;
   if (req.query.classId) filter.classId = req.query.classId;
   if (req.query.section) filter.section = req.query.section;
   res.json(await M.Student.find(filter).sort({ name: 1 }));
@@ -473,8 +466,10 @@ app.put('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
   const stu = await M.Student.findById(req.params.id).lean();
   if (stu) {
-    await M.UndoLog.create({ collectionName: 'students', label: `Student: ${stu.name} (${stu.regNo})`,
-      snapshot: stu, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.UndoLog.create({
+      collectionName: 'students', label: `Student: ${stu.name} (${stu.regNo})`,
+      snapshot: stu, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
     await M.Student.findByIdAndDelete(req.params.id);
   }
   await logAction(req.user._id, req.user.name, req.user.role, 'Student Deleted', stu?.name, 'data', 'warning', req.ip);
@@ -485,15 +480,15 @@ app.delete('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
 app.post('/api/students/bulk-upload', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const workbook  = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows      = XLSX.utils.sheet_to_json(worksheet);
-    const VALID_COURSE_TYPES = ['UG','PG','M.E','M.TECH','MBA','MCA','B.E','B.TECH','BE','BTECH'];
+    const rows = XLSX.utils.sheet_to_json(worksheet);
+    const VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'MBA', 'MCA', 'B.E', 'B.TECH', 'BE', 'BTECH'];
     let added = 0, skipped = 0, errors = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const cv = (keys) => { for (const k of keys) { const found = Object.keys(row).find(r => r.toLowerCase().replace(/\s/g,'').includes(k.toLowerCase())); if (found) return String(row[found]).trim(); } return ''; };
-      const name = cv(['fullname','name','studentname']), regNo = cv(['registerno','regno','rollno']), acadYear = cv(['academicyear','ay']) || '2025-26', courseType = cv(['coursetype','course']).toUpperCase() || 'UG', branch = cv(['branch']), deptName = cv(['department','dept']), yearStr = cv(['year','studyyear']), className = cv(['class','classname']), section = cv(['section','sec']) || 'A', email = cv(['email','mail']), username = cv(['username','user']), password = cv(['password','pass']) || 'Student@123';
+      const cv = (keys) => { for (const k of keys) { const found = Object.keys(row).find(r => r.toLowerCase().replace(/\s/g, '').includes(k.toLowerCase())); if (found) return String(row[found]).trim(); } return ''; };
+      const name = cv(['fullname', 'name', 'studentname']), regNo = cv(['registerno', 'regno', 'rollno']), acadYear = cv(['academicyear', 'ay']) || '2025-26', courseType = cv(['coursetype', 'course']).toUpperCase() || 'UG', branch = cv(['branch']), deptName = cv(['department', 'dept']), yearStr = cv(['year', 'studyyear']), className = cv(['class', 'classname']), section = cv(['section', 'sec']) || 'A', email = cv(['email', 'mail']), username = cv(['username', 'user']), password = cv(['password', 'pass']) || 'Student@123';
       const rowErrors = [];
       if (!name) rowErrors.push('FullName missing');
       if (!regNo) rowErrors.push('RegisterNo missing');
@@ -502,9 +497,9 @@ app.post('/api/students/bulk-upload', authMiddleware, adminOnly, upload.single('
       if (VALID_COURSE_TYPES.indexOf(courseType) === -1) rowErrors.push(`CourseType "${courseType}" unknown`);
       if (await M.Student.findOne({ regNo })) rowErrors.push(`RegisterNo ${regNo} already exists`);
       if (username && await M.User.findOne({ username: username.toLowerCase() })) rowErrors.push(`Username "${username}" taken`);
-      if (rowErrors.length) { skipped++; errors.push({ row: i+2, name: name||'(blank)', issues: rowErrors }); continue; }
+      if (rowErrors.length) { skipped++; errors.push({ row: i + 2, name: name || '(blank)', issues: rowErrors }); continue; }
       const dept = await M.Department.findOne({ $or: [{ name: new RegExp(deptName, 'i') }, { code: new RegExp(deptName, 'i') }] });
-      const cls  = await M.Class.findOne({ name: className }).lean();
+      const cls = await M.Class.findOne({ name: className }).lean();
       await M.Student.create({ name, regNo, academicYear: acadYear, courseType, branch, deptId: dept?._id, deptName: dept?.name || deptName, classId: cls?._id, className: cls?.name || className, year: yearStr, section, email });
       if (username) {
         const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
@@ -560,8 +555,10 @@ app.put('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
   const teacher = await M.User.findById(req.params.id).lean();
   if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
-  await M.UndoLog.create({ collectionName: 'teachers', label: `Teacher: ${teacher.name} (@${teacher.username})`,
-    snapshot: teacher, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+  await M.UndoLog.create({
+    collectionName: 'teachers', label: `Teacher: ${teacher.name} (@${teacher.username})`,
+    snapshot: teacher, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+  });
   await M.User.findByIdAndDelete(req.params.id);
   await M.Assignment.deleteMany({ teacherId: req.params.id });
   await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Deleted', teacher.name, 'data', 'warning', req.ip);
@@ -575,11 +572,27 @@ app.delete('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
 app.get('/api/attendance', authMiddleware, async (req, res) => {
   const filter = {};
   if (req.query.teacherId) filter.teacherId = req.query.teacherId;
-  if (req.query.classId)   filter.classId   = req.query.classId;
-  if (req.query.date)      filter.date       = req.query.date;
+  if (req.query.classId) filter.classId = req.query.classId;
+  if (req.query.date) filter.date = req.query.date;
   if (req.query.from && req.query.to) filter.date = { $gte: req.query.from, $lte: req.query.to };
   res.json(await M.Attendance.find(filter).sort({ date: -1 }).limit(500));
 });
+// Bulk delete all attendance (admin only)
+app.delete('/api/attendance/all', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const result = await M.Attendance.deleteMany({});
+    await logAction(req.user._id, req.user.name, req.user.role, 'Attendance Cleared', `All ${result.deletedCount} records deleted`, 'data', 'warning', req.ip);
+    res.json({ deleted: result.deletedCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Delete single attendance record
+app.delete('/api/attendance/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await M.Attendance.findByIdAndDelete(req.params.id);
+    res.json({ deleted: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/attendance', authMiddleware, async (req, res) => {
   try {
     const existing = await M.Attendance.findOne({ teacherId: req.body.teacherId, classId: req.body.classId, subjectId: req.body.subjectId, date: req.body.date });
@@ -594,12 +607,12 @@ app.post('/api/attendance', authMiddleware, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 app.get('/api/attendance/unmarked-teachers', authMiddleware, adminOnly, async (req, res) => {
-  const today  = new Date(), monday = new Date(today);
+  const today = new Date(), monday = new Date(today);
   monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   const weekDates = Array.from({ length: 5 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d.toISOString().split('T')[0]; });
   const assignments = await M.Assignment.find().lean();
-  const attendance  = await M.Attendance.find({ date: { $in: weekDates } }).lean();
-  const unmarked    = [];
+  const attendance = await M.Attendance.find({ date: { $in: weekDates } }).lean();
+  const unmarked = [];
   for (const a of assignments) {
     const markedDates = attendance.filter(att => String(att.teacherId) === String(a.teacherId) && String(att.classId) === String(a.classId) && String(att.subjectId) === String(a.subjectId)).map(att => att.date);
     const missingDays = weekDates.filter(d => !markedDates.includes(d));
@@ -613,10 +626,10 @@ app.post('/api/live-session/start', authMiddleware, async (req, res) => {
   if (req.user.role !== 'teacher') return res.status(403).json({ error: 'Only teachers can start live sessions' });
   const { classId, subjectId, date } = req.body;
   if (!classId || !subjectId || !date) return res.status(400).json({ error: 'classId, subjectId, date required' });
-  
+
   // Close any existing active sessions for this teacher/class
   await M.LiveSession.updateMany({ teacherId: req.user._id, classId, active: true }, { active: false });
-  
+
   const passcode = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
@@ -639,15 +652,15 @@ app.get('/api/live-session/active', authMiddleware, async (req, res) => {
 
     // Check if already marked
     const alreadyMarked = session.markedStudents.some(s => String(s.studentId) === String(student._id));
-    
+
     res.json({ active: true, sessionId: session._id, subjectName: session.subjectId?.name || 'Subject', alreadyMarked });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
   if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
   const { sessionId, passcode } = req.body;
-  
+
   try {
     const student = await M.Student.findOne({ userId: req.user._id });
     if (!student) return res.status(404).json({ error: 'Student profile not found' });
@@ -662,11 +675,11 @@ app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
     const allowed = settings ? settings.value : [];
     let isAllowed = allowed.length === 0; // if empty, allow all
     if (!isAllowed) {
-       for (const ip of allowed) {
-         if (req.ip.startsWith(ip) || (ip === '::1' && req.ip === '::1') || (ip === '127.0.0.1' && req.ip === '127.0.0.1') || req.ip.includes(ip)) {
-           isAllowed = true; break;
-         }
-       }
+      for (const ip of allowed) {
+        if (req.ip.startsWith(ip) || (ip === '::1' && req.ip === '::1') || (ip === '127.0.0.1' && req.ip === '127.0.0.1') || req.ip.includes(ip)) {
+          isAllowed = true; break;
+        }
+      }
     }
     if (!isAllowed) return res.status(403).json({ error: 'Must connect via College Wi-Fi' });
 
@@ -688,7 +701,7 @@ app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
     await session.save();
 
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/live-session/status/:id', authMiddleware, async (req, res) => {
@@ -757,13 +770,13 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
       const sid = String(rec.subjectId);
       if (!subjectMap[sid]) {
         subjectMap[sid] = {
-          subjectId:   sid,
+          subjectId: sid,
           subjectName: rec.subjectName || 'Unknown',
           teacherName: rec.teacherName || '—',
           present: 0,
-          absent:  0,
-          total:   0,
-          dates:   [],
+          absent: 0,
+          total: 0,
+          dates: [],
         };
       }
       const entry = subjectMap[sid];
@@ -788,9 +801,9 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
 
     // ── Overall totals
     const totalPresent = subjects.reduce((n, s) => n + s.present, 0);
-    const totalAbsent  = subjects.reduce((n, s) => n + s.absent,  0);
-    const totalClasses = subjects.reduce((n, s) => n + s.total,   0);
-    const overall      = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+    const totalAbsent = subjects.reduce((n, s) => n + s.absent, 0);
+    const totalClasses = subjects.reduce((n, s) => n + s.total, 0);
+    const overall = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
 
     res.json({
       user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: user.lastLogin, loginCount: user.loginCount },
@@ -821,10 +834,19 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
 app.post('/api/notifications', authMiddleware, async (req, res) => {
   try {
     const notif = await M.Notification.create(req.body);
-    await logAction(req.user._id, req.user.name, req.user.role, 'Notification Sent', req.body.message?.slice(0,80), 'data', 'info', req.ip);
+    await logAction(req.user._id, req.user.name, req.user.role, 'Notification Sent', req.body.message?.slice(0, 80), 'data', 'info', req.ip);
     res.status(201).json(notif);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
+// Bulk delete all notifications (admin only)
+app.delete('/api/notifications/all', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const result = await M.Notification.deleteMany({});
+    await logAction(req.user._id, req.user.name, req.user.role, 'Notifications Cleared', `All ${result.deletedCount} notifications deleted`, 'data', 'warning', req.ip);
+    res.json({ deleted: result.deletedCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.put('/api/notifications/:id', authMiddleware, async (req, res) => {
   const notif = await M.Notification.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (req.body.status === 'Solved' && notif?.grievanceId) await M.Grievance.findByIdAndUpdate(notif.grievanceId, { status: 'Resolved', resolvedAt: new Date(), resolvedBy: req.user.name });
@@ -877,37 +899,37 @@ app.delete('/api/timetable/:id', authMiddleware, async (req, res) => {
   res.json({ deleted: true });
 });
 
-app.get('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
-  const doc = await M.SectionTimetable.findOne({ classId:req.params.classId }).lean();
-  res.json(doc || { slots:{} });
+app.get('/api/timetable/section/:classId', authMiddleware, async (req, res) => {
+  const doc = await M.SectionTimetable.findOne({ classId: req.params.classId }).lean();
+  res.json(doc || { slots: {} });
 });
 
-app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req,res) => {
+app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req, res) => {
   const u = req.user;
 
   if (!u.isTimeTableCoordinator && u.role !== 'admin')
-    return res.status(403).json({ error:'TT Coordinator access required' });
+    return res.status(403).json({ error: 'TT Coordinator access required' });
 
   const { slotKey, payload, _meta } = req.body;
 
   if (_meta?.coordIsService && payload?.subjectId) {
     const subj = await M.Subject.findById(payload.subjectId).lean();
     if (subj && subj.deptId?.toString() !== _meta.coordDeptId)
-      return res.status(403).json({ error:`Service coordinators may only assign ${u.TTdeptName} subjects` });
+      return res.status(403).json({ error: `Service coordinators may only assign ${u.TTdeptName} subjects` });
   }
 
   if (!_meta?.coordIsService && u.role !== 'admin') {
     const cls = await M.Class.findById(req.params.classId).lean();
     if (cls?.deptId?.toString() !== u.TTdeptName)
-      return res.status(403).json({ error:'You can only edit timetables for your own department' });
+      return res.status(403).json({ error: 'You can only edit timetables for your own department' });
   }
 
   const cls = await M.Class.findById(req.params.classId).lean();
 
   const update = payload
-    ? { $set:{ [`slots.${slotKey}`]:payload }, updatedBy:u.name }
-    : { $unset:{ [`slots.${slotKey}`]:'' }, updatedBy:u.name };
-    
+    ? { $set: { [`slots.${slotKey}`]: payload }, updatedBy: u.name }
+    : { $unset: { [`slots.${slotKey}`]: '' }, updatedBy: u.name };
+
   if (cls) {
     update.$setOnInsert = {
       className: cls.name,
@@ -917,9 +939,9 @@ app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req,res) 
   }
 
   const doc = await M.SectionTimetable.findOneAndUpdate(
-    { classId:req.params.classId },
+    { classId: req.params.classId },
     update,
-    { upsert:true, new:true }
+    { upsert: true, new: true }
   );
 
   await logAction(u._id, u.name, u.role, 'TT Slot Updated', slotKey, 'data', 'info', req.ip);
@@ -927,15 +949,15 @@ app.put('/api/timetable/section/:classId/slot', authMiddleware, async (req,res) 
   res.json(doc);
 });
 
-app.put('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
+app.put('/api/timetable/section/:classId', authMiddleware, async (req, res) => {
   const u = req.user;
 
   if (!u.isTimeTableCoordinator && u.role !== 'admin')
-    return res.status(403).json({ error:'TT Coordinator access required' });
+    return res.status(403).json({ error: 'TT Coordinator access required' });
 
   const { slots } = req.body;
   const cls = await M.Class.findById(req.params.classId).lean();
-  const update = { slots, updatedBy:u.name };
+  const update = { slots, updatedBy: u.name };
   if (cls) {
     update.$setOnInsert = {
       className: cls.name,
@@ -945,9 +967,9 @@ app.put('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
   }
 
   const doc = await M.SectionTimetable.findOneAndUpdate(
-    { classId:req.params.classId },
+    { classId: req.params.classId },
     update,
-    { upsert:true, new:true }
+    { upsert: true, new: true }
   );
 
   await logAction(u._id, u.name, u.role, 'TT Saved', req.params.classId, 'data', 'info', req.ip);
@@ -955,7 +977,7 @@ app.put('/api/timetable/section/:classId', authMiddleware, async (req,res) => {
   res.json(doc);
 });
 
-app.post('/api/timetable/check-conflicts', authMiddleware, async (req,res) => {
+app.post('/api/timetable/check-conflicts', authMiddleware, async (req, res) => {
   const { subjects } = req.body;
 
   const results = subjects.map(s => ({
@@ -966,8 +988,8 @@ app.post('/api/timetable/check-conflicts', authMiddleware, async (req,res) => {
   res.json(results);
 });
 
-app.post('/api/timetable/auto-gen', authMiddleware, async (req,res) => {
-  res.json({ success:true });
+app.post('/api/timetable/auto-gen', authMiddleware, async (req, res) => {
+  res.json({ success: true });
 });
 
 // ════════════════════════════════════════════════════════
@@ -976,20 +998,20 @@ app.post('/api/timetable/auto-gen', authMiddleware, async (req,res) => {
 
 app.get('/api/logs', authMiddleware, adminOnly, async (req, res) => {
   const filter = {};
-  if (req.query.role)     filter.role     = req.query.role;
+  if (req.query.role) filter.role = req.query.role;
   if (req.query.category) filter.category = req.query.category;
   if (req.query.severity) filter.severity = req.query.severity;
-  if (req.query.from)     filter.time = { $gte: new Date(req.query.from) };
-  if (req.query.to)       filter.time = { ...filter.time, $lte: new Date(req.query.to + 'T23:59:59') };
+  if (req.query.from) filter.time = { $gte: new Date(req.query.from) };
+  if (req.query.to) filter.time = { ...filter.time, $lte: new Date(req.query.to + 'T23:59:59') };
   const logs = await M.Log.find(filter).sort({ time: -1 }).limit(500);
   res.json(logs);
 });
 app.post('/api/logs', authMiddleware, async (req, res) => {
   try {
     const { action, details, category } = req.body;
-    await M.Log.create({ userId: req.user._id, userName: req.user.name, role: req.user.role, action, details: details||'', category: category||'general', severity:'info', ip: req.ip });
+    await M.Log.create({ userId: req.user._id, userName: req.user.name, role: req.user.role, action, details: details || '', category: category || 'general', severity: 'info', ip: req.ip });
     res.json({ ok: true });
-  } catch(e) { res.json({ ok: false }); }
+  } catch (e) { res.json({ ok: false }); }
 });
 
 app.delete('/api/logs', authMiddleware, adminOnly, async (req, res) => {
@@ -1002,7 +1024,7 @@ app.get('/api/logs/count', authMiddleware, adminOnly, async (req, res) => {
   try {
     const filter = {};
 
-    if (req.query.role)     filter.role     = req.query.role;
+    if (req.query.role) filter.role = req.query.role;
     if (req.query.category) filter.category = req.query.category;
     if (req.query.severity) filter.severity = req.query.severity;
 
@@ -1080,8 +1102,10 @@ app.put('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
 app.delete('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
   const subj = await M.Subject.findById(req.params.id).lean();
   if (subj) {
-    await M.UndoLog.create({ collectionName: 'subjects', label: `Subject: ${subj.name} (${subj.code || ''})`,
-      snapshot: subj, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10*24*60*60*1000) });
+    await M.UndoLog.create({
+      collectionName: 'subjects', label: `Subject: ${subj.name} (${subj.code || ''})`,
+      snapshot: subj, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
     await M.Subject.findByIdAndDelete(req.params.id);
   }
   await logAction(req.user._id, req.user.name, req.user.role, 'Subject Deleted', subj?.name, 'data', 'warning', req.ip);
@@ -1095,7 +1119,7 @@ app.delete('/api/subjects/:id', authMiddleware, adminOnly, async (req, res) => {
 app.get('/api/assignments', authMiddleware, async (req, res) => {
   const filter = {};
   if (req.query.subjectId) filter.subjectId = req.query.subjectId;   // ← added
-  if (req.query.teacherId)  filter.teacherId  = req.query.teacherId;
+  if (req.query.teacherId) filter.teacherId = req.query.teacherId;
   else if (!req.query.subjectId && !req.query.classId && req.user.role === 'teacher')
     filter.teacherId = req.user._id;
   if (req.query.classId) filter.classId = req.query.classId;
@@ -1170,50 +1194,50 @@ app.get('/api/profile/me', authMiddleware, async (req, res) => {
 
     // Build role-shaped profile view so frontends know exactly what to show
     const base = {
-      _id:        user._id,
-      role:       user.role,
-      name:       user.name,
-      username:   user.username,
-      email:      user.email      || '',
-      active:     user.active,
+      _id: user._id,
+      role: user.role,
+      name: user.name,
+      username: user.username,
+      email: user.email || '',
+      active: user.active,
       // Session stats
-      loginCount:  user.loginCount  || 0,
-      lastLogin:   user.lastLogin   || null,
-      firstLogin:  user.firstLogin  || null,
+      loginCount: user.loginCount || 0,
+      lastLogin: user.lastLogin || null,
+      firstLogin: user.firstLogin || null,
       mustChangePassword: user.mustChangePassword || false,
-      createdAt:  user.createdAt,
-      updatedAt:  user.updatedAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
 
     if (user.role === 'admin') {
       Object.assign(base, {
         // AdminSchema fields mapped from legacy UserSchema
-        fullName:    user.name,
-        firstName:   user.name.split(' ')[0]  || '',
-        lastName:    user.name.split(' ').slice(1).join(' ') || '',
-        employeeNo:  user.empId       || '',
-        department:  user.dept        || '',
-        isAdmin:     user.isAdmin !== false ? true : false,
+        fullName: user.name,
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        employeeNo: user.empId || '',
+        department: user.dept || '',
+        isAdmin: user.isAdmin !== false ? true : false,
         adminRights: user.adminRights || 'all',
       });
     } else if (user.role === 'teacher') {
       Object.assign(base, {
         // TeacherSchema fields
-        fullName:    user.name,
-        firstName:   user.name.split(' ')[0]  || '',
-        lastName:    user.name.split(' ').slice(1).join(' ') || '',
-        employeeNo:  user.empId       || '',
-        department:  user.dept        || '',
-        designation: user.desig       || 'Assistant Professor',
+        fullName: user.name,
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        employeeNo: user.empId || '',
+        department: user.dept || '',
+        designation: user.desig || 'Assistant Professor',
         // Display-only role flags
-        isHod:       user.isHOD       || false,
+        isHod: user.isHOD || false,
         HoddeptName: user.HoddeptName || '',
-        isClassAdvisor:  user.isClassAdvisor  || false,
-        className:       user.advisorClassName || '',
+        isClassAdvisor: user.isClassAdvisor || false,
+        className: user.advisorClassName || '',
         isTimeTableCoordinator: user.isTimeTableCoordinator || false,
-        TTdeptName:      user.TTdeptName || '',
-        isAdmin:         user.isAdmin   || false,
-        adminRights:     user.adminRights || 'all',
+        TTdeptName: user.TTdeptName || '',
+        isAdmin: user.isAdmin || false,
+        adminRights: user.adminRights || 'all',
       });
     } else if (user.role === 'student') {
       // Also pull Student record for academic fields
@@ -1222,19 +1246,19 @@ app.get('/api/profile/me', authMiddleware, async (req, res) => {
         || null;
       Object.assign(base, {
         // StudentUserSchema fields
-        fullName:     user.name,
-        firstName:    user.name.split(' ')[0]  || '',
-        lastName:     user.name.split(' ').slice(1).join(' ') || '',
-        registerNo:   user.regNo           || studentRec?.regNo  || '',
-        class:        studentRec?.className || '',
-        section:      studentRec?.section   || '',
-        branch:       studentRec?.branch    || '',
-        course:       studentRec?.courseType|| '',
-        department:   studentRec?.deptName  || user.deptName || '',
-        currentYear:  studentRec?.year      || '',
+        fullName: user.name,
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        registerNo: user.regNo || studentRec?.regNo || '',
+        class: studentRec?.className || '',
+        section: studentRec?.section || '',
+        branch: studentRec?.branch || '',
+        course: studentRec?.courseType || '',
+        department: studentRec?.deptName || user.deptName || '',
+        currentYear: studentRec?.year || '',
         academicYear: studentRec?.academicYear || '',
         // Display-only
-        isRep:        user.isClassRep || false,
+        isRep: user.isClassRep || false,
       });
     }
 
@@ -1251,29 +1275,29 @@ app.put('/api/profile/me', authMiddleware, async (req, res) => {
 
     // Fields users can NEVER self-edit (role flags, auth state, etc.)
     const ALWAYS_PROTECTED = [
-      'role','isAdmin','adminRights',
-      'isHOD','HoddeptName','isClassAdvisor','advisorClassName','advisorClassId',
-      'isTimeTableCoordinator','TTdeptName',
-      'isWarden','isExamCoordinator','isPlacementCoord',
-      'isClassRep','isAssiClassRep','isSportsRep','isCulturalRep',
-      'active','failedLogins','lockedUntil','loginCount','firstLogin',
-      'lastLogin','mustChangePassword','password','username',
+      'role', 'isAdmin', 'adminRights',
+      'isHOD', 'HoddeptName', 'isClassAdvisor', 'advisorClassName', 'advisorClassId',
+      'isTimeTableCoordinator', 'TTdeptName',
+      'isWarden', 'isExamCoordinator', 'isPlacementCoord',
+      'isClassRep', 'isAssiClassRep', 'isSportsRep', 'isCulturalRep',
+      'active', 'failedLogins', 'lockedUntil', 'loginCount', 'firstLogin',
+      'lastLogin', 'mustChangePassword', 'password', 'username',
     ];
 
     const updates = { ...req.body };
     ALWAYS_PROTECTED.forEach(k => delete updates[k]);
 
     // Map friendly field names → UserSchema field names
-    if (updates.fullName)    { updates.name    = updates.fullName;   delete updates.fullName; }
+    if (updates.fullName) { updates.name = updates.fullName; delete updates.fullName; }
     if (updates.firstName || updates.lastName) {
       const fn = updates.firstName || user.name.split(' ')[0];
-      const ln = updates.lastName  || user.name.split(' ').slice(1).join(' ');
+      const ln = updates.lastName || user.name.split(' ').slice(1).join(' ');
       updates.name = (fn + ' ' + ln).trim();
       delete updates.firstName; delete updates.lastName;
     }
-    if (updates.employeeNo)  { updates.empId   = updates.employeeNo; delete updates.employeeNo; }
-    if (updates.department)  { updates.dept    = updates.department;  delete updates.department; }
-    if (updates.designation) { updates.desig   = updates.designation; delete updates.designation; }
+    if (updates.employeeNo) { updates.empId = updates.employeeNo; delete updates.employeeNo; }
+    if (updates.department) { updates.dept = updates.department; delete updates.department; }
+    if (updates.designation) { updates.desig = updates.designation; delete updates.designation; }
 
     Object.assign(user, updates);
     await user.save();
@@ -1288,7 +1312,7 @@ app.put('/api/profile/me', authMiddleware, async (req, res) => {
 app.get('/api/profile/users', authMiddleware, async (req, res) => {
   try {
     const reqUser = await M.User.findById(req.user._id).lean();
-    const rights  = reqUser?.adminRights;
+    const rights = reqUser?.adminRights;
     const canManage = req.user.role === 'admin'
       || rights === 'all'
       || (Array.isArray(rights) && rights.includes('Manage User'));
@@ -1296,7 +1320,7 @@ app.get('/api/profile/users', authMiddleware, async (req, res) => {
     if (!canManage) return res.status(403).json({ error: 'Manage User right required' });
 
     const filter = {};
-    if (req.query.role)   filter.role = req.query.role;
+    if (req.query.role) filter.role = req.query.role;
     if (req.query.search) {
       const re = new RegExp(req.query.search, 'i');
       filter.$or = [{ name: re }, { username: re }, { empId: re }, { email: re }, { regNo: re }, { dept: re }];
@@ -1315,7 +1339,7 @@ app.get('/api/profile/users', authMiddleware, async (req, res) => {
 app.put('/api/profile/users/:id', authMiddleware, async (req, res) => {
   try {
     const reqUser = await M.User.findById(req.user._id).lean();
-    const rights  = reqUser?.adminRights;
+    const rights = reqUser?.adminRights;
     const canManage = req.user.role === 'admin'
       || rights === 'all'
       || (Array.isArray(rights) && rights.includes('Manage User'));
@@ -1326,14 +1350,14 @@ app.put('/api/profile/users/:id', authMiddleware, async (req, res) => {
     if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
 
     // Map friendly names back to schema fields
-    if (data.fullName)    { data.name  = data.fullName;   delete data.fullName; }
-    if (data.employeeNo)  { data.empId = data.employeeNo; delete data.employeeNo; }
-    if (data.department)  { data.dept  = data.department; delete data.department; }
+    if (data.fullName) { data.name = data.fullName; delete data.fullName; }
+    if (data.employeeNo) { data.empId = data.employeeNo; delete data.employeeNo; }
+    if (data.department) { data.dept = data.department; delete data.department; }
     if (data.designation) { data.desig = data.designation; delete data.designation; }
     if (data.firstName || data.lastName) {
       const target = await M.User.findById(req.params.id).lean();
       const fn = data.firstName || (target?.name || '').split(' ')[0];
-      const ln = data.lastName  || (target?.name || '').split(' ').slice(1).join(' ');
+      const ln = data.lastName || (target?.name || '').split(' ').slice(1).join(' ');
       data.name = (fn + ' ' + ln).trim();
       delete data.firstName; delete data.lastName;
     }
@@ -1363,11 +1387,11 @@ app.get('/api/users', authMiddleware, adminOnly, async (req, res) => {
 });
 app.put('/api/users/:id', authMiddleware, async (req, res) => {
   try {
-    const isSelf   = String(req.user._id) === String(req.params.id);
-    const isAdmin  = req.user.role === 'admin';
+    const isSelf = String(req.user._id) === String(req.params.id);
+    const isAdmin = req.user.role === 'admin';
     // Check Manage User right for non-primary-admin teachers with adminRights
-    const reqUser  = await M.User.findById(req.user._id).lean();
-    const rights   = reqUser?.adminRights;
+    const reqUser = await M.User.findById(req.user._id).lean();
+    const rights = reqUser?.adminRights;
     const hasManageUser = rights === 'all' || (Array.isArray(rights) && rights.includes('Manage User'));
     const canEditOthers = isAdmin || hasManageUser;
 
@@ -1379,9 +1403,9 @@ app.put('/api/users/:id', authMiddleware, async (req, res) => {
 
     // Non-admins editing self: strip protected fields
     if (!canEditOthers && isSelf) {
-      const PROTECTED = ['role','isAdmin','adminRights','isHOD','isClassAdvisor','isTimeTableCoordinator',
-        'isClassRep','isAssiClassRep','isSportsRep','isCulturalRep','active','failedLogins','lockedUntil',
-        'loginCount','firstLogin','lastLogin','mustChangePassword'];
+      const PROTECTED = ['role', 'isAdmin', 'adminRights', 'isHOD', 'isClassAdvisor', 'isTimeTableCoordinator',
+        'isClassRep', 'isAssiClassRep', 'isSportsRep', 'isCulturalRep', 'active', 'failedLogins', 'lockedUntil',
+        'loginCount', 'firstLogin', 'lastLogin', 'mustChangePassword'];
       PROTECTED.forEach(k => delete data[k]);
     }
 
@@ -1408,7 +1432,7 @@ app.get('/api/system/dbstats', authMiddleware, adminOnly, async (req, res) => {
     const stats = await db.command({ dbStats: 1, scale: 1024 * 1024 });
     const collList = await db.listCollections().toArray();
     const collStats = await Promise.all(collList.map(async c => ({ name: c.name, count: await db.collection(c.name).countDocuments() })));
-    res.json({ dbName: stats.db, collections: stats.collections, totalDocs: stats.objects, dataSize: stats.dataSize.toFixed(2), storageSize: stats.storageSize.toFixed(2), indexSize: stats.indexSize ? stats.indexSize.toFixed(2) : '0.00', fsTotalSize: stats.fsTotalSize ? (stats.fsTotalSize/1024/1024).toFixed(0) : null, fsUsedSize: stats.fsUsedSize ? (stats.fsUsedSize/1024/1024).toFixed(0) : null, collStats });
+    res.json({ dbName: stats.db, collections: stats.collections, totalDocs: stats.objects, dataSize: stats.dataSize.toFixed(2), storageSize: stats.storageSize.toFixed(2), indexSize: stats.indexSize ? stats.indexSize.toFixed(2) : '0.00', fsTotalSize: stats.fsTotalSize ? (stats.fsTotalSize / 1024 / 1024).toFixed(0) : null, fsUsedSize: stats.fsUsedSize ? (stats.fsUsedSize / 1024 / 1024).toFixed(0) : null, collStats });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1428,17 +1452,17 @@ const _serverStartTime = new Date();
 const _serverLogs = []; // In-memory ring buffer, max 200 lines
 
 // Intercept console to capture server logs
-const _origLog   = console.log.bind(console);
+const _origLog = console.log.bind(console);
 const _origError = console.error.bind(console);
-const _origWarn  = console.warn.bind(console);
+const _origWarn = console.warn.bind(console);
 function _captureLog(level, args) {
   const line = { time: new Date().toISOString(), level, text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') };
   _serverLogs.push(line);
   if (_serverLogs.length > 200) _serverLogs.shift();
 }
-console.log   = (...a) => { _captureLog('info',  a); _origLog(...a); };
+console.log = (...a) => { _captureLog('info', a); _origLog(...a); };
 console.error = (...a) => { _captureLog('error', a); _origError(...a); };
-console.warn  = (...a) => { _captureLog('warn',  a); _origWarn(...a); };
+console.warn = (...a) => { _captureLog('warn', a); _origWarn(...a); };
 
 app.get('/api/system/serverlogs', authMiddleware, adminOnly, (req, res) => {
   const since = req.query.since ? new Date(req.query.since) : null;
@@ -1460,22 +1484,22 @@ app.get('/api/system/serverlogs', authMiddleware, adminOnly, (req, res) => {
 app.get('/api/system/health', authMiddleware, adminOnly, async (req, res) => {
   try {
     const dbState = mongoose.connection.readyState;
-    const dbStateMap = { 0:'Disconnected', 1:'Connected', 2:'Connecting', 3:'Disconnecting' };
+    const dbStateMap = { 0: 'Disconnected', 1: 'Connected', 2: 'Connecting', 3: 'Disconnecting' };
     const [errorCount, warnCount, totalUsers, activeTeachers] = await Promise.all([
-      M.Log.countDocuments({ severity: { $in: ['critical','error'] } }),
+      M.Log.countDocuments({ severity: { $in: ['critical', 'error'] } }),
       M.Log.countDocuments({ severity: 'warning' }),
       M.User.countDocuments({ active: true }),
       M.User.countDocuments({ role: 'teacher', active: true }),
     ]);
-    const recentErrors = await M.Log.find({ severity: { $in: ['critical','error','warning'] } })
+    const recentErrors = await M.Log.find({ severity: { $in: ['critical', 'error', 'warning'] } })
       .sort({ time: -1 }).limit(5).lean();
     res.json({
-      dbStatus:      dbStateMap[dbState] || 'Unknown',
-      dbConnected:   dbState === 1,
-      serverUptime:  Math.floor(process.uptime()),
+      dbStatus: dbStateMap[dbState] || 'Unknown',
+      dbConnected: dbState === 1,
+      serverUptime: Math.floor(process.uptime()),
       errorCount, warnCount, totalUsers, activeTeachers, recentErrors,
-      memoryMB:      (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1),
-      nodeVersion:   process.version,
+      memoryMB: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1),
+      nodeVersion: process.version,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1498,11 +1522,11 @@ app.post('/api/undo/:id', authMiddleware, adminOnly, async (req, res) => {
     const snap = entry.snapshot;
     const { _id, __v, createdAt, updatedAt, ...body } = snap;
     let restored;
-    if      (entry.collectionName === 'departments') restored = await M.Department.create(body);
-    else if (entry.collectionName === 'classes')     restored = await M.Class.create(body);
-    else if (entry.collectionName === 'subjects')    restored = await M.Subject.create(body);
-    else if (entry.collectionName === 'students')    restored = await M.Student.create(body);
-    else if (entry.collectionName === 'teachers')    restored = await M.User.create(snap);
+    if (entry.collectionName === 'departments') restored = await M.Department.create(body);
+    else if (entry.collectionName === 'classes') restored = await M.Class.create(body);
+    else if (entry.collectionName === 'subjects') restored = await M.Subject.create(body);
+    else if (entry.collectionName === 'students') restored = await M.Student.create(body);
+    else if (entry.collectionName === 'teachers') restored = await M.User.create(snap);
     else return res.status(400).json({ error: 'Cannot restore collection: ' + entry.collectionName });
     await M.UndoLog.findByIdAndDelete(req.params.id);
     await logAction(req.user._id, req.user.name, req.user.role, 'Undo Restore', entry.label, 'data', 'info', req.ip);
@@ -1530,7 +1554,7 @@ app.post('/api/system/backup', authMiddleware, adminOnly, async (req, res) => {
       M.Assignment.find().lean(),
     ]);
     const totalDocs = students.length + teachers.length + departments.length
-                    + classes.length + subjects.length + attendance.length + assignments.length;
+      + classes.length + subjects.length + attendance.length + assignments.length;
     const backupPayload = {
       meta: { createdAt: new Date().toISOString(), createdBy: req.user.name, totalDocs },
       students, teachers, departments, classes, subjects, attendance, assignments
@@ -1542,9 +1566,12 @@ app.post('/api/system/backup', authMiddleware, adminOnly, async (req, res) => {
     // ────────────────────────────────────────────────────
     await logAction(req.user._id, req.user.name, req.user.role, 'System Backup Created',
       `${totalDocs} docs — GDrive upload pending`, 'data', 'info', req.ip);
-    res.json({ ok: true, totalDocs, backupPassword, createdAt: backupPayload.meta.createdAt,
-      collections: { students: students.length, teachers: teachers.length, departments: departments.length,
-        classes: classes.length, subjects: subjects.length, attendance: attendance.length, assignments: assignments.length }
+    res.json({
+      ok: true, totalDocs, backupPassword, createdAt: backupPayload.meta.createdAt,
+      collections: {
+        students: students.length, teachers: teachers.length, departments: departments.length,
+        classes: classes.length, subjects: subjects.length, attendance: attendance.length, assignments: assignments.length
+      }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1566,21 +1593,29 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
     let payload;
     if (type === 'all') {
       const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
-        M.Student.find().lean(), M.User.find({ role:'teacher' }, '-password').lean(),
+        M.Student.find().lean(), M.User.find({ role: 'teacher' }, '-password').lean(),
         M.Department.find().lean(), M.Class.find().lean(), M.Subject.find().lean(),
         M.Attendance.find().lean(), M.Assignment.find().lean(),
       ]);
-      payload = { meta: { exportedAt: new Date().toISOString(), exportedBy: req.user.name,
-          type, totalStudents: studentCount }, students, teachers, departments, classes, subjects, attendance, assignments };
+      payload = {
+        meta: {
+          exportedAt: new Date().toISOString(), exportedBy: req.user.name,
+          type, totalStudents: studentCount
+        }, students, teachers, departments, classes, subjects, attendance, assignments
+      };
     } else {
       const dataMap = {
-        students:   () => M.Student.find().lean(),
-        teachers:   () => M.User.find({ role:'teacher' }, '-password').lean(),
+        students: () => M.Student.find().lean(),
+        teachers: () => M.User.find({ role: 'teacher' }, '-password').lean(),
         attendance: () => M.Attendance.find().lean(),
       };
       const data = dataMap[type] ? await dataMap[type]() : [];
-      payload = { meta: { exportedAt: new Date().toISOString(), exportedBy: req.user.name,
-          type, totalStudents: studentCount }, data };
+      payload = {
+        meta: {
+          exportedAt: new Date().toISOString(), exportedBy: req.user.name,
+          type, totalStudents: studentCount
+        }, data
+      };
     }
     const exportPassword = crypto.randomBytes(6).toString('hex').toUpperCase();
     // ─── Stub (wire when ready) ──────────────────────────
@@ -1608,7 +1643,7 @@ app.get('/api/manage', async (req, res) => {
 
 app.post('/api/manage', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const allowed = ['StudentsPortal','TeachersPortal','TimeTablePortal','LiveSessionFunctionality','StudentsViewAttendance','ForwardToRep'];
+    const allowed = ['StudentsPortal', 'TeachersPortal', 'TimeTablePortal', 'LiveSessionFunctionality', 'StudentsViewAttendance', 'ForwardToRep'];
     const update = {};
     for (const key of allowed) {
       if (typeof req.body[key] === 'boolean') update[key] = req.body[key];
@@ -1634,7 +1669,7 @@ app.get('/manage', async (req, res) => {
 
 app.get('/api/manage/:field', async (req, res) => {
   try {
-    const field = req.params.field; 
+    const field = req.params.field;
 
     const data = await Manage.findOne().select(field);
 

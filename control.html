@@ -507,39 +507,31 @@ select.form-input{cursor:pointer;}
         <div class="danger-row">
           <div>
             <div class="danger-label">🗑️ Clear Cache</div>
-            <div class="danger-hint">Removes all cache memory from your browser</div>
+            <div class="danger-hint">Deletes all browser storage and cached data. Also runs automatically on logout.</div>
           </div>
           <button class="btn btn-danger btn-sm" onclick="openClearStorageModal()">Clear Cache</button>
         </div>
 
         <div class="danger-row">
           <div>
-            <div class="danger-label">🗑️ Delete All Teachers</div>
-            <div class="danger-hint">Removes all teacher accounts and their assignments. Admin account is preserved.</div>
+            <div class="danger-label">🗑️ Delete All Adder</div>
+            <div class="danger-hint">Select and permanently delete Departments, Students, Teachers, Classes, or Subjects from the database.</div>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="openConfirm('teachers')">Delete Teachers</button>
-        </div>
-
-        <div class="danger-row">
-          <div>
-            <div class="danger-label">🗑️ Delete All Students</div>
-            <div class="danger-hint">Removes all student records and their attendance data.</div>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="openConfirm('students')">Delete Students</button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteAdderModal()">Delete Adder</button>
         </div>
 
         <div class="danger-row">
           <div>
             <div class="danger-label">🧹 Clear Attendance Records</div>
-            <div class="danger-hint">Deletes all attendance entries. Students and teachers are kept.</div>
+            <div class="danger-hint">Delete attendance records by date range, or wipe all records at once.</div>
           </div>
-          <button class="btn btn-warn btn-sm" onclick="openConfirm('attendance')">Clear Attendance</button>
+          <button class="btn btn-warn btn-sm" onclick="openAttendanceDateModal()">Clear Attendance</button>
         </div>
 
         <div class="danger-row">
           <div>
             <div class="danger-label">🧹 Clear Activity Logs</div>
-            <div class="danger-hint">Purges all system activity and login logs.</div>
+            <div class="danger-hint">Permanently deletes all system activity and login logs. Admin only.</div>
           </div>
           <button class="btn btn-warn btn-sm" onclick="openConfirm('logs')">Clear Logs</button>
         </div>
@@ -547,14 +539,14 @@ select.form-input{cursor:pointer;}
         <div class="danger-row">
           <div>
             <div class="danger-label">💥 Clear Entire Database</div>
-            <div class="danger-hint">Wipes ALL data: students, teachers, departments, classes, attendance, logs. Admin account is preserved.</div>
+            <div class="danger-hint">Wipes ALL collections: students, teachers, departments, classes, subjects, attendance, timetables, notifications, logs. Admin account is preserved.</div>
           </div>
           <button class="btn btn-danger btn-sm" style="background:#7f1d1d;" onclick="openConfirm('clearall')">Clear Everything</button>
         </div>
 
       </div>
 
-      <div class="warn-box">⚠️ These actions call the server API directly and immediately affect the MongoDB database. Deleted items can be undone within 10 days via the Undo menu.</div>
+      <div class="warn-box">⚠️ All destructive actions require admin password confirmation. These operations call the server API and immediately affect the MongoDB database. Deleted items can be undone within 10 days via the Undo menu.</div>
     </div>
 
     <!-- ── Export Data (expanded) ── -->
@@ -1164,6 +1156,88 @@ select.form-input{cursor:pointer;}
   <div>
     <div style="font-weight:700;font-size:13px;">Synced from MongoDB</div>
     <div style="font-size:11px;opacity:.8;margin-top:2px;"><span id="db-sync-settings">—</span> &nbsp;·&nbsp; <span id="db-sync-docs">—</span></div>
+  </div>
+</div>
+
+
+<!-- ══ DELETE ALL ADDER MODAL ══ -->
+<div class="modal-overlay" id="m-delete-adder" style="display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:800;color:var(--td);">🗑️ Delete All Adder</div>
+      <button onclick="closeModalBg('m-delete-adder')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tmu);">✖</button>
+    </div>
+    <div style="font-size:12px;color:var(--tmu);margin-bottom:16px;">Select which collections to permanently delete from the database. This cannot be undone.</div>
+    <div style="background:var(--gLt);border:1px solid var(--br);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Select collections to delete</div>
+      <label style="display:flex;align-items:center;gap:12px;font-size:13.5px;cursor:pointer;padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--br);">
+        <input type="checkbox" class="adder-chk" value="departments" style="accent-color:#ef4444;width:15px;height:15px;">
+        <span>🏛️ Departments</span><span style="margin-left:auto;font-size:11px;color:var(--tmu);">All dept records</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;font-size:13.5px;cursor:pointer;padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--br);">
+        <input type="checkbox" class="adder-chk" value="students" style="accent-color:#ef4444;width:15px;height:15px;">
+        <span>👨‍🎓 Students</span><span style="margin-left:auto;font-size:11px;color:var(--tmu);">All student records &amp; accounts</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;font-size:13.5px;cursor:pointer;padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--br);">
+        <input type="checkbox" class="adder-chk" value="teachers" style="accent-color:#ef4444;width:15px;height:15px;">
+        <span>👩‍🏫 Teachers</span><span style="margin-left:auto;font-size:11px;color:var(--tmu);">All teacher accounts &amp; assignments</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;font-size:13.5px;cursor:pointer;padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--br);">
+        <input type="checkbox" class="adder-chk" value="classes" style="accent-color:#ef4444;width:15px;height:15px;">
+        <span>🏫 Classes</span><span style="margin-left:auto;font-size:11px;color:var(--tmu);">All class records</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;font-size:13.5px;cursor:pointer;padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--br);">
+        <input type="checkbox" class="adder-chk" value="subjects" style="accent-color:#ef4444;width:15px;height:15px;">
+        <span>📚 Subjects</span><span style="margin-left:auto;font-size:11px;color:var(--tmu);">All subject records</span>
+      </label>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:16px;">
+      🔐 Admin password confirmation required on the next step.
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-out" style="flex:1;justify-content:center;" onclick="closeModalBg('m-delete-adder')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="confirmDeleteAdder()">Delete Selected →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ATTENDANCE DATE RANGE MODAL ══ -->
+<div class="modal-overlay" id="m-attendance-date" style="display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:800;color:var(--td);">🧹 Clear Attendance Records</div>
+      <button onclick="closeModalBg('m-attendance-date')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tmu);">✖</button>
+    </div>
+    <div style="font-size:12px;color:var(--tmu);margin-bottom:16px;">Choose a date range to delete, or wipe all records at once.</div>
+    <div id="att-date-loading" style="text-align:center;padding:20px;color:var(--tmu);font-size:13px;">⏳ Loading available dates from database…</div>
+    <div id="att-date-content" style="display:none;">
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#0369a1;">
+        📅 <strong id="att-date-range-info">Fetching date range…</strong>
+      </div>
+      <div style="background:var(--gLt);border:1px solid var(--br);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Delete by Date Range</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--tmu);display:block;margin-bottom:4px;">FROM DATE</label>
+            <input type="date" id="att-from-date" class="form-input" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--tmu);display:block;margin-bottom:4px;">TO DATE</label>
+            <input type="date" id="att-to-date" class="form-input" style="width:100%;">
+          </div>
+        </div>
+        <button class="btn btn-warn btn-sm" style="width:100%;justify-content:center;" onclick="confirmAttendanceDelete('range')">🧹 Delete Range →</button>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Delete All Records</div>
+        <div style="font-size:12px;color:#7f1d1d;margin-bottom:10px;">Permanently removes every attendance record from the database.</div>
+        <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;" onclick="confirmAttendanceDelete('all')">💥 Delete All Records →</button>
+      </div>
+    </div>
+    <div id="att-date-error" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-out" style="flex:1;justify-content:center;" onclick="closeModalBg('m-attendance-date')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -2154,6 +2228,7 @@ var ACTIONS = {
   logs:          { icon:'🧹', title:'Clear Activity Logs?', body:'This will permanently delete ALL system logs and login history.', btn:'Clear Logs', cls:'btn-warn' },
   clearall:      { icon:'💥', title:'Clear Entire Database?', body:'This will wipe ALL data: students, teachers, departments, classes, subjects, attendance, notifications, and logs. Your admin account will be preserved. This is IRREVERSIBLE.', btn:'Wipe Database', cls:'btn-danger' },
   resetSettings: { icon:'↩',  title:'Reset All Settings?',  body:'All settings will be restored to factory defaults. Data is NOT affected.', btn:'Reset Settings', cls:'btn-warn' },
+  deleteAdder:   { icon:'🗑️', title:'Delete Selected Collections?', body:'This will permanently delete all records in the selected collections from the database.', btn:'Delete →', cls:'btn-danger' },
 };
 
 function openConfirm(action) {
@@ -2261,14 +2336,9 @@ function getDeleteSteps(action) {
   if (action === 'teachers') {
     return [
       { label:'Fetching teachers…', fn: function() { return api('GET','/users?role=teacher'); } },
-      { label:'Deleting assignments…', fn: function(prev) {
-        return api('GET','/assignments').then(function(asgns) {
-          return Promise.all((asgns||[]).map(function(a){ return api('DELETE','/assignments/'+a._id); }));
-        });
-      }},
-      { label:'Deleting teacher accounts…', fn: function() {
-        return api('GET','/users?role=teacher').then(function(teachers) {
-          return Promise.all((teachers||[]).map(function(t){ return api('DELETE','/users/'+t._id); }));
+      { label:'Deleting all teachers (+ their assignments)…', fn: function() {
+        return api('GET','/teachers').then(function(teachers) {
+          return Promise.all((teachers||[]).map(function(t){ return api('DELETE','/teachers/'+t._id); }));
         });
       }},
     ];
@@ -2291,14 +2361,7 @@ function getDeleteSteps(action) {
   if (action === 'attendance') {
     return [
       { label:'Clearing all attendance records from DB…', fn: function() {
-        // Try bulk clear endpoint first, then fallback to individual deletes
-        return api('DELETE', '/attendance/all').catch(function() {
-          return api('GET','/attendance').then(function(records) {
-            return Promise.all((records||[]).map(function(r){
-              return fetch('/api/attendance/'+r._id,{ method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN}}).then(function(x){return x.json();});
-            }));
-          });
-        });
+        return api('DELETE', '/attendance/all');
       }},
       { label:'Clearing local attendance cache…', fn: function() {
         localStorage.removeItem('ss3_attendance');
@@ -2309,11 +2372,7 @@ function getDeleteSteps(action) {
   if (action === 'logs') {
     return [
       { label:'Clearing all activity logs from DB…', fn: function() {
-        return api('DELETE', '/logs/all').catch(function() {
-          return api('GET','/logs').then(function(logs) {
-            return Promise.all((logs||[]).map(function(l){ return api('DELETE','/logs/'+l._id); }));
-          });
-        });
+        return api('DELETE', '/logs');
       }},
       { label:'Clearing local logs cache…', fn: function() {
         localStorage.removeItem('ss3_logs');
@@ -2324,14 +2383,10 @@ function getDeleteSteps(action) {
   if (action === 'clearall') {
     return [
       { label:'Removing all attendance records…', fn: function() {
-        return api('DELETE', '/attendance/all').catch(function() {
-          return api('GET','/attendance').then(function(r){ return Promise.all((r||[]).map(function(x){ return api('DELETE','/attendance/'+x._id);})); });
-        });
+        return api('DELETE', '/attendance/all');
       }},
       { label:'Removing all activity logs…', fn: function() {
-        return api('DELETE', '/logs/all').catch(function() {
-          return api('GET','/logs').then(function(r){ return Promise.all((r||[]).map(function(x){ return api('DELETE','/logs/'+x._id);})); });
-        });
+        return api('DELETE', '/logs');
       }},
       { label:'Removing all assignments…', fn: function() {
         return api('GET','/assignments').then(function(a){ return Promise.all((a||[]).map(function(x){ return api('DELETE','/assignments/'+x._id);})); });
@@ -2342,8 +2397,8 @@ function getDeleteSteps(action) {
       { label:'Removing all student accounts…', fn: function() {
         return api('GET','/users?role=student').then(function(u){ return Promise.all((u||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
       }},
-      { label:'Removing all teachers…', fn: function() {
-        return api('GET','/users?role=teacher').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/users/'+x._id);})); });
+      { label:'Removing all teachers (+ assignments)…', fn: function() {
+        return api('GET','/teachers').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/teachers/'+x._id);})); });
       }},
       { label:'Removing departments…', fn: function() {
         return api('GET','/departments').then(function(d){ return Promise.all((d||[]).map(function(x){ return api('DELETE','/departments/'+x._id);})); });
@@ -2357,8 +2412,13 @@ function getDeleteSteps(action) {
       { label:'Removing notifications…', fn: function() {
         return api('DELETE', '/notifications/all').catch(function() { return Promise.resolve({ok:true}); });
       }},
+      { label:'Removing timetables…', fn: function() {
+        return api('GET', '/timetable').then(function(t){ return Promise.all((t||[]).map(function(x){ return api('DELETE','/timetable/'+x._id);})); }).catch(function(){ return Promise.resolve({ok:true}); });
+      }},
       { label:'Clearing all local caches…', fn: function() {
-        ['ss3_students','ss3_users','ss3_attendance','ss3_logs','ss3_assignments','ss3_depts','ss3_classes','ss3_subjects','ss3_notifications'].forEach(function(k){ localStorage.removeItem(k); });
+        var keys = ['ss3_students','ss3_users','ss3_attendance','ss3_logs','ss3_assignments',
+                    'ss3_depts','ss3_classes','ss3_subjects','ss3_notifications','ss3_timetable'];
+        keys.forEach(function(k){ localStorage.removeItem(k); });
         return Promise.resolve({ok:true});
       }},
     ];
@@ -2513,7 +2573,20 @@ function showDbSyncToast(settingsCount, totalDocs) {
 
 // ── Navigation utils ───────────────────────────────────
 function goBack()    { window.location.href = 'admin.html'; }
-function doLogout()  { sessionStorage.clear(); window.location.href = 'index.html'; }
+function clearAllBrowserCache() {
+  var toRemove = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && (k.startsWith('ss3_') || k.startsWith('eams_'))) toRemove.push(k);
+  }
+  toRemove.forEach(function(k) { localStorage.removeItem(k); });
+  sessionStorage.clear();
+}
+
+function doLogout() {
+  clearAllBrowserCache();
+  window.location.href = 'index.html';
+}
 
 // ── Health stats (for Overview live strip) ─────────────
 function loadHealth() {
@@ -2696,11 +2769,158 @@ function createBackup() {
     });
 }
 
-function openClearStorageModal() {
-      document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = false; });
-      document.getElementById('clr-all').checked = false;
-      openModal_('m-clear-storage');
+
+// ── Delete All Adder ────────────────────────────────────
+function openDeleteAdderModal() {
+  document.querySelectorAll('.adder-chk').forEach(function(c) { c.checked = false; });
+  openModal_('m-delete-adder');
+}
+
+function confirmDeleteAdder() {
+  var selected = Array.from(document.querySelectorAll('.adder-chk:checked')).map(function(c) { return c.value; });
+  if (!selected.length) {
+    showToast('❌ Select at least one collection to delete.', 'danger');
+    return;
+  }
+  closeModalBg('m-delete-adder');
+  requireSpecialPw(function() {
+    logLine('Delete All Adder: ' + selected.join(', '), 'warn');
+    showProgress('Starting delete operations…', 5);
+    var steps = buildAdderSteps(selected);
+    currentAction = 'deleteAdder';
+    runSteps(steps, 0);
+  });
+}
+
+function buildAdderSteps(selected) {
+  var steps = [];
+  if (selected.indexOf('departments') !== -1) {
+    steps.push({ label: 'Deleting all departments…', fn: function() {
+      return api('GET', '/departments').then(function(d) {
+        return Promise.all((d||[]).map(function(x) { return api('DELETE', '/departments/' + x._id); }));
+      });
+    }});
+  }
+  if (selected.indexOf('students') !== -1) {
+    steps.push({ label: 'Deleting all student records…', fn: function() {
+      return api('GET', '/students').then(function(s) {
+        return Promise.all((s||[]).map(function(x) { return api('DELETE', '/students/' + x._id); }));
+      });
+    }});
+    steps.push({ label: 'Removing student user accounts…', fn: function() {
+      return api('GET', '/users?role=student').then(function(u) {
+        return Promise.all((u||[]).map(function(x) { return api('DELETE', '/users/' + x._id); }));
+      });
+    }});
+  }
+  if (selected.indexOf('teachers') !== -1) {
+    steps.push({ label: 'Deleting all teachers (+ their assignments)…', fn: function() {
+      return api('GET', '/teachers').then(function(t) {
+        return Promise.all((t||[]).map(function(x) { return api('DELETE', '/teachers/' + x._id); }));
+      });
+    }});
+  }
+  if (selected.indexOf('classes') !== -1) {
+    steps.push({ label: 'Deleting all classes…', fn: function() {
+      return api('GET', '/classes').then(function(c) {
+        return Promise.all((c||[]).map(function(x) { return api('DELETE', '/classes/' + x._id); }));
+      });
+    }});
+  }
+  if (selected.indexOf('subjects') !== -1) {
+    steps.push({ label: 'Deleting all subjects…', fn: function() {
+      return api('GET', '/subjects').then(function(s) {
+        return Promise.all((s||[]).map(function(x) { return api('DELETE', '/subjects/' + x._id); }));
+      });
+    }});
+  }
+  // Clear relevant local caches
+  steps.push({ label: 'Clearing local cache…', fn: function() {
+    var cacheMap = { departments:'ss3_depts', students:'ss3_students', teachers:'ss3_users', classes:'ss3_classes', subjects:'ss3_subjects' };
+    selected.forEach(function(k) { if (cacheMap[k]) localStorage.removeItem(cacheMap[k]); });
+    if (selected.indexOf('students') !== -1) localStorage.removeItem('ss3_students');
+    if (selected.indexOf('teachers') !== -1) { localStorage.removeItem('ss3_users'); localStorage.removeItem('ss3_assignments'); }
+    return Promise.resolve({ ok: true });
+  }});
+  return steps;
+}
+
+// ── Clear Attendance by Date ────────────────────────────
+function openAttendanceDateModal() {
+  document.getElementById('att-date-loading').style.display = 'block';
+  document.getElementById('att-date-content').style.display = 'none';
+  document.getElementById('att-date-error').style.display = 'none';
+  openModal_('m-attendance-date');
+  // Fetch available dates from DB
+  api('GET', '/attendance').then(function(records) {
+    document.getElementById('att-date-loading').style.display = 'none';
+    if (!records || !records.length) {
+      document.getElementById('att-date-error').textContent = 'No attendance records found in the database.';
+      document.getElementById('att-date-error').style.display = 'block';
+      return;
     }
+    var dates = records.map(function(r) { return r.date; }).filter(Boolean).sort();
+    var minDate = dates[0];
+    var maxDate = dates[dates.length - 1];
+    document.getElementById('att-date-range-info').textContent =
+      'Database has ' + records.length + ' record(s) from ' + minDate + ' to ' + maxDate;
+    document.getElementById('att-from-date').min = minDate;
+    document.getElementById('att-from-date').max = maxDate;
+    document.getElementById('att-from-date').value = minDate;
+    document.getElementById('att-to-date').min = minDate;
+    document.getElementById('att-to-date').max = maxDate;
+    document.getElementById('att-to-date').value = maxDate;
+    document.getElementById('att-date-content').style.display = 'block';
+  }).catch(function() {
+    document.getElementById('att-date-loading').style.display = 'none';
+    document.getElementById('att-date-error').textContent = 'Failed to fetch attendance data from server.';
+    document.getElementById('att-date-error').style.display = 'block';
+  });
+}
+
+function confirmAttendanceDelete(mode) {
+  if (mode === 'range') {
+    var from = document.getElementById('att-from-date').value;
+    var to   = document.getElementById('att-to-date').value;
+    if (!from || !to) { showToast('❌ Please select both From and To dates.', 'danger'); return; }
+    if (from > to)    { showToast('❌ From date must be before To date.', 'danger'); return; }
+  }
+  closeModalBg('m-attendance-date');
+  requireSpecialPw(function() {
+    if (mode === 'all') {
+      currentAction = 'attendance';
+      runSteps(getDeleteSteps('attendance'), 0);
+    } else {
+      var from = document.getElementById('att-from-date').value;
+      var to   = document.getElementById('att-to-date').value;
+      currentAction = 'attendance';
+      var steps = [
+        { label: 'Fetching records for date range ' + from + ' → ' + to + '…', fn: function() {
+          return api('GET', '/attendance?from=' + from + '&to=' + to);
+        }},
+        { label: 'Deleting records in range…', fn: function() {
+          return api('GET', '/attendance?from=' + from + '&to=' + to).then(function(records) {
+            if (!records || !records.length) { showToast('ℹ️ No records found in that date range.'); return Promise.resolve([]); }
+            return Promise.all(records.map(function(r) { return api('DELETE', '/attendance/' + r._id); }));
+          });
+        }},
+        { label: 'Clearing local attendance cache…', fn: function() {
+          localStorage.removeItem('ss3_attendance');
+          return Promise.resolve({ ok: true });
+        }}
+      ];
+      runSteps(steps, 0);
+    }
+  });
+}
+
+function openClearStorageModal() {
+  requireSpecialPw(function() {
+    document.querySelectorAll('.clr-chk').forEach(function(c) { c.checked = false; });
+    document.getElementById('clr-all').checked = false;
+    openModal_('m-clear-storage');
+  });
+}
 
 function toggleClearAll(master) {
   document.querySelectorAll('.clr-chk').forEach(function (c) { c.checked = master.checked; });

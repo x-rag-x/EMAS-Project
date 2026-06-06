@@ -1,4 +1,32 @@
+## 🔹 v2.1.1 — 06 June 2026
+
+### Forced Update
+
+- `server.js`
+    - Waste update, forgetten log of update :(.
+    - Fixed Data management apis
+
+- `control.html`
+    - Fixed Data Management Page, Improved security in Data Management Page.
+    - When logout, auto clears all browser caches.
+
+- `index.html`
+    - Removed default seeders (Teacher, Student) from db.
+
+- `admin.html`
+    - Reworked pages navigators
+    - Fixing Empty data message(No data found.)
+
+### ⚠️ Yet to Finish
+- Add subject model bug.
+- No student found, teacher found messages not display correctly.
+- Activity log page bug.
+
+----------------------------------
+
 ## 🔹 v2.1.0 — 05 May 2026
+
+### Complete Update
 
 - `admin.html`
     - CSS converted to compact format.
@@ -24,6 +52,8 @@
 
 ----------------------------------
 ## 🔹 v2.0.0 — 27 Apr 2026
+
+### Complete Update
 
 ### ✨ Added
 - Introduction of Track ID generation
@@ -60,12 +90,13 @@
 ----------------------
 ## 🔹 v1.1.0 — 27 Apr 2026
 
+### Complete Update
+
 ### ✨ Added
 - Introduced ChangeLog.md file
 - All updates, changes, new features, bug fixes and other information will be logged in this file
 
 ### 📁 Files Changed
 - `CHANGELOG.md` - New File Added
-
 
 ---------------------

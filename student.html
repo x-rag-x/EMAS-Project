@@ -542,7 +542,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
   <div class="modal">
     <div class="modal-hd">
       <div class="modal-title">🔐 Change Password</div>
-      <div class="modal-close" onclick="closeModal('m-chpw')">✕</div>
     </div>
     <div id="chpw-err" class="err-msg"></div>
     <div class="fg">
@@ -559,7 +558,6 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       <div class="pw-wrap"><input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password"><button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:4px;">
-      <button class="btn-sec" onclick="closeModal('m-chpw')" style="flex:1;">Cancel</button>
       <button class="btn-pri" onclick="doChangePw()" style="flex:2;">Update Password</button>
     </div>
   </div>

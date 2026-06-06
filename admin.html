@@ -679,23 +679,23 @@ to { transform: rotate(360deg) }
 
       <div class="nav-section" style="flex:1;overflow-y:auto;padding:6px 0;">
         <div class="sb-section-label">Overview</div>
-        <button class="sb-item act" onclick="nav('dash')"><span class="sbi-ic">📊</span>Dashboard</button>
+        <button class="sb-item act" data-page="dash" onclick="nav('dash')"><span class="sbi-ic">📊</span>Dashboard</button>
 
         <div class="sb-section-label">Management</div>
-        <button class="sb-item" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments<span class="sb-badge"
+        <button class="sb-item" data-page="depts" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments<span class="sb-badge"
             id="sb-dept-badge">0</span></button>
-        <button class="sb-item" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes &amp; Subjects</button>
-        <button class="sb-item" onclick="nav('students')"><span class="sbi-ic">👨‍🎓</span>Students<span
+        <button class="sb-item" data-page="struct" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes &amp; Subjects</button>
+        <button class="sb-item" data-page="students" onclick="nav('students')"><span class="sbi-ic">👨‍🎓</span>Students<span
             class="sb-badge" id="sb-stu-badge">0</span></button>
-        <button class="sb-item" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span
+        <button class="sb-item" data-page="teachers" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span
             class="sb-badge" id="sb-teach-badge">0</span></button>
         <!-- Timetable – Management section -->
         <button class="sb-item" onclick="window.location.href='timetable.html'"><span class="sbi-ic">🗓️</span>Timetable</button>
 
         <div class="sb-section-label">Reports & Logs</div>
-        <button class="sb-item" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
+        <button class="sb-item" data-page="reports" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
         <button class="sb-item" onclick="window.location.href='bulk.html'"><span class="sbi-ic">📤</span>Bulk Upload      🡭</button>
-        <button class="sb-item" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity Logs</button>
+        <button class="sb-item" data-page="logs" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity Logs</button>
 
 
         <div class="sb-section-label">System</div>
@@ -894,7 +894,7 @@ to { transform: rotate(360deg) }
                 <div class="card-title">🔔 Notifications</div>
                 <span class="notif-tag-err" id="notif-count-badge">0 new</span>
               </div>
-              <div id="notif-list-main" style="flex:1;overflow-y:auto;max-height:380px;"></div>
+              <div id="notif-list-main" style="flex:1;overflow-y:auto;max-height:380px;"><div class="empty-state"><span class="ei">🎉</span><p>No notifications</p></div></div>
               <div style="padding:10px;border-top:1px solid var(--brl);">
                 <button class="respond-btn" onclick="openModal('notif-all')">📩 View All & Respond</button>
               </div>
@@ -1007,7 +1007,7 @@ to { transform: rotate(360deg) }
           <div id="sp-classes">
             <div class="shd">
               <div class="stl"><span class="sdo"></span>Classes</div>
-              <button class="btn-pri" onclick="om('m-add-class-quick')">+ Add Class</button>
+              <button class="btn-pri" onclick="openAddClassModal()">+ Add Class</button>
             </div>
             <div id="scg" class="egrd"></div>
           </div>
@@ -1016,7 +1016,7 @@ to { transform: rotate(360deg) }
               <div class="stl"><span class="sdo"></span>Subjects</div>
               <div style="display:flex;gap:7px;">
                 <!-- <button class="btn-pri" onclick="om('m-upload-subj')">📤 Upload</button> -->
-                <button class="btn-out" onclick="openAddSubj()">+ Add Subject</button>
+                <button class="btn-pri" onclick="openAddSubj()">+ Add Subject</button>
               </div>
             </div>
             <div id="ssg2" class="egrd"></div>
@@ -1507,14 +1507,14 @@ to { transform: rotate(360deg) }
       </div>
       <!-- Row 3: Course Type | Branch -->
       <div class="form-grid" style="grid-template-columns:1.5fr 1.5fr;">
-        <div class="fg"><label class="fl">Course Type</label>
+        <div class="fg"><label class="fl">Course Type <span style="color:var(--red);">*</span></label>
           <select class="fc2" id="co-type" onchange="updateBranch()">
             <option value="">— Select —</option>
             <option>UG</option>
             <option>PG</option>
           </select>
         </div>
-        <div class="fg"><label class="fl">Branch</label>
+        <div class="fg"><label class="fl">Branch <span style="color:var(--red);">*</span></label>
           <select class="fc2" id="branch">
             <option value="">— Select Course Type First —</option>
           </select>
@@ -1663,9 +1663,9 @@ to { transform: rotate(360deg) }
       </div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr;">
         <div class="fg"><label class="fl">Section<span style="color:var(--red);">*</span></label><input type="text" class="fc2" id="nc-sec" placeholder="e.g. A / B"
-            oninput="ncAutoName()"></div>
+            oninput="ncAutoName()" minlength="1" maxlength="1"></div>
         <div class="fg"><label class="fl">Hall Number<span style="color:var(--red);">*</span></label><input type="text" class="fc2" id="nc-hall"
-            placeholder="e.g. LH01"></div>
+            placeholder="e.g, LH01" minlength="4" maxlength="4"></div>
       </div>
       <div class="fg" style="margin-bottom:6px;"><label class="fl">Class Name <span class="auto-txt">(auto)</span></label>
             <input type="text" class="fc2"
@@ -2606,21 +2606,35 @@ to { transform: rotate(360deg) }
       var targetPage = document.getElementById('pg-' + pageName);
       if (targetPage) targetPage.classList.add('act');
 
-      // Update sidebar active state
+      // Update sidebar active state — match by data-page attribute to avoid index-offset bugs
       document.querySelectorAll('.sb-item').forEach(function (item) { item.classList.remove('act'); });
-      var navIndex = PAGE_NAMES.indexOf(pageName);
-      var navItems = document.querySelectorAll('.sb-item');
-      if (navIndex >= 0 && navItems[navIndex]) navItems[navIndex].classList.add('act');
+      var activeItem = document.querySelector('.sb-item[data-page="' + pageName + '"]');
+      if (activeItem) activeItem.classList.add('act');
 
       // Run page-specific initializer
       var pageInitializers = {
         'dash': initDash,
         'depts': renderDepartments,
-        'struct': function () { resetStructureState(); renderDepartmentSelector(); },
-        'students': renderStudents,
-        'teachers': renderTeachers,
+        'struct': function () { resetStructureState(); renderDepartmentSelector(); renderDepartments(); },
+        'students': function () {
+          var ay = document.getElementById('sf-ay');
+          if (ay) { ay.innerHTML = '<option value="">All Years</option>'; ay.value = ''; }
+          renderStudents();
+          syncFromAPI('students', '/students').then(function () {
+            if (ay) ay.value = '';   // keep All Years after sync
+            renderStudents();
+          }).catch(function () { renderStudents(); });
+        },
+        'teachers': function () {
+          renderTeachers(); // render from cache immediately
+          syncFromAPI('users', '/users').then(function () { renderTeachers(); }).catch(function () {});
+        },
         'reports': initAdminReports,
-        'logs': renderLogs,
+        'logs': function () {
+          _logRoleFilter = ''; // always reset filter on nav
+          setLogRole('');      // resets pill UI + calls renderLogs()
+          syncFromAPI('logs', '/logs').then(function () { renderLogs(); }).catch(function () { renderLogs(); });
+        },
       };
       if (pageInitializers[pageName]) pageInitializers[pageName]();
     }
@@ -2686,7 +2700,7 @@ to { transform: rotate(360deg) }
       var el = document.getElementById('log-stat-cards');
       if (!el) return;
       var cards = [
-        { label: 'Total Logs',       val: total,           icon: '📋', bg: 'var(-p)',  tc: 'black',     mc: 'var(--tmu)' },
+        { label: 'Total Logs',       val: total,           icon: '📋', bg: '#fff',      tc: 'var(--td)',  mc: 'var(--tmu)' },
         { label: 'Admin Actions',    val: counts.admin,    icon: '👑', bg: '#fef2f2',  tc: '#dc2626',   mc: 'var(--tmu)' },
         { label: 'Teacher Actions',  val: counts.teacher,  icon: '👩‍🏫', bg: '#eff6ff',  tc: '#2563eb',   mc: 'var(--tmu)' },
         { label: 'Student Actions',  val: counts.student,  icon: '🎓', bg: '#f0fdf4',  tc: '#16a34a',   mc: 'var(--tmu)' },
@@ -2705,17 +2719,25 @@ to { transform: rotate(360deg) }
       var toDate   = document.getElementById('ltd') ?  document.getElementById('ltd').value : '';
       var searchQ  = (document.getElementById('lsq') ? document.getElementById('lsq').value : '').toLowerCase();
 
-      var allLogs = DB.get('logs').slice().reverse();
+      // Normalize: server stores 'time', local addLog stores 'timestamp' — support both
+      var rawLogs = DB.get('logs');
+      var logsArr = Array.isArray(rawLogs) ? rawLogs : [];
+      var allLogs = logsArr.map(function (l) {
+        return Object.assign({}, l, { _ts: l.timestamp || l.time || new Date().toISOString() });
+      }).slice().reverse();
 
-      // Stat counts from unfiltered set
+      // Stat counts from unfiltered set (always show full counts)
       var counts = { admin: 0, teacher: 0, student: 0, system: 0 };
-      allLogs.forEach(function (l) { if (counts[l.role] !== undefined) counts[l.role]++; });
+      allLogs.forEach(function (l) {
+        var r = (l.role || l.userName === 'SYSTEM' ? 'system' : l.role) || '';
+        if (counts[r] !== undefined) counts[r]++;
+      });
       renderLogStatCards(allLogs.length, counts);
 
       // Apply filters
       if (_logRoleFilter) allLogs = allLogs.filter(function (l) { return l.role === _logRoleFilter; });
-      if (fromDate) allLogs = allLogs.filter(function (l) { return l.timestamp.slice(0, 10) >= fromDate; });
-      if (toDate)   allLogs = allLogs.filter(function (l) { return l.timestamp.slice(0, 10) <= toDate; });
+      if (fromDate) allLogs = allLogs.filter(function (l) { return l._ts.slice(0, 10) >= fromDate; });
+      if (toDate)   allLogs = allLogs.filter(function (l) { return l._ts.slice(0, 10) <= toDate; });
       if (searchQ)  allLogs = allLogs.filter(function (l) {
         return (l.userName || '').toLowerCase().includes(searchQ)
             || (l.action   || '').toLowerCase().includes(searchQ)
@@ -2723,6 +2745,7 @@ to { transform: rotate(360deg) }
       });
 
       var container = document.getElementById('fll');
+      if (!container) return;
       if (!allLogs.length) {
         container.innerHTML = '<div class="emst"><span class="emico">📋</span><div class="emtx">No logs match your filters.</div></div>';
         return;
@@ -2741,40 +2764,36 @@ to { transform: rotate(360deg) }
         other:  { bg: '#f3f4f6', color: '#6b7280', label: 'Action'  },
       };
 
-      // Group by calendar date
+      // Group by calendar date using normalized _ts field
       var groups = {}, order = [];
       allLogs.forEach(function (log) {
-        var key = new Date(log.timestamp).toDateString();
-        if (!groups[key]) { groups[key] = { label: _logDateLabel(log.timestamp), entries: [] }; order.push(key); }
+        var key = new Date(log._ts).toDateString();
+        if (!groups[key]) { groups[key] = { label: _logDateLabel(log._ts), entries: [] }; order.push(key); }
         groups[key].entries.push(log);
       });
 
       var html = '';
       order.forEach(function (key) {
         var g = groups[key];
-        // Date divider
         html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
           + '<span style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;">' + g.label + '</span>'
           + '<span style="flex:1;height:1px;background:var(--brl);"></span>'
           + '<span style="font-size:11px;color:var(--tdi);white-space:nowrap;">' + g.entries.length + ' action' + (g.entries.length !== 1 ? 's' : '') + '</span>'
           + '</div>';
 
-        // Card wrapping all entries for this date
         html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:18px;">';
         g.entries.forEach(function (log, i) {
           var rs = roleStyle[log.role] || roleStyle.system;
           var ts = typeStyle[log.type]  || typeStyle.other;
           var inits = (log.userName || '?').split(' ').map(function (w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase();
-          var exact = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          var exact = new Date(log._ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
           html += '<div style="display:flex;align-items:flex-start;gap:12px;padding:13px 18px;'
             + (i < g.entries.length - 1 ? 'border-bottom:1px solid var(--brl);' : '')
             + '" onmouseover="this.style.background=\'var(--gLt)\'" onmouseout="this.style.background=\'#fff\'">';
-          
-            // Avatar
+
           html += '<div style="width:36px;height:36px;border-radius:50%;background:' + rs.av + ';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;">' + inits + '</div>';
 
-          // Body
           html += '<div style="flex:1;min-width:0;">'
             + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">'
             +   '<span style="font-size:13px;font-weight:700;color:var(--td);">' + (log.userName || 'Unknown') + '</span>'
@@ -2785,9 +2804,8 @@ to { transform: rotate(360deg) }
             + (log.details ? '<div style="font-size:11.5px;color:var(--tmu);">' + log.details + '</div>' : '')
             + '</div>';
 
-          // Timestamp
           html += '<div style="flex-shrink:0;text-align:right;padding-top:1px;">'
-            + '<div style="font-size:11.5px;font-weight:600;color:var(--tdi);white-space:nowrap;" title="' + exact + '">' + _logRelTime(log.timestamp) + '</div>'
+            + '<div style="font-size:11.5px;font-weight:600;color:var(--tdi);white-space:nowrap;" title="' + exact + '">' + _logRelTime(log._ts) + '</div>'
             + '</div>';
 
           html += '</div>';
@@ -3405,7 +3423,7 @@ to { transform: rotate(360deg) }
         var color = AVATAR_COLORS[index % AVATAR_COLORS.length];
         var badge = badgeMap[log.action] || 'ab-green';
         return '<div class="activity-item">'
-          + '<div class="act-av" style="background:' + color + '">' + log.userName[0] + '</div>'
+          + '<div class="act-av" style="background:' + color + '">' + ((log.userName || '?')[0] || '?').toUpperCase() + '</div>'
           + '<div class="act-body">'
           + '<div class="act-name">' + log.userName + '</div>'
           + '<div class="act-task">Working on <b>' + log.action + '</b> — ' + log.details + '</div>'
@@ -3780,60 +3798,41 @@ to { transform: rotate(360deg) }
       var allClasses = DB.get('classes').filter(function (c) { return !deptId || c.deptId === deptId; }) || [];
       var classGrid = document.getElementById('scg');
 
-      if (clsWrap) {
-        if (!classes.length) {
-          clsWrap.innerHTML = `
-            <div class="empty-state">
-              <span class="ei">🏫</span>
-              <p>No classes found</p>
-            </div>
-          `;
-        } else {
-            classGrid.innerHTML = allClasses.length
-              ? allClasses.map(function (cls) {
-                var studentCount = DB.get('students').filter(function (s) { return s.classId === cls._id; }).length;
-                var assignmentCount = DB.get('assignments').filter(function (a) { return a.classId === cls._id; }).length;
-                return '<div class="ec" onclick="openCD(\'' + cls._id + '\')">'
-                  + '<div class="ech"><div class="eci" style="background:var(--gLt)">🏫</div>'
-                  + '<div><div class="ecn">' + cls.name + '</div>'
-                  + '<div class="ecsu">Hall: ' + (cls.hallNo || '—') + ' · Sec ' + (cls.section || '—') + ' · ' + cls.deptName + '</div></div></div>'
-                  + '<div class="ecb"><div class="emt">' + studentCount + ' students · ' + assignmentCount + ' subjects</div></div>'
-                  + '</div>';
-              }).join('')
-              : '<div class="emst" style="grid-column:1/-1"><span class="emico">🏫</span><div class="emtx">No classes. Click "+ Add Class".</div></div>';
-        }
+      if (classGrid) {
+        classGrid.innerHTML = allClasses.length
+          ? allClasses.map(function (cls) {
+            var studentCount = DB.get('students').filter(function (s) { return s.classId === cls._id; }).length;
+            var assignmentCount = DB.get('assignments').filter(function (a) { return a.classId === cls._id; }).length;
+            return '<div class="ec" onclick="openCD(\'' + cls._id + '\')">'
+              + '<div class="ech"><div class="eci" style="background:var(--gLt)">🏫</div>'
+              + '<div><div class="ecn">' + cls.name + '</div>'
+              + '<div class="ecsu">Hall: ' + (cls.hallNo || '—') + ' · Sec ' + (cls.section || '—') + ' · ' + cls.deptName + '</div></div></div>'
+              + '<div class="ecb"><div class="emt">' + studentCount + ' students · ' + assignmentCount + ' subjects</div></div>'
+              + '</div>';
+          }).join('')
+          : '<div class="emst" style="grid-column:1/-1"><span class="emico">🏫</span><div class="emtx">No classes. Click "+ Add Class".</div></div>';
       }
 
       var allSubjects = DB.get('subjects').filter(function (s) { return !deptId || s.deptId === deptId; }) || [];
       var subjectGrid = document.getElementById('ssg2');
-      var subWrap = document.getElementById('subject-grid');
 
-      if (subWrap) {
-        if (!subjects.length) {
-          subWrap.innerHTML = `
-            <div class="empty-state">
-              <span class="ei">📘</span>
-              <p>No subjects found</p>
-            </div>
-          `;
-        } else {
-            subjectGrid.innerHTML = allSubjects.length
-              ? allSubjects.map(function (subj) {
-                var assignments = DB.get('assignments').filter(function (a) { return a.subjectId === subj._id; });
-                var teacherNames = Array.from(new Set(assignments.map(function (a) { return a.teacherName; }).filter(Boolean)));
-                var sectionCount = assignments.length;
-                return '<div class="ec" onclick="openSubjAssignModal(\'' + subj._id + '\')" style="cursor:pointer;">'
-                  + '<div class="ech"><div class="eci" style="background:rgba(59,130,246,.1)">📚</div>'
-                  + '<div style="flex:1"><div class="ecn">' + subj.name + '</div>'
-                  + '<div class="ecsu">' + subj.code + ' · ' + subj.credits + ' credits · ' + subj.type + '</div></div>'
-                  + '<button class="btn-xs btn-out" onclick="event.stopPropagation();openSD(\'' + subj._id + '\')" title="Subject Details / Edit" style="flex-shrink:0;margin-left:6px;padding:4px 10px;font-size:11px;">ℹ Details</button>'
-                  + '</div>'
-                  + '<div class="ecb"><div class="emt">' + (sectionCount ? '📋 ' + sectionCount + ' section(s) assigned' : '➕ Click to assign sections') + '</div></div>'
-                  + '</div>';
-              }).join('')
-              : '<div class="emst" style="grid-column:1/-1"><span class="emico">📚</span><div class="emtx">No subjects. Click "+ Add Subject".</div></div>';
-          }
-        }
+      if (subjectGrid) {
+        subjectGrid.innerHTML = allSubjects.length
+          ? allSubjects.map(function (subj) {
+            var assignments = DB.get('assignments').filter(function (a) { return a.subjectId === subj._id; });
+            var teacherNames = Array.from(new Set(assignments.map(function (a) { return a.teacherName; }).filter(Boolean)));
+            var sectionCount = assignments.length;
+            return '<div class="ec" onclick="openSubjAssignModal(\'' + subj._id + '\')" style="cursor:pointer;">'
+              + '<div class="ech"><div class="eci" style="background:rgba(59,130,246,.1)">📚</div>'
+              + '<div style="flex:1"><div class="ecn">' + subj.name + '</div>'
+              + '<div class="ecsu">' + subj.code + ' · ' + subj.credits + ' credits · ' + subj.type + '</div></div>'
+              + '<button class="btn-xs btn-out" onclick="event.stopPropagation();openSD(\'' + subj._id + '\')" title="Subject Details / Edit" style="flex-shrink:0;margin-left:6px;padding:4px 10px;font-size:11px;">ℹ Details</button>'
+              + '</div>'
+              + '<div class="ecb"><div class="emt">' + (sectionCount ? '📋 ' + sectionCount + ' section(s) assigned' : '➕ Click to assign sections') + '</div></div>'
+              + '</div>';
+          }).join('')
+          : '<div class="emst" style="grid-column:1/-1"><span class="emico">📚</span><div class="emtx">No subjects. Click "+ Add Subject".</div></div>';
+      }
     }
     var renderCSViewNosem = renderClassSubjectView;
 
@@ -4079,7 +4078,8 @@ to { transform: rotate(360deg) }
       var warnEl = document.getElementById('nc-warn');
       var addBtn = document.getElementById('nc-add-btn');
       if (dept && batch && section) {
-        var autoName = batch + '-' + dept.code + '-' + section;
+        var batchV = batch.slice(2,4) + '-' + batch.slice(5,7);
+        var autoName = batchV + ' ' + dept.code + '-' + section;
         nameEl.value = autoName;
         // Check duplicate
         var dup = DB.get('classes').find(function (cls) {
@@ -4104,6 +4104,31 @@ to { transform: rotate(360deg) }
         addBtn.style.opacity = '.5';
       }
     }
+    function openAddClassModal() {
+      // Ensure dropdowns are populated with latest DB data
+      populateAdminDropdowns();
+
+      // Reset fields
+      document.getElementById('nc-sec').value  = '';
+      document.getElementById('nc-hall').value = '';
+      document.getElementById('nc-name').value = '';
+      var warnEl = document.getElementById('nc-warn');
+      if (warnEl) warnEl.style.display = 'none';
+      var addBtn = document.getElementById('nc-add-btn');
+      if (addBtn) { addBtn.disabled = true; addBtn.style.opacity = '.5'; addBtn.style.cursor = 'not-allowed'; }
+
+      // Auto-select current dept from structure context
+      if (structureContext && structureContext.deptId) {
+        var deptSel = document.getElementById('nc-dept');
+        if (deptSel) {
+          deptSel.value = structureContext.deptId;
+          ncAutoName(); // trigger name generation
+        }
+      }
+
+      openModal_('m-add-class-quick');
+    }
+
     function ncValidate() { ncAutoName(); }
     function ncdc() { ncAutoName(); }
 
@@ -4117,10 +4142,11 @@ to { transform: rotate(360deg) }
       if (!deptId) { showToast('Select a department', 'warn'); return; }
       if (!batch) { showToast('Select a batch', 'warn'); return; }
       if (!section) { showToast('Enter a section', 'warn'); return; }
+      if (!hallNo) { showToast('Enter a hall number', 'warn'); return; }
       var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
-      var className = batch + '-' + dept.code + '-' + section;
+      var className = getFieldValue('nc-name');
       // Final duplicate check
-      if (DB.get('classes').find(function (cls) { return cls.deptId === deptId && cls.batch === batch && cls.section === section; })) {
+      if (DB.get('classes').find(function (cls) { return cls.name.toLowerCase() === className.toLowerCase(); })) {
         showToast('Class "' + className + '" already exists!', 'warn'); return;
       }
       apiAddClass({ deptId: deptId, deptName: dept.name, deptCode: dept.code, year: year, sem: sem, section: section, hallNo: hallNo, name: className, batch: batch })
@@ -4140,11 +4166,29 @@ to { transform: rotate(360deg) }
     }
 
     function openAddSubj() {
-      var teachers = DB.get('users').filter(function (u) { return u.role === 'teacher'; });
+      if (!structureContext.deptId) {
+        showToast('Please explore a department first before adding a subject.', 'warn');
+        return;
+      }
+
+      // Show active dept in modal title
+      var titleEl = document.querySelector('#m-add-subj-ctx .modal-title');
+      if (titleEl) titleEl.textContent = '📚 Add Subject — ' + (structureContext.deptName || 'Department');
+
+      // Clear previous input values
+      ['ns-nm','ns-ssc','ns-cd','ns-sc'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      var crEl = document.getElementById('ns-cr');
+      if (crEl) crEl.value = '3';
+
+      var teachers = Array.isArray(DB.get('users')) ? DB.get('users') : [];
       document.getElementById('ns-tch').innerHTML = '<option value="">— Optional —</option>'
-        + teachers.map(function (t) {
-          return '<option value="' + t._id + '">' + t.name + ' (' + (t.dept || '') + ')</option>';
-        }).join('');
+        + teachers.filter(function (t) { return t.role === 'teacher'; })
+          .map(function (t) {
+            return '<option value="' + t._id + '">' + t.name + ' (' + (t.dept || '') + ')</option>';
+          }).join('');
       openModal_('m-add-subj-ctx');
     }
 
@@ -4448,21 +4492,30 @@ to { transform: rotate(360deg) }
 
     // ─── STUDENTS PAGE ───────────────────────────────────────────────────────────
     function renderStudents() {
-      var depts = DB.get('depts');
-      var classes = DB.get('classes');
+      var depts   = Array.isArray(DB.get('depts'))   ? DB.get('depts')   : [];
+      var classes = Array.isArray(DB.get('classes')) ? DB.get('classes') : [];
+      var stuList = Array.isArray(DB.get('students'))? DB.get('students'): [];
 
       var deptFilter = document.getElementById('sf-dept');
-      deptFilter.innerHTML = '<option value="">All Departments</option>'
-        + depts.map(function (d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');
+      if (deptFilter) {
+        deptFilter.innerHTML = '<option value="">All Departments</option>'
+          + depts.map(function (d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');
+      }
 
       var classFilter = document.getElementById('sf-cls');
-      classFilter.innerHTML = '<option value="">All Classes</option>'
-        + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
+      if (classFilter) {
+        classFilter.innerHTML = '<option value="">All Classes</option>'
+          + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
+      }
 
+      // Build year list from actual student data, always prepend All Years
+      var years = Array.from(new Set(stuList.map(function (s) { return s.academicYear; }).filter(Boolean))).sort().reverse();
       var yearFilter = document.getElementById('sf-ay');
-      var years = Array.from(new Set(DB.get('students').map(function (s) { return s.academicYear; }).filter(Boolean))).sort().reverse();
-      yearFilter.innerHTML = '<option value="">All Years</option>'
-        + years.map(function (y) { return '<option>' + y + '</option>'; }).join('');
+      if (yearFilter) {
+        yearFilter.innerHTML = '<option value="">All Years</option>'
+          + years.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+        yearFilter.value = ''; // always default to All Years
+      }
 
       filterStudents();
     }
@@ -4476,7 +4529,7 @@ to { transform: rotate(360deg) }
       var classValue = document.getElementById('sf-cls') ? document.getElementById('sf-cls').value : '';
       var sectionValue = document.getElementById('sf-sec') ? document.getElementById('sf-sec').value : '';
 
-      var students = DB.get('students');
+      var students = Array.isArray(DB.get('students')) ? DB.get('students') : [];
       if (yearValue) students = students.filter(function (s) { return s.academicYear === yearValue; });
       if (courseType) students = students.filter(function (s) { return s.courseType === courseType; });
       if (deptValue) students = students.filter(function (s) { return s.deptId === deptValue; });
@@ -4489,26 +4542,30 @@ to { transform: rotate(360deg) }
 
       document.getElementById('scb').textContent = students.length + ' students';
       var tbody = document.getElementById('stb');
-
-      if (!students.length) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--tdi);">No students found.</td></tr>';
-        return;
+      if (tbody) {
+        if (!students.length) {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:36px 16px;color:var(--tdi);">'
+            + '<span style="font-size:38px;display:block;margin-bottom:10px;">👨‍🎓</span>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">No students found in the database.</div>'
+            + '<div style="font-size:12px;color:var(--tdi);">Try adjusting your filters or add a student using the button above.</div>'
+            + '</td></tr>';
+        } else {
+          tbody.innerHTML = students.map(function (student, index) {
+            return '<tr>'
+              + '<td>' + (index + 1) + '</td>'
+              + '<td class="b">' + (student.name || '—') + '</td>'
+              + '<td>' + (student.regNo || '—') + '</td>'
+              + '<td>' + (student.academicYear || '—') + '</td>'
+              + '<td>' + (student.courseType || '—') + '</td>'
+              + '<td>' + (student.branch || student.deptName || '—') + '</td>'
+              + '<td>' + (student.deptName || '—') + '</td>'
+              + '<td>' + (student.className || '—') + '</td>'
+              + '<td>' + (student.section || '—') + '</td>'
+              + '<td><button class="btn bgho bxs" onclick="openStuEdit(\'' + student._id + '\')">✏️</button></td>'
+              + '</tr>';
+          }).join('');
+        }
       }
-
-      tbody.innerHTML = students.map(function (student, index) {
-        return '<tr>'
-          + '<td>' + (index + 1) + '</td>'
-          + '<td class="b">' + student.name + '</td>'
-          + '<td>' + student.regNo + '</td>'
-          + '<td>' + (student.academicYear || '—') + '</td>'
-          + '<td>' + (student.courseType || '—') + '</td>'
-          + '<td>' + (student.branch || student.deptName || '—') + '</td>'
-          + '<td>' + (student.deptName || '—') + '</td>'
-          + '<td>' + (student.className || '—') + '</td>'
-          + '<td>' + (student.section || '—') + '</td>'
-          + '<td><button class="btn bgho bxs" onclick="openStuEdit(\'' + student._id + '\')">✏️</button></td>'
-          + '</tr>';
-      }).join('');
     }
     var sfch = filterStudents; // alias
 
@@ -4858,6 +4915,7 @@ to { transform: rotate(360deg) }
 
       if (!name)  { showToast('Student name is required', 'warn'); return; }
       if (!regNo || regNo.length < 12) { showToast('Valid 12-digit Register Number required', 'warn'); return; }
+      if (!classId) { showToast('Class is required', 'warn'); return; }
       if (!email) { showToast('Email is required', 'warn'); return; }
       if (!_stuEmailVerified) { 
         showToast('Please confirm the email first (click the email field)', 'warn'); 
@@ -5101,6 +5159,17 @@ to { transform: rotate(360deg) }
         }
       }
 
+      // Batch year
+      var batchYear = '20' + yearCode + '-' + (parseInt(yearCode,10) + 4);
+      var yearEl = document.getElementById('stu-batch');
+      if (yearEl) {
+        for (var i = 0; i < yearEl.options.length; i++) {
+          if (yearEl.options[i].value === batchYear || yearEl.options[i].text === batchYear) {
+            yearEl.value = batchYear; break;
+          }
+        }
+      }
+
       // Dept
       var dept = getDeptByNumber(deptCode);
       if (dept) {
@@ -5203,17 +5272,27 @@ to { transform: rotate(360deg) }
 
     // ─── TEACHERS PAGE ───────────────────────────────────────────────────────────
     function renderTeachers() {
+      var grid = document.getElementById('tgr');
+      if (!grid) return;
+      grid.className = 'tgrd';
+      grid.innerHTML = '<div class="emst"><span class="emico" style="font-size:28px;">⏳</span><div class="emtx">Loading teachers…</div></div>';
+
       var depts = DB.get('depts');
       var deptFilter = document.getElementById('tf-dept');
-      if (deptFilter && !deptFilter.options.length) {
+      // Always repopulate dept filter from DB
+      if (deptFilter) {
         deptFilter.innerHTML = '<option value="">All Departments</option>'
-          + depts.map(function (d) { return '<option value="' + d.name + '">' + d.name + '</option>'; }).join('');
+          + (Array.isArray(depts) ? depts : []).map(function (d) { return '<option value="' + d.name + '">' + d.name + '</option>'; }).join('');
       }
 
       var searchQuery = (document.getElementById('tf-q') ? document.getElementById('tf-q').value : '').toLowerCase();
       var deptSelected = document.getElementById('tf-dept') ? document.getElementById('tf-dept').value : '';
 
-      var teachers = DB.get('users').filter(function (u) { return u.role === 'teacher'; });
+      // Defensive: ensure we always have an array
+      var rawUsers = DB.get('users');
+      var usersArr = Array.isArray(rawUsers) ? rawUsers : [];
+      var teachers = usersArr.filter(function (u) { return (u.role || '').toLowerCase() === 'teacher'; });
+
       if (searchQuery) teachers = teachers.filter(function (t) {
         return (t.name || '').toLowerCase().includes(searchQuery)
           || (t.empId || '').toLowerCase().includes(searchQuery)
@@ -5221,19 +5300,20 @@ to { transform: rotate(360deg) }
       });
       if (deptSelected) teachers = teachers.filter(function (t) { return t.dept === deptSelected; });
 
-      var grid = document.getElementById('tgr');
-      grid.className = 'tgrd';
-
       if (!teachers.length) {
-        grid.innerHTML = '<div class="emst"><span class="emico">👩‍🏫</span><div class="emtx">No teachers found.</div></div>';
+        grid.innerHTML = '<div class="emst"><span class="emico">👩‍🏫</span>'
+          + '<div class="emtx">No teachers found in the database.</div>'
+          + '<div style="margin-top:10px;font-size:12px;color:var(--tdi);">Add a teacher using the button above.</div></div>';
         return;
       }
 
+      var assignments = Array.isArray(DB.get('assignments')) ? DB.get('assignments') : [];
       grid.innerHTML = teachers.map(function (teacher) {
-        var assignmentCount = DB.get('assignments').filter(function (a) { return a.teacherId === teacher._id; }).length;
+        var assignmentCount = assignments.filter(function (a) { return a.teacherId === teacher._id; }).length;
+        var nameInitial = ((teacher.name || '')[0] || 'T').toUpperCase();
         return '<div class="tcrd" onclick="openTD(\'' + teacher._id + '\')">'
-          + '<div class="tav">' + (teacher.name[0] || 'T').toUpperCase() + '</div>'
-          + '<div class="tnm">' + teacher.name + '</div>'
+          + '<div class="tav">' + nameInitial + '</div>'
+          + '<div class="tnm">' + (teacher.name || '—') + '</div>'
           + '<div class="tdp">' + (teacher.desig || '—') + ' · ' + (teacher.dept || '—') + '</div>'
           + '<div class="tsts">'
           + '<div class="tst2"><span>' + assignmentCount + '</span>Subjects</div>'
@@ -5400,14 +5480,21 @@ to { transform: rotate(360deg) }
       var years = ['2025-26', '2024-25', '2023-24', '2022-23'];
       var batch = ['2023-26', '2023-27', '2024-28', '2025-29'];
 
-      ['stu-year', 'edit-year',].forEach(function (id) {
+      ['stu-year', 'edit-year'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = years.map(function (y) { return '<option>' + y + '</option>'; }).join('');
       });
+      // sf-ay (student list year filter) always starts with "All Years"
+      var sfAy = document.getElementById('sf-ay');
+      if (sfAy) {
+        sfAy.innerHTML = '<option value="">All Years</option>'
+          + years.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+        sfAy.value = ''; // force All Years selected
+      }
 
       ['nc-batch', 'stu-batch', 'edit-batch'].forEach(function (id) {
         var el = document.getElementById(id);
-        if (el) el.innerHTML = batch.map(function (y) { return '<option value="' + y.slice(0,4) + '">' + y + '</option>'; }).join('');
+        if (el) el.innerHTML = batch.map(function (y) { return '<option>' + y + '</option>'; }).join('');
       });
 
       ['t-dp'].forEach(function (id) {
@@ -5838,10 +5925,11 @@ to { transform: rotate(360deg) }
         syncFromAPI('students', '/students'),
         syncFromAPI('users', '/users'),
         syncFromAPI('assignments', '/assignments'),
+        syncFromAPI('logs', '/logs'),
       ]).then(function (results) {
+        var names = ['depts', 'classes', 'subjects', 'students', 'users', 'assignments', 'logs'];
         dbToast('Synced from Database', 'success', results.map(function (r, i) {
-          var names = ['depts', 'classes', 'subjects', 'students', 'users', 'assignments'];
-          return r.length + ' ' + names[i];
+          return (Array.isArray(r) ? r.length : 0) + ' ' + names[i];
         }).join(' · '));
         updateStatCards();
         if (cb) cb();

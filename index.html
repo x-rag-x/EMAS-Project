@@ -398,27 +398,6 @@
       }
     };
 
-    // ─── SEED DEFAULT USERS ON FIRST VISIT ───────────────────────────────────────
-    (function seedDefaultUsers() {
-      if (!DB.get('users').length) {
-        DB.insert('users', {
-          name: 'Administrator',
-          username: 'admin',
-          password: 'admin123',
-          role: 'admin'
-        });
-        DB.insert('users', {
-          name: 'Default Teacher',
-          username: 'teacher',
-          password: 'teacher123',
-          role: 'teacher',
-          empId: 'EMP001',
-          dept: 'Computer Science Engineering',
-          desig: 'Assistant Professor'
-        });
-      }
-    })();
-
     // ─── ROLE SELECTION ──────────────────────────────────────────────────────────
     let selectedRole = 'admin';
 

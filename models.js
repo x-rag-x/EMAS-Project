@@ -65,8 +65,8 @@ const StudentUserSchema = new mongoose.Schema({
   class:        { type: String, default: '' },
   classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
   section:      { type: String, default: '' },
-  courseType:    { type: String, enum: ['UG','PG'], default: 'UG'  },
-  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
+  courseType:    { type: String, enum: ['None', 'UG','PG'], default: 'None'},
+  branch:       { type: String, enum: ['None', 'M.E','M.TECH','B.E','B.TECH'], default: 'None' },
   department:   { type: String, default: '' },
   deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
   admissionYear: { type: String, default: '' },   // like ADM-2025
@@ -363,6 +363,14 @@ const ManageSchema = new mongoose.Schema({
   updatedBy : String,
 }, { timestamps:true }); 
 
+const PasswordSchema = new mongoose.Schema({
+  studentPassword    : { type: String, default: 'student123' },
+  teacherPassword    : { type: String, default: 'teacher123' },
+  adminPassword      : { type: String, default: 'admin123' },
+  deleteDataPassword : { type: String, default: 'EAMS-DELETE-6969' },
+  updatedBy          : String,
+}, { timestamps:true });
+
 module.exports = {
   Admin:        mongoose.model('Admin',        AdminSchema),
   Teacher:      mongoose.model('Teacher',      TeacherSchema),
@@ -385,4 +393,5 @@ module.exports = {
   Manage:       mongoose.model('Manage',       ManageSchema),
   SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
   DataManagement: mongoose.model('DataManagement', DataManagementSchema),
+  Passwords:    mongoose.model('Passwords',    PasswordSchema),
 };
