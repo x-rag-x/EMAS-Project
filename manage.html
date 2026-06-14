@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAMS – Manage | Sri Shakthi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+:root{--gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;--gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;--td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;--br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);--shd:0 8px 32px rgba(0,0,0,0.08);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
+
+/* ── SIDEBAR ── */
+.sb{width:220px;flex-shrink:0;background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;transition:transform .28s ease;}
+.sb.sb-hidden{transform:translateX(-100%);}
+.sb-logo{padding:18px 18px 14px;border-bottom:1px solid var(--brl);display:flex;align-items:center;gap:10px;}
+.sb-logo-mark{width:36px;height:36px;border-radius:10px;background:var(--gD);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sb-logo-text{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--td);line-height:1.2;}
+.sb-logo-sub{font-size:10px;color:var(--tdi);font-family:'Poppins',sans-serif;font-weight:500;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-section{font-size:10.5px;text-transform:uppercase;letter-spacing:1.8px;color:var(--tdi);font-weight:600;padding:12px 16px 4px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 14px;margin:1px 8px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--tmu);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:.18s;}
+.sb-item:hover{background:var(--gLt);color:var(--gK);}
+.sb-item.act{background:var(--gLt);color:var(--gD);font-weight:700;border-left:3px solid var(--gD);border-radius:0 10px 10px 0;padding-left:11px;}
+.sb-item .sbi-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.sb-divider{height:1px;background:var(--brl);margin:10px 14px;}
+.sb-bottom{padding:12px;}
+.sb-user{display:flex;align-items:center;gap:9px;padding:10px 12px;background:var(--gLt);border-radius:10px;border:1px solid var(--br);margin-bottom:10px;}
+.sb-uav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-uname{font-size:11.5px;font-weight:600;color:var(--td);}
+.sb-urole{font-size:9.5px;color:#fff;background:var(--gM);padding:1px 6px;border-radius:10px;display:inline-block;margin-top:1px;}
+.sb-goto-dash{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1.5px solid var(--br);color:var(--tmu);font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:'Poppins',sans-serif;transition:.18s;margin-bottom:7px;width:100%;}
+.sb-goto-dash:hover{background:var(--gLt);color:var(--gD);border-color:var(--gLr);}
+.sb-logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px 14px;border-radius:10px;border:1.5px solid rgba(239,68,68,.25);background:rgba(239,68,68,.06);color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;transition:.18s;}
+.sb-logout-btn:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);}
+
+/* ── TOGGLE BUTTON ── */
+.sb-toggle-btn{position:fixed;top:14px;left:228px;z-index:300;width:28px;height:28px;border-radius:50%;background:var(--gD);border:none;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:left .28s ease;font-family:'Poppins',sans-serif;}
+.sb-toggle-btn.closed{left:10px;}
+
+/* ── MAIN ── */
+.mc{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;max-width:calc(100vw - 220px);transition:margin-left .28s ease,max-width .28s ease;}
+.topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 22px 0 12px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.tb-date{font-size:11px;color:var(--tmu);background:var(--gLt);padding:4px 12px;border-radius:12px;border:1px solid var(--br);font-weight:500;}
+.tb-profile{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:24px;border:1.5px solid var(--br);background:#fff;}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gD);}
+.tb-name{font-size:12px;font-weight:700;color:var(--td);}
+
+/* ── PAGES ── */
+.pg{display:none;padding:20px 22px 28px;animation:pgIn .3s ease;}
+.pg.act{display:block;}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.page-title{font-size:26px;font-weight:800;color:var(--td);letter-spacing:-.4px;}
+.page-sub{font-size:12px;color:var(--tmu);margin-top:3px;}
+.page-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:16px;border:1px solid var(--br);overflow:hidden;}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
+.card-title{font-size:13.5px;font-weight:700;color:var(--td);}
+.card-body-p{padding:14px 16px;}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.tab-btn{padding:6px 15px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--br);color:var(--tmu);background:#fff;transition:all .18s;font-family:'Poppins',sans-serif;}
+.tab-btn.act{background:var(--gD);border-color:var(--gD);color:#fff;}
+
+/* ── FORMS ── */
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fl{font-size:11px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.6px;}
+.fc{background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;transition:all .18s;width:100%;}
+.fc:focus{border-color:var(--gM);}
+.fc2{background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:8px 11px;font-size:12.5px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;transition:all .18s;}
+.fc2:focus{border-color:var(--gM);}
+.fgrid{display:grid;gap:12px;margin-bottom:12px;}
+.fg2{grid-template-columns:1fr 1fr;}.fg3{grid-template-columns:1fr 1fr 1fr;}
+
+/* ── BUTTONS ── */
+.btn-pri{background:var(--gD);color:#fff;border:none;border-radius:20px;padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:6px;transition:.18s;}
+.btn-pri:hover{background:var(--gM);transform:translateY(-1px);}
+.btn-out{background:#fff;color:var(--td);border:1.5px solid #cdd4cd;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:5px;transition:.18s;}
+.btn-out:hover{border-color:var(--gLr);background:var(--gLt);}
+.btn-sm{padding:6px 13px;font-size:11.5px;border-radius:15px;}
+.btn-xs{padding:4px 10px;font-size:11px;border-radius:10px;}
+.btn-danger{background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:5px;transition:.18s;}
+.btn-danger:hover{background:rgba(239,68,68,.15);}
+
+/* ── TABLE ── */
+.tw{overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{background:var(--gLt);padding:9px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;color:var(--tmu);border-bottom:1px solid var(--br);text-align:left;white-space:nowrap;}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--brl);color:var(--tmu);vertical-align:middle;}
+.tbl tr:last-child td{border-bottom:none;}.tbl tbody tr:hover td{background:var(--gP);}
+.tbl td.b{font-weight:600;color:var(--td);}
+
+/* ── BADGES ── */
+.bge{padding:2px 8px;border-radius:18px;font-size:10.5px;font-weight:600;display:inline-block;}
+.bgg{background:rgba(76,175,80,.12);color:var(--gK);}.bga{background:rgba(245,158,11,.1);color:#b45309;}
+.bgr{background:rgba(239,68,68,.1);color:#dc2626;}.bgb{background:rgba(59,130,246,.1);color:#2563eb;}
+.bgp{background:rgba(139,92,246,.1);color:#7c3aed;}.bggy{background:#f3f4f6;color:#374151;}
+
+/* ── MODALS ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(5px);z-index:700;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:all .22s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:18px;width:94%;max-width:560px;max-height:88vh;overflow-y:auto;padding:24px;transform:translateY(18px) scale(.97);transition:all .22s;box-shadow:0 24px 60px rgba(0,0,0,.14);}
+.modal-bg.open .modal{transform:none;}.modal-lg{max-width:680px;}
+.modal-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--td);}
+.modal-sub{font-size:11px;color:var(--tmu);margin-top:3px;}
+.modal-close{width:28px;height:28px;border-radius:7px;background:var(--gP);border:1px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--tmu);transition:.18s;flex-shrink:0;}
+.modal-close:hover{background:rgba(239,68,68,.08);color:#dc2626;}
+.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.btn-form-pri{background:var(--gD);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+.btn-form-pri:hover{background:var(--gM);}
+.btn-form-ghost{background:var(--gP);color:var(--tmu);border:1px solid var(--br);border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+.btn-form-ghost:hover{background:#fff0f0;color:#d32f2f;border-color:#f5c2c2;}
+.btn-form-del{background:rgba(239,68,68,.07);color:#dc2626;border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;margin-right:auto;}
+.btn-form-del:hover{background:rgba(239,68,68,.14);}
+
+/* ── TOASTS ── */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);background:#fff;border:1px solid var(--br);border-left:4px solid var(--gM);border-radius:11px;padding:11px 18px;font-size:12px;color:var(--td);box-shadow:var(--shd);z-index:9999;opacity:0;transition:all .38s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#db-toast{position:fixed;bottom:20px;right:20px;z-index:9999;background:#1a2e1a;color:#fff;border-radius:12px;padding:11px 16px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.22);transform:translateY(110px);opacity:0;transition:all .32s cubic-bezier(.34,1.56,.64,1);max-width:320px;font-family:'Poppins',sans-serif;min-width:200px;}
+#db-toast.show{transform:translateY(0);opacity:1;}#db-toast.success{background:#166534;}#db-toast.error{background:#991b1b;}#db-toast.saving{background:#1e3a5f;}
+.db-spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#db-toast-bar{position:absolute;top:3px;left:5px;right:5px;height:2.5px;border-radius:4px;background:#fff;transform-origin:left center;}
+
+/* ── CALENDAR ── */
+.cal-cell{border-radius:9px;padding:7px 5px;min-height:64px;cursor:pointer;border:1.5px solid var(--br);transition:all .14s;font-size:12px;display:flex;flex-direction:column;gap:2px;background:#fff;}
+.cal-cell:not(.other-month):hover{transform:scale(1.05);box-shadow:0 3px 12px rgba(0,0,0,.1);z-index:2;}
+.cal-cell.working{background:#f0fdf4;border-color:#86efac;}
+.cal-cell.leave{background:#fef2f2;border-color:#fca5a5;}
+.cal-cell.exam{background:#fffbeb;border-color:#fcd34d;}
+.cal-cell.holiday{background:#eff6ff;border-color:#93c5fd;}
+.cal-cell.half-day{background:#fdf4ff;border-color:#d8b4fe;}
+.cal-cell.not-set{background:var(--gP);border-color:var(--br);}
+.cal-cell.other-month{opacity:.28;pointer-events:none;}
+.cal-cell.today{box-shadow:0 0 0 2.5px var(--gD);}
+.cal-cell.readonly{cursor:default;}
+.cal-cell.readonly:not(.other-month):hover{transform:none;box-shadow:none;}
+.cal-date{font-size:14px;font-weight:800;color:var(--td);line-height:1;}
+.cal-cell.sunday .cal-date{color:#dc2626;}.cal-cell.saturday .cal-date{color:#b45309;}
+.cal-type-label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.cal-yr-badges{display:flex;gap:2px;flex-wrap:wrap;margin-top:2px;}
+.cal-yr-badge{font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px;background:var(--gD);color:#fff;}
+
+/* ── TOGGLE ── */
+.toggle-track{width:40px;height:21px;border-radius:11px;background:#ccc;position:relative;cursor:pointer;transition:.2s;flex-shrink:0;}
+.toggle-track.on{background:var(--gD);}
+.toggle-thumb{width:15px;height:15px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle-track.on .toggle-thumb{left:22px;}
+
+/* ── DAY TYPE PILLS ── */
+.dt-pill{display:flex;align-items:center;gap:6px;cursor:pointer;padding:7px 12px;border-radius:9px;border:2px solid var(--br);font-size:11.5px;font-weight:600;color:var(--tmu);transition:all .14s;background:#fff;}
+.dt-pill.sel{border-color:var(--gD);color:var(--gD);background:var(--gLt);}
+.dt-pill.lv.sel{border-color:#dc2626;color:#dc2626;background:#fef2f2;}
+.dt-pill.ex.sel{border-color:#b45309;color:#b45309;background:#fffbeb;}
+.dt-pill.hd.sel{border-color:#2563eb;color:#2563eb;background:#eff6ff;}
+.dt-pill.hf.sel{border-color:#7c3aed;color:#7c3aed;background:#fdf4ff;}
+
+/* ── DEPT CHECKBOX ── */
+.dept-cb-wrap{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:6px 11px;transition:all .14s;user-select:none;}
+.dept-cb-wrap:hover{border-color:var(--gLr);background:var(--gLt);}
+.dept-cb-wrap.checked{border-color:var(--gM);background:var(--gLt);color:var(--gD);font-weight:700;}
+.dept-cb-wrap input{accent-color:var(--gD);width:12px;height:12px;}
+
+/* ── EXAM ATTENDANCE ── */
+.ea-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--brl);font-size:12px;}
+.ea-row:last-child{border-bottom:none;}
+.ea-info{flex:1;min-width:0;}
+.ea-name{font-weight:700;color:var(--td);font-size:12px;}
+.ea-meta{color:var(--tmu);font-size:10.5px;margin-top:1px;}
+.ea-status-btn{padding:3px 9px;border-radius:15px;border:1.5px solid;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;transition:.14s;white-space:nowrap;}
+.ea-status-btn.present{background:#dcfce7;border-color:#86efac;color:#166534;}
+.ea-status-btn.absent{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.ea-rm{width:20px;height:20px;border-radius:50%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:.14s;}
+.ea-rm:hover{background:rgba(239,68,68,.18);}
+.srch-dd{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--br);border-radius:9px;z-index:200;max-height:200px;overflow-y:auto;display:none;box-shadow:0 6px 22px rgba(0,0,0,.11);margin-top:2px;}
+.srch-dd.open{display:block;}
+.srch-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--brl);transition:.12s;}
+.srch-item:last-child{border-bottom:none;}.srch-item:hover{background:var(--gLt);}
+.srch-name{font-size:12px;font-weight:700;color:var(--td);}
+.srch-meta{font-size:10.5px;color:var(--tmu);margin-top:1px;}
+
+/* ── INFO BANNERS ── */
+.banner-yellow{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;border-radius:11px;padding:10px 14px;font-size:11.5px;line-height:1.6;}
+.banner-green{background:#f0fdf4;border:1.5px solid #86efac;color:#166534;border-radius:11px;padding:10px 14px;font-size:11.5px;line-height:1.6;}
+.banner-blue{background:#eff6ff;border:1.5px solid #93c5fd;color:#1e40af;border-radius:11px;padding:10px 14px;font-size:11.5px;line-height:1.6;}
+
+/* ── SETTINGS ── */
+.admin-card{background:#fff;border:1.5px solid var(--br);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:.18s;}
+.admin-card:hover{box-shadow:var(--shd);border-color:var(--gLr);}
+.admin-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;}
+.admin-info{flex:1;min-width:0;}
+.admin-name{font-size:13px;font-weight:700;color:var(--td);}
+.admin-user{font-size:11px;color:var(--tmu);margin-top:1px;}
+.perm-chip{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--gLt);color:var(--gK);margin:1px;}
+
+/* ── STAT MINI CARDS (Overview) ── */
+.ov-stat{background:#fff;border:1.5px solid var(--br);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:10px;}
+.ov-stat-num{font-size:24px;font-weight:800;color:var(--td);line-height:1;}
+.ov-stat-label{font-size:10.5px;color:var(--tmu);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+.ov-stat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* ── EXAM UPCOMING ITEM ── */
+.upcoming-exam{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--brl);}
+.upcoming-exam:last-child{border-bottom:none;}
+.ue-type-ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ue-info{flex:1;}
+.ue-title{font-size:12.5px;font-weight:700;color:var(--td);}
+.ue-meta{font-size:10.5px;color:var(--tmu);margin-top:2px;}
+
+@media(max-width:768px){.sb{transform:translateX(-100%)}.sb.sb-mobile-open{transform:translateX(0)}.mc{margin-left:0!important;max-width:100vw!important}.sb-toggle-btn.closed{left:10px;}}
+  </style>
+</head>
+<body>
+
+<div id="db-toast"><div id="db-toast-bar"></div></div>
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR TOGGLE -->
+<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle">✖</button>
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-logo">
+    <div class="sb-logo-mark">📅</div>
+    <div>
+      <div class="sb-logo-text">Manage</div>
+      <div class="sb-logo-sub">Sri Shakthi EAMS</div>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <button class="sb-item act" data-page="overview"  onclick="nav('overview')"><span class="sbi-ic">📊</span>Overview</button>
+    <div class="sb-section">Academic</div>
+    <button class="sb-item" data-page="calendar"  onclick="nav('calendar')"><span class="sbi-ic">📅</span>College Days</button>
+    <button class="sb-item" data-page="exam"      onclick="nav('exam')"><span class="sbi-ic">📝</span>Exam</button>
+    <div class="sb-section">Admin</div>
+    <button class="sb-item" data-page="settings"  onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Settings</button>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-user">
+      <div class="sb-uav" id="sb-av">A</div>
+      <div>
+        <div class="sb-uname" id="sb-name">Administrator</div>
+        <div class="sb-urole">Admin</div>
+      </div>
+    </div>
+    <button class="sb-goto-dash" onclick="location.href='admin.html'">← Go to Dashboard</button>
+    <button class="sb-logout-btn" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="mc">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div style="width:28px;"></div>
+      <div class="tb-date" id="tdt-label"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-profile">
+        <div class="tb-av" id="topbar-av">A</div>
+        <div class="tb-name" id="topbar-name">Administrator</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE: OVERVIEW
+  ═══════════════════════════════════ -->
+  <div class="pg act" id="pg-overview">
+    <div class="page-hd">
+      <div>
+        <div class="page-title">📊 Overview</div>
+        <div class="page-sub">Quick snapshot of the current month's schedule.</div>
+      </div>
+      <button class="btn-out btn-sm" onclick="nav('calendar')">Edit Calendar →</button>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--gK);"></div><div><div class="ov-stat-num" id="ov-working">—</div><div class="ov-stat-label">Working Days</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:#dc2626;"></div><div><div class="ov-stat-num" id="ov-leave">—</div><div class="ov-stat-label">Leave / Holiday</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:#b45309;"></div><div><div class="ov-stat-num" id="ov-exam">—</div><div class="ov-stat-label">Exam Days</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--tdi);"></div><div><div class="ov-stat-num" id="ov-total">—</div><div class="ov-stat-label">Total Days</div></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+      <!-- Read-only calendar -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title" id="ov-month-label">—</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span style="background:#f0fdf4;border:1.5px solid #86efac;color:var(--gK);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Working</span>
+            <span style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Leave</span>
+            <span style="background:#fffbeb;border:1.5px solid #fcd34d;color:#b45309;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Exam</span>
+          </div>
+        </div>
+        <div class="card-body-p">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;text-align:center;">
+            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Tue</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Thu</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:10px;font-weight:700;color:#b45309;">Sat</div>
+            <div style="font-size:10px;font-weight:700;color:#dc2626;">Sun</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;" id="ov-cal-grid">
+            <div style="grid-column:span 7;text-align:center;padding:16px;color:var(--tdi);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming exams -->
+      <div>
+        <div class="card">
+          <div class="card-hd">
+            <div class="card-title">📋 Upcoming Exams</div>
+            <button class="btn-out btn-xs" onclick="nav('exam')">View All</button>
+          </div>
+          <div id="ov-exams-list" style="max-height:360px;overflow-y:auto;">
+            <div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE: COLLEGE DAYS
+  ═══════════════════════════════════ -->
+  <div class="pg" id="pg-calendar">
+    <div class="page-hd">
+      <div>
+        <div class="page-title">📅 College Days</div>
+        <div class="page-sub">Mark working days, leaves, holidays, and daily timings.</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-body-p">
+        <div style="display:grid;grid-template-columns:130px 90px 170px 1fr;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div class="fg">
+            <label class="fl">Month</label>
+            <select class="fc" id="cal-month-sel" onchange="loadCalendar()">
+              <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+              <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+              <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Year</label>
+            <input type="number" class="fc" id="cal-year-inp" value="2025" min="2020" max="2040" onchange="loadCalendar()">
+          </div>
+          <div class="fg">
+            <label class="fl">Year Filter</label>
+            <select class="fc" id="cal-year-filter" onchange="loadCalendar()">
+              <option value="">All Years</option>
+              <option value="I">Year I</option><option value="II">Year II</option>
+              <option value="III">Year III</option><option value="IV">Year IV</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+            <button class="btn-out btn-sm" onclick="prevMonth()">‹</button>
+            <button class="btn-out btn-sm" onclick="nextMonth()">›</button>
+            <button class="btn-out btn-sm" onclick="generateMonthDefaults()">⚙️ Auto-Fill</button>
+            <button class="btn-out btn-sm" onclick="loadCalendar()">🔄</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--gK);"></div><div><div class="ov-stat-num" id="cs-working">—</div><div class="ov-stat-label">Working</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:#dc2626;"></div><div><div class="ov-stat-num" id="cs-leave">—</div><div class="ov-stat-label">Leave</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:#b45309;"></div><div><div class="ov-stat-num" id="cs-exam">—</div><div class="ov-stat-label">Exam Days</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--tdi);"></div><div><div class="ov-stat-num" id="cs-total">—</div><div class="ov-stat-label">Total</div></div></div>
+    </div>
+
+    <!-- Calendar grid -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title" id="cal-month-label">—</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+          <span style="background:#f0fdf4;border:1.5px solid #86efac;color:var(--gK);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Working</span>
+          <span style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Leave</span>
+          <span style="background:#fffbeb;border:1.5px solid #fcd34d;color:#b45309;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Exam</span>
+          <span style="background:#eff6ff;border:1.5px solid #93c5fd;color:#2563eb;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Holiday</span>
+          <span style="background:#fdf4ff;border:1.5px solid #d8b4fe;color:#7c3aed;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Half Day</span>
+        </div>
+      </div>
+      <div class="card-body-p">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Tue</div>
+          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Thu</div>
+          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:10px;font-weight:700;color:#b45309;">Sat</div>
+          <div style="font-size:10px;font-weight:700;color:#dc2626;">Sun</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;" id="cal-grid">
+          <div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:8px;font-size:10.5px;color:var(--tdi);text-align:center;">💡 Default: Sundays = Leave &nbsp;|&nbsp; 1st &amp; 3rd Saturdays = Leave &nbsp;|&nbsp; 2nd &amp; 4th Saturdays = Working &nbsp;|&nbsp; Click any day to edit.</div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE: EXAM
+  ═══════════════════════════════════ -->
+  <div class="pg" id="pg-exam">
+    <div class="page-hd">
+      <div>
+        <div class="page-title">📝 Exam</div>
+        <div class="page-sub">Schedule exams and track hall-wise attendance.</div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn act" id="est-dates-btn"  onclick="examSubTab('dates')">📋 Exam Dates</button>
+      <button class="tab-btn"     id="est-att-btn"    onclick="examSubTab('attendance')">✅ Exam Attendance</button>
+    </div>
+
+    <!-- ── EXAM DATES ── -->
+    <div id="est-dates-panel">
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-body-p">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:9px;align-items:end;">
+            <div class="fg">
+              <label class="fl">Type</label>
+              <select class="fc" id="ef-type" onchange="loadExams()">
+                <option value="">All Types</option>
+                <option value="Internal1">Internal 1</option><option value="Internal2">Internal 2</option>
+                <option value="Practicals">Practicals</option><option value="Semester">Semester</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Student Year</label>
+              <select class="fc" id="ef-year" onchange="loadExams()">
+                <option value="">All</option>
+                <option value="I">Year I</option><option value="II">Year II</option>
+                <option value="III">Year III</option><option value="IV">Year IV</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Status</label>
+              <select class="fc" id="ef-status" onchange="loadExams()">
+                <option value="">All</option>
+                <option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Acad. Year</label>
+              <input type="text" class="fc" id="ef-acyear" placeholder="2025-26" oninput="loadExams()">
+            </div>
+            <button class="btn-pri" onclick="openExamModal(null)" style="white-space:nowrap;">+ Add Exam</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">📋 Scheduled Exams</div>
+          <button class="btn-out btn-sm" onclick="loadExams()">🔄</button>
+        </div>
+        <div class="tw">
+          <table class="tbl">
+            <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Year</th><th>Dept</th><th>Start</th><th>End</th><th>Timing</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="exams-tbody"><tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:24px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EXAM ATTENDANCE ── -->
+    <div id="est-att-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <!-- Left: form -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card">
+            <div class="card-hd" style="padding-bottom:8px;"><div class="card-title">🔖 Step 1 — Select Exam &amp; Hall</div></div>
+            <div class="card-body-p" style="padding-top:8px;">
+              <div class="fg" style="margin-bottom:9px;">
+                <label class="fl">Active Exam</label>
+                <select class="fc2" id="ea-exam-sel" onchange="onExamSelChange()"><option value="">— Select —</option></select>
+              </div>
+              <div class="fg" style="margin-bottom:9px;">
+                <label class="fl">Date</label>
+                <select class="fc2" id="ea-date-sel" onchange="onExamDateChange()"><option value="">— Select Date —</option></select>
+              </div>
+              <div class="fg">
+                <label class="fl">Your Hall No</label>
+                <input type="text" class="fc2" id="ea-hall-inp" placeholder="e.g. Hall A, Room 201, Lab 3" autocomplete="off">
+                <div style="font-size:10px;color:var(--tdi);margin-top:3px;">Enter the hall where you are invigilating.</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hd" style="padding-bottom:8px;"><div class="card-title">🏛️ Step 2 — Depts in Your Hall</div></div>
+            <div class="card-body-p" style="padding-top:6px;">
+              <div style="font-size:11px;color:var(--tmu);margin-bottom:8px;">Select all departments whose students are in your hall.</div>
+              <div id="ea-dept-wrap" style="display:flex;flex-wrap:wrap;gap:7px;">
+                <div style="color:var(--tdi);font-size:11.5px;">Loading…</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hd" style="padding-bottom:8px;"><div class="card-title">🔍 Step 3 — Enter Register No</div></div>
+            <div class="card-body-p" style="padding-top:8px;">
+              <div class="fg" style="margin-bottom:8px;">
+                <label class="fl">Student Year</label>
+                <select class="fc2" id="ea-year-filter">
+                  <option value="">All Years</option>
+                  <option value="I">Year I</option><option value="II">Year II</option>
+                  <option value="III">Year III</option><option value="IV">Year IV</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label class="fl">Register No</label>
+                <div style="position:relative;">
+                  <input type="text" class="fc2" id="ea-regno-inp" placeholder="Type register no (min 3 chars)…" oninput="searchStudentByRegno(this.value)" autocomplete="off">
+                  <div class="srch-dd" id="ea-search-dd"></div>
+                </div>
+                <div style="font-size:10px;color:var(--tdi);margin-top:3px;">Type → click student to add to list.</div>
+              </div>
+            </div>
+          </div>
+          <div class="banner-yellow">
+            <strong>📌 Instructions</strong><br>
+            1. Select exam and date.<br>2. Enter your hall number.<br>
+            3. Tick which depts are in your hall.<br>4. Type reg no → click to add student.<br>
+            5. Toggle Absent for no-shows.<br>6. Submit when done.
+          </div>
+        </div>
+        <!-- Right: student list -->
+        <div>
+          <div class="card" style="height:100%;display:flex;flex-direction:column;">
+            <div class="card-hd">
+              <div class="card-title">📋 Students in Hall</div>
+              <div style="display:flex;gap:7px;align-items:center;">
+                <span id="ea-count-pill" style="background:var(--gLt);color:var(--gD);font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;">0 students</span>
+                <button class="btn-out btn-xs" onclick="clearExamList()">Clear</button>
+              </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;min-height:200px;max-height:360px;border-top:1px solid var(--brl);" id="ea-student-list">
+              <div style="text-align:center;color:var(--tdi);font-size:11.5px;padding:32px 0;">No students added yet.</div>
+            </div>
+            <div style="border-top:1px solid var(--brl);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div style="font-size:12px;color:var(--tmu);">
+                Present: <strong id="ea-present-count" style="color:var(--gK);">0</strong>
+                &nbsp;|&nbsp; Absent: <strong id="ea-absent-count" style="color:#dc2626;">0</strong>
+              </div>
+              <button class="btn-pri" onclick="submitExamAttendance()" id="ea-submit-btn" disabled style="opacity:.5;cursor:not-allowed;">✅ Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Hall summary -->
+      <div class="card" style="margin-top:14px;">
+        <div class="card-hd">
+          <div class="card-title">🏛️ Today's Hall Submissions</div>
+          <button class="btn-out btn-sm" onclick="loadHallSummary()">🔄</button>
+        </div>
+        <div class="tw">
+          <table class="tbl">
+            <thead><tr><th>Hall No</th><th>Teacher</th><th>Exam</th><th>Date</th><th>Present</th><th>Absent</th><th>Submitted</th><th>View</th></tr></thead>
+            <tbody id="hall-summary-tbody"><tr><td colspan="8" style="text-align:center;color:var(--tdi);padding:18px;">Select exam to view submissions.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE: SETTINGS
+  ═══════════════════════════════════ -->
+  <div class="pg" id="pg-settings">
+    <div class="page-hd">
+      <div>
+        <div class="page-title">⚙️ Settings</div>
+        <div class="page-sub">Manage users who can access this portal.</div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:760px;">
+      <div class="card-hd">
+        <div class="card-title">👤 Manage Portal Admins</div>
+        <button class="btn-pri" onclick="openAdminModal(null)">+ Add Admin</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--tmu);padding:0 16px 12px;border-bottom:1px solid var(--brl);">Users below can log in to the Manage portal. Full admins always have access.</div>
+      <div id="manage-admins-list" style="padding:14px 16px;">
+        <div style="text-align:center;color:var(--tdi);padding:20px;font-size:12px;">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div><!-- /mc -->
+
+
+<!-- ════════════════════════════════
+     MODAL: DAY DETAIL
+════════════════════════════════ -->
+<div class="modal-bg" id="day-modal-bg" onclick="if(event.target===this)closeModal('day-modal-bg')">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="dm-title">Edit Day</div>
+        <div class="modal-sub" id="dm-sub">Set status, timing, and year-specific rules</div>
+      </div>
+      <div class="modal-close" onclick="closeModal('day-modal-bg')">✕</div>
+    </div>
+    <input type="hidden" id="dm-date">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--brl);margin-bottom:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--td);">Working Day?</div>
+        <div style="font-size:10.5px;color:var(--tmu);margin-top:2px;">Turn off for leaves and holidays.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleDmWorking()">
+        <div class="toggle-track on" id="dm-toggle"><div class="toggle-thumb"></div></div>
+        <span style="font-size:12.5px;font-weight:600;color:var(--td);" id="dm-toggle-label">Yes</span>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="fl" style="margin-bottom:7px;">Day Type</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div class="dt-pill sel"    id="dt-regular"  onclick="selDayType('regular')">📗 Regular</div>
+        <div class="dt-pill lv"     id="dt-leave"    onclick="selDayType('leave')">📕 Leave</div>
+        <div class="dt-pill ex"     id="dt-exam"     onclick="selDayType('exam')">📝 Exam</div>
+        <div class="dt-pill hd"     id="dt-holiday"  onclick="selDayType('holiday')">🔵 Holiday</div>
+        <div class="dt-pill hf"     id="dt-half-day" onclick="selDayType('half-day')">🟣 Half Day</div>
+        <div class="dt-pill"        id="dt-optional" onclick="selDayType('optional')">⬜ Optional</div>
+      </div>
+    </div>
+    <div class="fgrid fg2" style="margin-bottom:12px;">
+      <div class="fg"><label class="fl">Start Time</label><input type="time" class="fc2" id="dm-start" value="08:30"></div>
+      <div class="fg"><label class="fl">End Time</label><input type="time" class="fc2" id="dm-end" value="16:30"></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="fl" style="margin-bottom:7px;">Applies To</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;" id="dm-years-wrap">
+        <label class="dept-cb-wrap" id="dm-yr-all"><input type="checkbox" id="dm-year-all" onchange="toggleAllYrs(this)"> All Years</label>
+        <label class="dept-cb-wrap"><input type="checkbox" class="dm-yr-cb" value="I"> Year I</label>
+        <label class="dept-cb-wrap"><input type="checkbox" class="dm-yr-cb" value="II"> Year II</label>
+        <label class="dept-cb-wrap"><input type="checkbox" class="dm-yr-cb" value="III"> Year III</label>
+        <label class="dept-cb-wrap"><input type="checkbox" class="dm-yr-cb" value="IV"> Year IV</label>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:14px;">
+      <label class="fl">Notes</label>
+      <input type="text" class="fc2" id="dm-notes" placeholder="e.g. Pongal Holiday, Internal 1…">
+    </div>
+    <div class="banner-yellow" id="dm-exam-warn" style="margin-bottom:12px;display:none;">📝 Marked as <strong>Exam Day</strong>. Consider adding an Exam record under the Exam tab for hall attendance.</div>
+    <div class="form-actions">
+      <button class="btn-form-ghost" onclick="closeModal('day-modal-bg')">Cancel</button>
+      <button class="btn-form-pri" onclick="saveDayModal()">💾 Save Day</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: ADD / EDIT EXAM
+════════════════════════════════ -->
+<div class="modal-bg" id="exam-modal-bg" onclick="if(event.target===this)closeModal('exam-modal-bg')">
+  <div class="modal modal-lg">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="exam-modal-title">Add Exam</div>
+        <div class="modal-sub">Schedule a new exam and auto-mark calendar dates.</div>
+      </div>
+      <div class="modal-close" onclick="closeModal('exam-modal-bg')">✕</div>
+    </div>
+    <input type="hidden" id="em-id">
+    <div class="fgrid fg2" style="margin-bottom:12px;">
+      <div class="fg" style="grid-column:span 2;"><label class="fl">Title *</label><input type="text" class="fc2" id="em-title" placeholder="e.g. Internal 1 — CSE Year III"></div>
+      <div class="fg"><label class="fl">Exam Type *</label>
+        <select class="fc2" id="em-type"><option value="">— Select —</option>
+          <option value="Internal1">Internal 1</option><option value="Internal2">Internal 2</option>
+          <option value="Practicals">Practicals</option><option value="Semester">Semester</option></select></div>
+      <div class="fg"><label class="fl">Academic Year</label><input type="text" class="fc2" id="em-acyear" placeholder="2025-26"></div>
+      <div class="fg"><label class="fl">Student Year *</label>
+        <select class="fc2" id="em-student-year"><option value="All">All Years</option>
+          <option value="I">Year I</option><option value="II">Year II</option>
+          <option value="III">Year III</option><option value="IV">Year IV</option></select></div>
+      <div class="fg"><label class="fl">Department</label>
+        <select class="fc2" id="em-dept"><option value="">All Departments</option></select></div>
+      <div class="fg"><label class="fl">Start Date *</label><input type="date" class="fc2" id="em-start"></div>
+      <div class="fg"><label class="fl">End Date *</label><input type="date" class="fc2" id="em-end"></div>
+      <div class="fg"><label class="fl">Exam Start Time</label><input type="time" class="fc2" id="em-t-start" value="09:00"></div>
+      <div class="fg"><label class="fl">Exam End Time</label><input type="time" class="fc2" id="em-t-end" value="16:00"></div>
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fc2" id="em-status"><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option>
+          <option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+      <div class="fg" style="grid-column:span 2;"><label class="fl">Notes</label><textarea class="fc2" id="em-notes" rows="2" placeholder="Optional notes…"></textarea></div>
+    </div>
+    <div class="banner-green" style="margin-bottom:14px;">📅 Dates in the range will be auto-marked as <strong>Exam Days</strong> on the calendar for the selected student year.</div>
+    <div class="form-actions">
+      <button class="btn-form-del" id="em-delete-btn" style="display:none;" onclick="deleteExam()">🗑 Delete</button>
+      <button class="btn-form-ghost" onclick="closeModal('exam-modal-bg')">Cancel</button>
+      <button class="btn-form-pri" onclick="saveExam()">💾 Save Exam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: VIEW HALL ATTENDANCE
+════════════════════════════════ -->
+<div class="modal-bg" id="view-att-bg" onclick="if(event.target===this)closeModal('view-att-bg')">
+  <div class="modal modal-lg">
+    <div class="modal-hd">
+      <div><div class="modal-title" id="vam-title">Hall Attendance</div><div class="modal-sub" id="vam-sub"></div></div>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-out btn-sm" onclick="window.print()">🖨️ Print</button>
+        <div class="modal-close" onclick="closeModal('view-att-bg')">✕</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11.5px;color:var(--tmu);" id="vam-meta"></div>
+    <div class="tw">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Register No</th><th>Name</th><th>Department</th><th>Year</th><th>Status</th></tr></thead>
+        <tbody id="vam-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:14px;margin-top:12px;font-size:12.5px;font-weight:700;">
+      <span style="color:var(--gK);" id="vam-present-total"></span>
+      <span style="color:#dc2626;" id="vam-absent-total"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: ADD / EDIT MANAGE ADMIN
+════════════════════════════════ -->
+<div class="modal-bg" id="admin-modal-bg" onclick="if(event.target===this)closeModal('admin-modal-bg')">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="am-title">Add Manage Admin</div>
+        <div class="modal-sub">This user can access the Manage portal.</div>
+      </div>
+      <div class="modal-close" onclick="closeModal('admin-modal-bg')">✕</div>
+    </div>
+    <input type="hidden" id="am-id">
+    <div class="fgrid fg2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Full Name *</label><input type="text" class="fc2" id="am-name" placeholder="e.g. Dr. Karthik"></div>
+      <div class="fg"><label class="fl">Email</label><input type="text" class="fc2" id="am-email" placeholder="email@ssiet.ac.in"></div>
+      <div class="fg"><label class="fl">Username *</label><input type="text" class="fc2" id="am-username" placeholder="karthik.cse" autocomplete="off"></div>
+      <div class="fg"><label class="fl" id="am-pw-label">Password *</label><input type="password" class="fc2" id="am-password" placeholder="Min 6 chars" autocomplete="new-password"></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px;">
+      <label class="fl">Permissions</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="am-perms-wrap">
+        <label class="dept-cb-wrap" id="perm-calendar"><input type="checkbox" value="calendar" checked> 📅 Calendar</label>
+        <label class="dept-cb-wrap" id="perm-exam"><input type="checkbox" value="exam" checked> 📝 Exam</label>
+        <label class="dept-cb-wrap" id="perm-attendance"><input type="checkbox" value="attendance" checked> ✅ Attendance</label>
+        <label class="dept-cb-wrap" id="perm-settings"><input type="checkbox" value="settings"> ⚙️ Settings</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-form-del" id="am-delete-btn" style="display:none;" onclick="deleteManageAdmin()">🗑 Remove</button>
+      <button class="btn-form-ghost" onclick="closeModal('admin-modal-bg')">Cancel</button>
+      <button class="btn-form-pri" onclick="saveManageAdmin()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Globals ───────────────────────────────────────────────────────────
+var currentUser  = null;
+var deptsData    = [];
+var examsData    = [];
+var calendarData = {};
+var eaStudentList= [];
+var _dmDayType   = 'regular';
+var _dmWorking   = true;
+var _dbToastTimer= null;
+var _dbToastDuration = 4000;
+
+// ── Boot ──────────────────────────────────────────────────────────────
+(function boot() {
+  var stored = sessionStorage.getItem('eams_user');
+  if (!stored) { location.href = 'index.html'; return; }
+  try { currentUser = JSON.parse(stored); } catch(e) { location.href = 'index.html'; return; }
+  if (!currentUser || currentUser.role !== 'admin') { location.href = 'index.html'; return; }
+  var nm = currentUser.name || 'Admin', av = nm[0].toUpperCase();
+  ['sb-av','topbar-av'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=av; });
+  ['sb-name','topbar-name'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=nm; });
+  document.getElementById('tdt-label').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  var now = new Date();
+  var mSel = document.getElementById('cal-month-sel');
+  var yInp = document.getElementById('cal-year-inp');
+  if(mSel) mSel.value = now.getMonth() + 1;
+  if(yInp) yInp.value = now.getFullYear();
+  loadDepts();
+  loadOverview();
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function apiCall(method, path, body) {
+  var tok = sessionStorage.getItem('eams_token');
+  return fetch('/api' + path, {
+    method: method,
+    headers: {'Content-Type':'application/json','Authorization': tok ? 'Bearer '+tok : ''},
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r) {
+    if (r.status === 401) { location.href = 'index.html'; throw new Error('Auth'); }
+    return r.json();
+  });
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast'); t.textContent = msg;
+  t.style.borderLeftColor = type==='warn'?'#ef4444':type==='info'?'#3b82f6':'var(--gM)';
+  t.classList.add('show'); clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+function dbToast(msg, state, extra) {
+  var el = document.getElementById('db-toast'); clearTimeout(_dbToastTimer);
+  el.className = 'show ' + (state||'saving');
+  var ic = state==='success'?'✓ ':state==='error'?'❌ ':'';
+  var sp = state==='saving'?'<div class="db-spin"></div>':'';
+  var bar= state!=='saving'?'<div id="db-toast-bar"></div>':'';
+  el.innerHTML = bar+'<span id="dbt-x" style="position:absolute;top:4px;right:8px;cursor:pointer;font-size:10px;">✕</span>'
+    +sp+'<div><div style="font-size:12.5px;font-weight:700;">'+ic+msg+'</div>'+(extra?'<div style="font-size:11px;opacity:.75;margin-top:2px;">'+extra+'</div>':'')+'</div>';
+  var x = document.getElementById('dbt-x'); if(x) x.onclick=function(){ el.classList.remove('show'); clearTimeout(_dbToastTimer); };
+  var barEl = document.getElementById('db-toast-bar');
+  if(barEl && state!=='saving'){barEl.style.transition='none';barEl.style.transform='scaleX(1)';barEl.getBoundingClientRect();barEl.style.transition='transform '+_dbToastDuration+'ms linear';barEl.style.transform='scaleX(0)';}
+  if(state!=='saving') _dbToastTimer=setTimeout(function(){ el.classList.remove('show'); },_dbToastDuration);
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function fmtDate(s){ if(!s)return'—'; var d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function doLogout(){
+  var tok = sessionStorage.getItem('eams_token');
+  if(tok) fetch('/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+tok}});
+  sessionStorage.clear(); location.href='index.html';
+}
+function toggleSidebar(){
+  var sb=document.querySelector('.sb'), btn=document.getElementById('sbtoggle');
+  sb.classList.toggle('sb-hidden');
+  var hidden=sb.classList.contains('sb-hidden');
+  var mc=document.querySelector('.mc');
+  mc.style.marginLeft=hidden?'0':'220px'; mc.style.maxWidth=hidden?'100vw':'calc(100vw - 220px)';
+  btn.classList.toggle('closed',hidden); btn.textContent=hidden?'☰':'✖';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────
+function nav(page) {
+  document.querySelectorAll('.pg').forEach(function(p){ p.classList.remove('act'); });
+  var pg = document.getElementById('pg-'+page); if(pg) pg.classList.add('act');
+  document.querySelectorAll('.sb-item').forEach(function(b){ b.classList.remove('act'); });
+  var btn = document.querySelector('[data-page="'+page+'"]'); if(btn) btn.classList.add('act');
+  if(page==='overview')  loadOverview();
+  if(page==='calendar')  loadCalendar();
+  if(page==='exam')      { loadExams(); populateExamSel(); populateDeptCheckboxes(); }
+  if(page==='settings')  loadManageAdmins();
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────
+function loadOverview() {
+  var now = new Date(), m = now.getMonth()+1, y = now.getFullYear();
+  document.getElementById('ov-month-label').textContent = ['','January','February','March','April','May','June','July','August','September','October','November','December'][m]+' '+y;
+  apiCall('GET','/calendar?month='+m+'&year='+y).then(function(days){
+    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ map[d.date]=d; });
+    renderCalGrid(map,m,y,'ov-cal-grid',true);
+    var stats={working:0,leave:0,exam:0,total:new Date(y,m,0).getDate()};
+    for(var day=1;day<=stats.total;day++){
+      var ds=y+'-'+pad2(m)+'-'+pad2(day),d=map[ds],dow=new Date(ds+'T00:00:00').getDay();
+      var eff=getEffType(d,dow,day,m,y);
+      if(eff.type==='exam')stats.exam++; else if(!eff.working)stats.leave++; else stats.working++;
+    }
+    document.getElementById('ov-working').textContent=stats.working;
+    document.getElementById('ov-leave').textContent=stats.leave;
+    document.getElementById('ov-exam').textContent=stats.exam;
+    document.getElementById('ov-total').textContent=stats.total;
+  }).catch(function(){ renderCalGrid({},m,y,'ov-cal-grid',true); });
+  apiCall('GET','/exams?status=upcoming&status=ongoing').then(function(data){
+    renderUpcomingExams(Array.isArray(data)?data:[]);
+  }).catch(function(){});
+  // Also load ongoing exams
+  apiCall('GET','/exams/active').then(function(data){
+    renderUpcomingExams(Array.isArray(data)?data:[]);
+  }).catch(function(){});
+}
+
+function renderUpcomingExams(exams) {
+  var cont = document.getElementById('ov-exams-list');
+  if(!exams.length){ cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">No upcoming exams.</div>'; return; }
+  var typeIcons={'Internal1':'📘','Internal2':'📙','Practicals':'🔬','Semester':'📚'};
+  var typeColors={'Internal1':'#eff6ff','Internal2':'#fdf4ff','Practicals':'#fff7ed','Semester':'#fef2f2'};
+  var html='';
+  exams.slice(0,8).forEach(function(ex){
+    var ic=typeIcons[ex.examType]||'📄';
+    var col=typeColors[ex.examType]||'#f3f4f6';
+    var statusPill = ex.status==='ongoing'?'<span class="bge bgg">Ongoing</span>':'<span class="bge bgb">'+ex.status+'</span>';
+    html+='<div class="upcoming-exam">'
+      +'<div class="ue-type-ic" style="background:'+col+'">'+ic+'</div>'
+      +'<div class="ue-info"><div class="ue-title">'+ex.title+'</div>'
+      +'<div class="ue-meta">'+fmtDate(ex.startDate)+' – '+fmtDate(ex.endDate)+' &nbsp;|&nbsp; Year '+ex.studentYear+' &nbsp;'+statusPill+'</div></div>'
+      +'</div>';
+  });
+  cont.innerHTML = html;
+}
+
+// ── CALENDAR HELPERS ──────────────────────────────────────────────────
+function getSatOrdinal(day, month, year) {
+  var count=0;
+  for(var d=1;d<=day;d++){ if(new Date(year,month-1,d).getDay()===6) count++; }
+  return count;
+}
+function getEffType(doc, dow, day, month, year) {
+  if(doc) return { type: doc.dayType||'regular', working: doc.isWorkingDay, timing: doc.timing||{start:'08:30',end:'16:30'} };
+  if(dow===0) return { type:'leave', working:false, timing:{start:'08:30',end:'16:30'} };
+  if(dow===6){ var sn=getSatOrdinal(day,month,year); var w=sn%2===0; return { type:w?'regular':'leave', working:w, timing:{start:'08:30',end:'16:30'} }; }
+  return { type:'regular', working:true, timing:{start:'08:30',end:'16:30'} };
+}
+
+function renderCalGrid(map, month, year, gridId, readonly) {
+  var grid=document.getElementById(gridId); if(!grid) return;
+  var today=todayStr(), lastDay=new Date(year,month,0).getDate();
+  var firstDow=new Date(year,month-1,1).getDay();
+  var offset=(firstDow===0)?6:firstDow-1;
+  var cells='';
+  for(var i=0;i<offset;i++) cells+='<div class="cal-cell other-month"></div>';
+  for(var day=1;day<=lastDay;day++){
+    var ds=year+'-'+pad2(month)+'-'+pad2(day);
+    var dow=new Date(ds+'T00:00:00').getDay(), isSun=dow===0, isSat=dow===6;
+    var doc=map[ds], eff=getEffType(doc,dow,day,month,year);
+    var cls='cal-cell '+eff.type+(isSun?' sunday':'')+(isSat?' saturday':'')+(ds===today?' today':'')+(readonly?' readonly':'');
+    var typeLabel=eff.type.charAt(0).toUpperCase()+eff.type.slice(1).replace('-',' ');
+    var typeLabelColor=eff.working?(eff.type==='exam'?'#b45309':'var(--gK)'):'#dc2626';
+    var timingStr=(eff.working&&eff.timing&&eff.timing.start)?'<div style="font-size:7.5px;color:var(--tmu);">'+eff.timing.start+'–'+eff.timing.end+'</div>':'';
+    var yrBadges='';
+    if(doc&&doc.affectedYears&&doc.affectedYears.length>0){
+      yrBadges='<div class="cal-yr-badges">';
+      doc.affectedYears.forEach(function(yr){ yrBadges+='<span class="cal-yr-badge">'+yr+'</span>'; });
+      yrBadges+='</div>';
+    }
+    var onclick=readonly?'':' onclick="openDayModal(\''+ds+'\')"';
+    cells+='<div class="'+cls+'"'+onclick+'>'
+      +'<div class="cal-date">'+day+'</div>'
+      +'<div class="cal-type-label" style="color:'+typeLabelColor+';">'+typeLabel+'</div>'
+      +timingStr+yrBadges+'</div>';
+  }
+  grid.innerHTML=cells;
+}
+
+// ── COLLEGE DAYS ──────────────────────────────────────────────────────
+function prevMonth(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  if(m===1){m=12;y--;}else{m--;}
+  document.getElementById('cal-month-sel').value=m; document.getElementById('cal-year-inp').value=y;
+  loadCalendar();
+}
+function nextMonth(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  if(m===12){m=1;y++;}else{m++;}
+  document.getElementById('cal-month-sel').value=m; document.getElementById('cal-year-inp').value=y;
+  loadCalendar();
+}
+function loadCalendar(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value),yf=document.getElementById('cal-year-filter').value;
+  var mn=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=mn[m]+' '+y;
+  document.getElementById('cal-grid').innerHTML='<div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>';
+  apiCall('GET','/calendar?month='+m+'&year='+y).then(function(days){
+    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ map[d.date]=d; });
+    calendarData=map;
+    // Apply year filter
+    if(yf){
+      var fmap={};
+      Object.keys(map).forEach(function(k){ var d=map[k];
+        if(!d.affectedYears||d.affectedYears.length===0||d.affectedYears.includes(yf)) fmap[k]=d;
+      });
+      map=fmap;
+    }
+    renderCalGrid(map,m,y,'cal-grid',false);
+    var stats={working:0,leave:0,exam:0,total:new Date(y,m,0).getDate()};
+    for(var day=1;day<=stats.total;day++){
+      var ds=y+'-'+pad2(m)+'-'+pad2(day),doc=calendarData[ds],dow=new Date(ds+'T00:00:00').getDay();
+      var eff=getEffType(doc,dow,day,m,y);
+      if(eff.type==='exam')stats.exam++; else if(!eff.working)stats.leave++; else stats.working++;
+    }
+    document.getElementById('cs-working').textContent=stats.working;
+    document.getElementById('cs-leave').textContent=stats.leave;
+    document.getElementById('cs-exam').textContent=stats.exam;
+    document.getElementById('cs-total').textContent=stats.total;
+  }).catch(function(){ renderCalGrid({},m,y,'cal-grid',false); });
+}
+
+function generateMonthDefaults(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  dbToast('Generating defaults…','saving');
+  apiCall('POST','/calendar/bulk-generate',{month:m,year:y,overwriteExisting:false}).then(function(r){
+    if(r.error){dbToast('Error: '+r.error,'error');return;}
+    dbToast('Defaults applied','success',r.generated+' days set');
+    loadCalendar();
+  }).catch(function(){dbToast('Server error','error');});
+}
+
+// ── DAY MODAL ─────────────────────────────────────────────────────────
+function openDayModal(dateStr){
+  var doc=calendarData[dateStr], d=new Date(dateStr+'T00:00:00');
+  var dows=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var mns=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dm-title').textContent=dows[d.getDay()]+', '+d.getDate()+' '+mns[d.getMonth()]+' '+d.getFullYear();
+  document.getElementById('dm-sub').textContent=dateStr;
+  document.getElementById('dm-date').value=dateStr;
+  _dmWorking=doc?doc.isWorkingDay:(d.getDay()!==0);
+  updateDmToggle(_dmWorking);
+  var dt=doc?(doc.dayType||'regular'):(d.getDay()===0?'leave':'regular');
+  selDayType(dt,true);
+  document.getElementById('dm-start').value=(doc&&doc.timing&&doc.timing.start)||'08:30';
+  document.getElementById('dm-end').value=(doc&&doc.timing&&doc.timing.end)||'16:30';
+  document.getElementById('dm-notes').value=(doc&&doc.notes)||'';
+  var ayrs=(doc&&doc.affectedYears)||[];
+  document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ cb.checked=ayrs.includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); });
+  var allYrCb=document.getElementById('dm-year-all');
+  allYrCb.checked=(ayrs.length===0); document.getElementById('dm-yr-all').classList.toggle('checked',ayrs.length===0);
+  openModal('day-modal-bg');
+}
+function updateDmToggle(val){ var t=document.getElementById('dm-toggle'); t.classList.toggle('on',val); document.getElementById('dm-toggle-label').textContent=val?'Yes':'No'; }
+function toggleDmWorking(){ _dmWorking=!_dmWorking; updateDmToggle(_dmWorking); }
+function selDayType(type,silent){
+  _dmDayType=type;
+  ['regular','leave','exam','holiday','half-day','optional'].forEach(function(t){ var el=document.getElementById('dt-'+t); if(el) el.classList.remove('sel'); });
+  var el=document.getElementById('dt-'+type); if(el) el.classList.add('sel');
+  var warn=document.getElementById('dm-exam-warn'); if(warn) warn.style.display=(type==='exam')?'':'none';
+}
+function toggleAllYrs(cb){
+  document.getElementById('dm-yr-all').classList.toggle('checked',cb.checked);
+  if(cb.checked) document.querySelectorAll('.dm-yr-cb').forEach(function(c){ c.checked=false; c.closest('label').classList.remove('checked'); });
+}
+function saveDayModal(){
+  var dateStr=document.getElementById('dm-date').value;
+  var ayrs=[]; if(!document.getElementById('dm-year-all').checked){ document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ if(cb.checked) ayrs.push(cb.value); }); }
+  dbToast('Saving…','saving');
+  apiCall('POST','/calendar',{date:dateStr,isWorkingDay:_dmWorking,dayType:_dmDayType,notes:document.getElementById('dm-notes').value.trim(),timing:{start:document.getElementById('dm-start').value,end:document.getElementById('dm-end').value},affectedYears:ayrs,isOverride:true})
+    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Day saved','success'); closeModal('day-modal-bg'); loadCalendar(); })
+    .catch(function(){dbToast('Server error','error');});
+}
+
+// ── EXAMS ─────────────────────────────────────────────────────────────
+function examSubTab(tab){
+  document.getElementById('est-dates-panel').style.display=tab==='dates'?'':'none';
+  document.getElementById('est-att-panel').style.display=tab==='attendance'?'':'none';
+  document.getElementById('est-dates-btn').classList.toggle('act',tab==='dates');
+  document.getElementById('est-att-btn').classList.toggle('act',tab==='attendance');
+  if(tab==='dates') loadExams();
+  if(tab==='attendance'){ populateExamSel(); populateDeptCheckboxes(); }
+}
+function loadDepts(){
+  apiCall('GET','/depts').then(function(d){ deptsData=Array.isArray(d)?d:[]; populateDeptSelectsAll(); }).catch(function(){});
+}
+function populateDeptSelectsAll(){
+  var sel=document.getElementById('em-dept'); if(!sel) return;
+  sel.innerHTML='<option value="">All Departments</option>';
+  deptsData.forEach(function(dp){ sel.innerHTML+='<option value="'+dp._id+'">'+dp.name+'</option>'; });
+}
+function loadExams(){
+  var type=document.getElementById('ef-type').value, yr=document.getElementById('ef-year').value;
+  var status=document.getElementById('ef-status').value, acyr=document.getElementById('ef-acyear').value.trim();
+  var q='/exams?'; if(type) q+='examType='+encodeURIComponent(type)+'&'; if(yr) q+='studentYear='+encodeURIComponent(yr)+'&';
+  if(status) q+='status='+encodeURIComponent(status)+'&'; if(acyr) q+='academicYear='+encodeURIComponent(acyr)+'&';
+  document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:20px;">Loading…</td></tr>';
+  apiCall('GET',q).then(function(data){ examsData=Array.isArray(data)?data:[]; renderExamsTable(examsData); }).catch(function(){ document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:20px;">Failed to load</td></tr>'; });
+}
+var typePills={Internal1:'<span class="bge bgb">Int 1</span>',Internal2:'<span class="bge bgp">Int 2</span>',Practicals:'<span class="bge bga">Labs</span>',Semester:'<span class="bge bgr">Sem</span>'};
+var statusPills={upcoming:'<span class="bge bgb">Upcoming</span>',ongoing:'<span class="bge bgg">Ongoing</span>',completed:'<span class="bge bggy">Done</span>',cancelled:'<span class="bge bgr">Cancelled</span>'};
+function renderExamsTable(exams){
+  if(!exams.length){ document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:24px;">No exams. Click <strong>+ Add Exam</strong>.</td></tr>'; return; }
+  var html='';
+  exams.forEach(function(ex,i){
+    html+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+ex.title+'</td><td>'+(typePills[ex.examType]||ex.examType)+'</td><td><span class="bge bgg">'+ex.studentYear+'</span></td><td>'+(ex.deptName||'<em style="color:var(--tdi)">All</em>')+'</td><td>'+fmtDate(ex.startDate)+'</td><td>'+fmtDate(ex.endDate)+'</td><td style="white-space:nowrap;">'+(ex.timing?ex.timing.start+'–'+ex.timing.end:'—')+'</td><td>'+(statusPills[ex.status]||ex.status)+'</td>'
+      +'<td style="white-space:nowrap;">'
+      +'<button class="btn-out btn-xs" onclick="openExamModal(\''+ex._id+'\')" style="margin-right:4px;">✏️</button>'
+      +'<button style="background:rgba(59,130,246,.08);color:#2563eb;border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:\'Poppins\',sans-serif;" onclick="quickViewAtt(\''+ex._id+'\',\''+ex.title+'\')">👁️</button>'
+      +'</td></tr>';
+  });
+  document.getElementById('exams-tbody').innerHTML=html;
+}
+function openExamModal(examId){
+  document.getElementById('exam-modal-title').textContent=examId?'Edit Exam':'Add Exam';
+  document.getElementById('em-id').value=examId||'';
+  document.getElementById('em-delete-btn').style.display=examId?'':'none';
+  ['em-title','em-acyear','em-notes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('em-type').value=''; document.getElementById('em-student-year').value='All';
+  document.getElementById('em-dept').value=''; document.getElementById('em-t-start').value='09:00';
+  document.getElementById('em-t-end').value='16:00'; document.getElementById('em-status').value='upcoming';
+  document.getElementById('em-start').value=''; document.getElementById('em-end').value='';
+  if(examId){ var ex=examsData.find(function(e){return e._id===examId;}); if(ex){ document.getElementById('em-title').value=ex.title||''; document.getElementById('em-type').value=ex.examType||''; document.getElementById('em-acyear').value=ex.academicYear||''; document.getElementById('em-student-year').value=ex.studentYear||'All'; document.getElementById('em-dept').value=ex.deptId||''; document.getElementById('em-start').value=ex.startDate||''; document.getElementById('em-end').value=ex.endDate||''; document.getElementById('em-t-start').value=(ex.timing&&ex.timing.start)||'09:00'; document.getElementById('em-t-end').value=(ex.timing&&ex.timing.end)||'16:00'; document.getElementById('em-status').value=ex.status||'upcoming'; document.getElementById('em-notes').value=ex.notes||''; } }
+  openModal('exam-modal-bg');
+}
+function saveExam(){
+  var id=document.getElementById('em-id').value, title=document.getElementById('em-title').value.trim();
+  var type=document.getElementById('em-type').value, start=document.getElementById('em-start').value, end=document.getElementById('em-end').value;
+  if(!title){showToast('Title is required','warn');return;} if(!type){showToast('Exam type required','warn');return;}
+  if(!start||!end){showToast('Start and end dates required','warn');return;} if(start>end){showToast('Start must be before end','warn');return;}
+  var deptEl=document.getElementById('em-dept'), deptId=deptEl.value||null, deptName=deptId?deptEl.options[deptEl.selectedIndex].text:'';
+  dbToast('Saving…','saving');
+  apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{title,examType:type,academicYear:document.getElementById('em-acyear').value.trim(),studentYear:document.getElementById('em-student-year').value,deptId,deptName,startDate:start,endDate:end,timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},status:document.getElementById('em-status').value,notes:document.getElementById('em-notes').value.trim()})
+    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Exam saved','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(){dbToast('Server error','error');});
+}
+function deleteExam(){
+  if(!confirm('Delete this exam? Calendar exam entries will also be removed.')) return;
+  var id=document.getElementById('em-id').value;
+  dbToast('Deleting…','saving');
+  apiCall('DELETE','/exams/'+id).then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Exam deleted','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(){dbToast('Server error','error');});
+}
+
+// ── EXAM ATTENDANCE ───────────────────────────────────────────────────
+function populateExamSel(){
+  apiCall('GET','/exams/active').then(function(data){
+    var exams=Array.isArray(data)?data:[], sel=document.getElementById('ea-exam-sel');
+    sel.innerHTML='<option value="">— Select Exam —</option>';
+    exams.forEach(function(ex){ sel.innerHTML+='<option value="'+ex._id+'">'+ex.title+' ('+fmtDate(ex.startDate)+' – '+fmtDate(ex.endDate)+')</option>'; });
+  }).catch(function(){});
+}
+function onExamSelChange(){
+  var examId=document.getElementById('ea-exam-sel').value;
+  document.getElementById('ea-date-sel').innerHTML='<option value="">— Select Date —</option>';
+  if(!examId) return;
+  var ex=examsData.find(function(e){return e._id===examId;});
+  if(ex){ populateDateDrop(ex); } else { apiCall('GET','/exams/'+examId).then(function(r){ if(!r.error) populateDateDrop(r); }).catch(function(){}); }
+  loadHallSummary();
+}
+function populateDateDrop(ex){
+  var sel=document.getElementById('ea-date-sel');
+  sel.innerHTML='<option value="">— Select Date —</option>';
+  if(!ex.startDate||!ex.endDate) return;
+  var cur=new Date(ex.startDate+'T00:00:00'), end=new Date(ex.endDate+'T00:00:00');
+  while(cur<=end){ var ds=cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate()); var dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][cur.getDay()]; sel.innerHTML+='<option value="'+ds+'">'+dow+' '+fmtDate(ds)+(ds===todayStr()?' ← Today':'')+'</option>'; cur.setDate(cur.getDate()+1); }
+  if(ex.startDate<=todayStr()&&todayStr()<=ex.endDate) sel.value=todayStr();
+}
+function onExamDateChange(){ loadHallSummary(); }
+function populateDeptCheckboxes(){
+  if(!deptsData.length){ apiCall('GET','/depts').then(function(d){ deptsData=Array.isArray(d)?d:[]; buildDeptCbs(); }).catch(function(){}); return; }
+  buildDeptCbs();
+}
+function buildDeptCbs(){
+  var wrap=document.getElementById('ea-dept-wrap'); if(!wrap) return;
+  if(!deptsData.length){ wrap.innerHTML='<div style="color:var(--tdi);font-size:11.5px;">No departments found.</div>'; return; }
+  wrap.innerHTML='';
+  deptsData.forEach(function(dp){ var lbl=document.createElement('label'); lbl.className='dept-cb-wrap'; lbl.dataset.name=dp.name; var cb=document.createElement('input'); cb.type='checkbox'; cb.value=dp._id; cb.addEventListener('change',function(){ lbl.classList.toggle('checked',cb.checked); }); lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+dp.name)); wrap.appendChild(lbl); });
+}
+function getSelectedDepts(){ var r=[]; document.querySelectorAll('#ea-dept-wrap .dept-cb-wrap.checked').forEach(function(l){ r.push(l.dataset.name); }); return r; }
+var _srchTimer=null;
+function searchStudentByRegno(q){
+  var dd=document.getElementById('ea-search-dd'); if(q.length<3){dd.classList.remove('open');return;}
+  clearTimeout(_srchTimer); _srchTimer=setTimeout(function(){
+    var depts=getSelectedDepts().join(','), yr=document.getElementById('ea-year-filter').value;
+    var url='/students/exam-search?q='+encodeURIComponent(q); if(depts) url+='&depts='+encodeURIComponent(depts); if(yr) url+='&year='+encodeURIComponent(yr);
+    apiCall('GET',url).then(function(s){ renderSrchDd(Array.isArray(s)?s:[]); }).catch(function(){dd.classList.remove('open');});
+  },260);
+}
+function renderSrchDd(students){
+  var dd=document.getElementById('ea-search-dd');
+  if(!students.length){ dd.innerHTML='<div class="srch-item" style="color:var(--tdi);cursor:default;">No matching students.</div>'; dd.classList.add('open'); return; }
+  dd.innerHTML='';
+  students.forEach(function(s){ var already=eaStudentList.some(function(r){return r.regNo===s.regNo;}); var div=document.createElement('div'); div.className='srch-item'; div.innerHTML='<div class="srch-name">'+(s.name||'Unknown')+(already?' <span style="color:var(--gK);font-size:10px;">✓ Added</span>':'')+'</div><div class="srch-meta">Reg: <strong>'+s.regNo+'</strong> · '+s.deptName+' · Year '+s.year+'</div>'; if(!already) div.onclick=function(){ addStudent(s); document.getElementById('ea-regno-inp').value=''; dd.classList.remove('open'); }; dd.appendChild(div); });
+  dd.classList.add('open');
+}
+document.addEventListener('click',function(e){ if(!e.target.closest('#ea-search-dd')&&!e.target.matches('#ea-regno-inp')) document.getElementById('ea-search-dd').classList.remove('open'); });
+function addStudent(s){ if(eaStudentList.some(function(r){return r.regNo===s.regNo;})){showToast('Already added','warn');return;} eaStudentList.push({_id:s._id||null,regNo:s.regNo,name:s.name||'',deptName:s.deptName||'',year:s.year||'',status:'present'}); renderStudentList(); }
+function renderStudentList(){
+  var cont=document.getElementById('ea-student-list'), pill=document.getElementById('ea-count-pill'), sub=document.getElementById('ea-submit-btn');
+  if(!eaStudentList.length){ cont.innerHTML='<div style="text-align:center;color:var(--tdi);font-size:11.5px;padding:30px 0;">No students added yet.</div>'; pill.textContent='0 students'; document.getElementById('ea-present-count').textContent='0'; document.getElementById('ea-absent-count').textContent='0'; sub.disabled=true; sub.style.opacity='.5'; sub.style.cursor='not-allowed'; return; }
+  var present=0,absent=0,html='';
+  eaStudentList.forEach(function(s,i){ if(s.status==='present')present++;else absent++; html+='<div class="ea-row"><div style="font-size:11px;color:var(--tdi);width:18px;font-weight:700;">'+(i+1)+'</div><div class="ea-info"><div class="ea-name">'+s.name+'</div><div class="ea-meta">'+s.regNo+' · '+s.deptName+' · Year '+s.year+'</div></div><button class="ea-status-btn '+(s.status==='present'?'present':'absent')+'" onclick="toggleEaStatus('+i+')">'+(s.status==='present'?'✓ Present':'✗ Absent')+'</button><button class="ea-rm" onclick="removeEaStudent('+i+')">✕</button></div>'; });
+  cont.innerHTML=html; pill.textContent=eaStudentList.length+' student'+(eaStudentList.length>1?'s':'');
+  document.getElementById('ea-present-count').textContent=present; document.getElementById('ea-absent-count').textContent=absent;
+  sub.disabled=false; sub.style.opacity='1'; sub.style.cursor='pointer';
+}
+function toggleEaStatus(i){ eaStudentList[i].status=eaStudentList[i].status==='present'?'absent':'present'; renderStudentList(); }
+function removeEaStudent(i){ eaStudentList.splice(i,1); renderStudentList(); }
+function clearExamList(){ eaStudentList=[]; renderStudentList(); }
+function submitExamAttendance(){
+  var examId=document.getElementById('ea-exam-sel').value, date=document.getElementById('ea-date-sel').value, hallNo=document.getElementById('ea-hall-inp').value.trim();
+  if(!examId){showToast('Select an exam','warn');return;} if(!date){showToast('Select a date','warn');return;} if(!hallNo){showToast('Enter your hall number','warn');return;} if(!eaStudentList.length){showToast('Add at least one student','warn');return;}
+  dbToast('Submitting…','saving');
+  apiCall('POST','/exam-attendance',{examId,date,hallNo,records:eaStudentList.map(function(s){return{studentId:s._id,regNo:s.regNo,name:s.name,deptName:s.deptName,year:s.year,status:s.status};})})
+    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Submitted — Hall '+hallNo,'success',eaStudentList.filter(function(s){return s.status==='present';}).length+' present'); clearExamList(); document.getElementById('ea-hall-inp').value=''; loadHallSummary(); }).catch(function(){dbToast('Server error','error');});
+}
+function loadHallSummary(){
+  var examId=document.getElementById('ea-exam-sel').value, date=document.getElementById('ea-date-sel').value||todayStr();
+  if(!examId) return;
+  apiCall('GET','/exam-attendance/halls-today?examId='+examId+'&date='+date).then(function(halls){ renderHallSummary(Array.isArray(halls)?halls:[]); }).catch(function(){});
+}
+function renderHallSummary(halls){
+  var tbody=document.getElementById('hall-summary-tbody');
+  if(!halls.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--tdi);padding:16px;font-size:12px;">No submissions yet.</td></tr>';return;}
+  var html='';
+  halls.forEach(function(h){ var t=h.markedAt?new Date(h.markedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'; html+='<tr><td class="b">'+h.hallNo+'</td><td class="b">'+h.teacherName+'</td><td>'+(h.examTitle||'—')+'</td><td>'+fmtDate(h.date)+'</td><td><strong style="color:var(--gK);">'+h.totalPresent+'</strong></td><td><strong style="color:#dc2626;">'+h.totalAbsent+'</strong></td><td>'+t+'</td><td><button class="btn-out btn-xs" onclick="viewHallAtt(\''+h._id+'\')">👁️</button></td></tr>'; });
+  tbody.innerHTML=html;
+}
+function viewHallAtt(id){
+  apiCall('GET','/exam-attendance/'+id).then(function(r){ if(r.error||!r){showToast('Failed','warn');return;} document.getElementById('vam-title').textContent='Hall '+r.hallNo; document.getElementById('vam-sub').textContent=r.examTitle+' — '+fmtDate(r.date); document.getElementById('vam-meta').innerHTML='<span>👩‍🏫 <strong>'+r.teacherName+'</strong></span><span>🏛️ '+r.hallNo+'</span><span>📅 '+fmtDate(r.date)+'</span>'; var tb=document.getElementById('vam-tbody'); tb.innerHTML=''; r.records.forEach(function(rec,i){ tb.innerHTML+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+rec.regNo+'</td><td>'+rec.name+'</td><td>'+rec.deptName+'</td><td>'+rec.year+'</td><td>'+(rec.status==='present'?'<span class="bge bgg">Present</span>':'<span class="bge bgr">Absent</span>')+'</td></tr>'; }); document.getElementById('vam-present-total').textContent='✓ Present: '+r.totalPresent; document.getElementById('vam-absent-total').textContent='✗ Absent: '+r.totalAbsent; openModal('view-att-bg'); }).catch(function(){showToast('Server error','warn');});
+}
+function quickViewAtt(examId,title){ examSubTab('attendance'); setTimeout(function(){ document.getElementById('ea-exam-sel').value=examId; onExamSelChange(); },100); }
+
+// ── MANAGE ADMINS (SETTINGS) ──────────────────────────────────────────
+function loadManageAdmins(){
+  document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>';
+  apiCall('GET','/manage-admins').then(function(data){
+    var admins=Array.isArray(data)?data:[];
+    if(!admins.length){ document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">No manage admins added yet.</div>'; return; }
+    var html='<div style="display:flex;flex-direction:column;gap:10px;">';
+    admins.forEach(function(a){
+      var permsHtml=(a.permissions||[]).map(function(p){ return '<span class="perm-chip">'+p+'</span>'; }).join('');
+      var statusPill=a.active?'<span class="bge bgg">Active</span>':'<span class="bge bgr">Inactive</span>';
+      html+='<div class="admin-card">'
+        +'<div class="admin-av">'+a.name[0].toUpperCase()+'</div>'
+        +'<div class="admin-info">'
+          +'<div class="admin-name">'+a.name+' '+statusPill+'</div>'
+          +'<div class="admin-user">@'+a.username+(a.email?' · '+a.email:'')+'</div>'
+          +'<div style="margin-top:4px;">'+permsHtml+'</div>'
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'
+          +'<button class="btn-out btn-xs" onclick="openAdminModal(\''+a._id+'\')">✏️ Edit</button>'
+          +'<div style="font-size:9.5px;color:var(--tdi);">Added by '+a.addedBy+'</div>'
+        +'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    document.getElementById('manage-admins-list').innerHTML=html;
+  }).catch(function(){ document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:20px;color:#dc2626;font-size:12px;">Failed to load</div>'; });
+}
+
+var _manageAdmins=[];
+function openAdminModal(adminId){
+  document.getElementById('am-title').textContent=adminId?'Edit Admin':'Add Manage Admin';
+  document.getElementById('am-id').value=adminId||'';
+  document.getElementById('am-delete-btn').style.display=adminId?'':'none';
+  ['am-name','am-email','am-username','am-password'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('am-pw-label').textContent=adminId?'Password (leave blank to keep)':'Password *';
+  document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ cb.checked=['calendar','exam','attendance'].includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); });
+  if(adminId){
+    apiCall('GET','/manage-admins').then(function(data){ var admins=Array.isArray(data)?data:[], a=admins.find(function(x){return x._id===adminId;}); if(!a) return; document.getElementById('am-name').value=a.name||''; document.getElementById('am-email').value=a.email||''; document.getElementById('am-username').value=a.username||''; var perms=a.permissions||[]; document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ cb.checked=perms.includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); }); }).catch(function(){}); }
+  openModal('admin-modal-bg');
+}
+function saveManageAdmin(){
+  var id=document.getElementById('am-id').value, name=document.getElementById('am-name').value.trim(), username=document.getElementById('am-username').value.trim(), pw=document.getElementById('am-password').value;
+  if(!name){showToast('Name required','warn');return;} if(!username){showToast('Username required','warn');return;} if(!id&&!pw){showToast('Password required','warn');return;}
+  var perms=[]; document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ if(cb.checked) perms.push(cb.value); });
+  var payload={name,username,email:document.getElementById('am-email').value.trim(),permissions:perms};
+  if(pw) payload.password=pw;
+  if(!id&&!payload.password){showToast('Password required','warn');return;}
+  dbToast('Saving…','saving');
+  apiCall(id?'PUT':'POST',id?'/manage-admins/'+id:'/manage-admins',payload)
+    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Saved','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(){dbToast('Server error','error');});
+}
+function deleteManageAdmin(){
+  if(!confirm('Remove this manage admin?')) return;
+  var id=document.getElementById('am-id').value;
+  dbToast('Removing…','saving');
+  apiCall('DELETE','/manage-admins/'+id).then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Removed','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(){dbToast('Server error','error');});
+}
+
+// init perm checkboxes toggle behavior
+document.querySelectorAll('#am-perms-wrap .dept-cb-wrap').forEach(function(lbl){
+  var cb=lbl.querySelector('input'); if(cb) cb.addEventListener('change',function(){ lbl.classList.toggle('checked',cb.checked); });
+});
+</script>
+</body>
+</html>

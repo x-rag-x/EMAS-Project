@@ -22,6 +22,16 @@ const M = require('./models');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ── Helper: resolve role-specific Mongoose model ──────
+function getRoleModel(role) {
+  switch (role) {
+    case 'admin':   return M.Admin;
+    case 'teacher': return M.Teacher;
+    case 'student': return M.Student;
+    default:        return null;
+  }
+}
+
 // ── Middleware ────────────────────────────────────────
 app.use(cors({ origin: process.env.NODE_ENV === 'production' ? true : cfg.CORS_ORIGIN, credentials: true }));
 app.use(express.json());
@@ -37,47 +47,174 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
 
 // ── Seed Defaults ─────────────────────────────────────
 async function seedDefaults() {
-  // Seed a single admin account only if none exists (first-boot)
-  const adminExists = await M.User.findOne({ role: 'admin' });
+  // Seed admin account (first-boot only) → both M.Admin and M.User
+  const adminExists = await M.Admin.findOne({ username: 'admin' });
   if (!adminExists) {
-    const hash = await bcrypt.hash('admin123', cfg.BCRYPT_ROUNDS);
-    await M.User.create({ name: 'Administrator', username: 'admin', password: hash, role: 'admin', mustChangePassword: true });
-    console.log('✅ Default admin account created — please change the password after first login.');
+    const hash = await bcrypt.hash(cfg.ADMIN_PASSWORD, cfg.BCRYPT_ROUNDS);
+    await M.Admin.create({ fullName: 'Administrator', firstName: 'Admin', lastName: '', username: 'admin', password: hash, trackId: 'TRADMIN001', isAdmin: true, adminRights: 'all', active: true, mustChangePassword: true });
+    // Shadow entry in legacy User for session tracking
+    const userExists = await M.User.findOne({ username: 'admin' });
+    if (!userExists) await M.User.create({ name: 'Administrator', username: 'admin', password: hash, role: 'admin', trackId: 'TRADMIN001', status: 'active' });
+    console.log('✅ Default admin account created');
   }
 
-  
-  // Seed default settings
+  // ── Settings defaults — 5 card-grouped keys + 3 internal keys ──────────────
+  // card enum: 'Institution Details' | 'Settings' | 'Academic Settings' | 'Password Policy' 
   const defaults = [
-    { key: 'maintenance', value: { active: false, message: 'System under maintenance. Please try again later.', affectedRoles: ['teacher', 'student'], endTime: null, startedAt: null } },
-    { key: 'institution', value: { name: 'Sri Shakthi Institute of Engineering and Technology', short: 'SIET', address: 'Coimbatore, Tamil Nadu', email: '', phone: '' } },
-    { key: 'academic', value: { year: '2025-26', sem: 'I', minAttendance: 75, workingDays: 6 } },
-    { key: 'security', value: { maxLoginAttempts: 3, sessionTimeoutMins: 480, forcePwChange: true } },
-    { key: 'special_delete_password', value: bcrypt.hashSync('987543210', 10) },
-    { key: 'college_ips', value: ['127.0.0.1', '::1', '192.', '10.'] },
+
+    // ── card: Institution Details ────────────────────────────────────────────
+    {
+      card: 'Institution Details',
+      key:  'institution',
+      value: {
+        institutionName:    'Sri Shakthi Institute of Engineering and Technology',
+        institutionShort:   'SIET',
+        institutionAddress: 'Coimbatore, Tamil Nadu',
+        institutionEmail:   '',
+        institutionPhone:   '',
+      }
+    },
+
+    // ── card: Settings ───────────────────────────────────────────────────────
+    {
+      card: 'Settings',
+      key:  'settings',
+      value: {
+        // Pages
+        pageStudents:     true,
+        pageTeachers:     true,
+        pageManage:       true,
+        pageBulk:         true,
+        // Models
+        modelBackup:      true,
+        modelUndo:        true,
+        modelMaintenance: true,
+        modelAdder:       true,
+        modelAddStudent:  true,
+        modelExportSheet: true,
+        moduleDelUseAdminPass: true,
+        modelProduction:    cfg.NODE_ENV === 'production' ? true : false,
+        // Attendance
+        markAttendance:   true,
+        liveSessions:     true,
+        forwardToRep:     true,
+      }
+    },
+
+    // ── card: Academic Settings ──────────────────────────────────────────────
+    {
+      card: 'Academic Settings',
+      key:  'academic',
+      value: {
+        academicYear:  '2025-26',
+        minAttendance: 75,
+        workingDays:   6,
+        errorsCount:   20,
+      }
+    },
+
+    // ── card: Password Policy ────────────────────────────────────────────────
+    {
+      card: 'Password Policy',
+      key:  'security',
+      value: {
+        forcePasswordChange:   true,
+        requireStrongPassword: true,
+        sessionTimeout:        true,
+        sessionTimeoutMins:    60,
+        maxLoginAttempts:      3,
+      }
+    },
+
+    // ── card: System Utilities ───────────────────────────────────────────────
+    {
+      card: 'System Utilities',
+      key:  'advanced',
+      value: {
+        debugMode:         false,
+        multiAdminSession: false,
+        autoSeedDemoData:  false,
+      }
+    },
+
+    // ── Internal / operational keys ──────────────────────────────────────────
+    {
+      card: 'System Utilities',
+      key:  'maintenance',
+      value: {
+        active:        false,
+        message:       'System under maintenance. Please try again later.',
+        affectedRoles: [],
+        endTime:       null,
+        startedAt:     null,
+      }
+    }
   ];
+
+  let seeded = 0;
   for (const d of defaults) {
     const exists = await M.Settings.findOne({ key: d.key });
-    if (!exists) await M.Settings.create(d);
+    if (!exists) {
+      await M.Settings.create({ card: d.card, key: d.key, value: d.value, updatedBy: 'system' });
+      seeded++;
+      console.log(`  ✅ Seeded settings key: ${d.key}`);
+    } else if (!exists.card) {
+      // Back-fill missing card field on old records
+      await M.Settings.findOneAndUpdate({ key: d.key }, { $set: { card: d.card } });
+    }
+  }
+  if (seeded > 0) console.log(`✅ ${seeded} default setting(s) seeded`);
+
+  // ── One-time migration: flatten old per-field rows → grouped object ────────
+  // Old server stored e.g. key:'institutionName', key:'pageStudents' individually.
+  // Detect and merge them into the new grouped key, then delete the old rows.
+  const migrationMap = [
+    {
+      groupKey: 'institution', card: 'Institution Details',
+      oldKeys: ['institutionName','institutionShort','institutionAddress','institutionEmail','institutionPhone'],
+    },
+    {
+      groupKey: 'settings', card: 'Settings',
+      oldKeys: ['pageStudents','pageTeachers','pageManage','pageBulk','errorsCount',
+                'modelBackup','modelUndo','modelMaintenance','modelAdder','modelAddStudent','modelExportSheet',
+                'markAttendance','liveSessions','forwardToRep'],
+    },
+    {
+      groupKey: 'academic', card: 'Academic Settings',
+      oldKeys: ['academicYear','minAttendance','workingDays','errorsCount'],
+    },
+    {
+      groupKey: 'security', card: 'Password Policy',
+      oldKeys: ['forcePasswordChange','requireStrongPassword','sessionTimeout','sessionTimeoutMins','maxLoginAttempts'],
+    },
+    {
+      groupKey: 'advanced', card: 'System Utilities',
+      oldKeys: ['debugMode','multiAdminSession','autoSeedDemoData'],
+    },
+  ];
+  for (const { groupKey, card, oldKeys } of migrationMap) {
+    const oldRows = await M.Settings.find({ key: { $in: oldKeys } });
+    if (oldRows.length === 0) continue;
+    // Merge old scalar rows into the grouped object
+    const existing = await M.Settings.findOne({ key: groupKey });
+    const merged = existing ? { ...existing.value } : {};
+    for (const row of oldRows) merged[row.key] = row.value;
+    await M.Settings.findOneAndUpdate(
+      { key: groupKey },
+      { $set: { card, value: merged, updatedBy: 'migration' } },
+      { upsert: true }
+    );
+    await M.Settings.deleteMany({ key: { $in: oldKeys } });
+    console.log(`🔄 Migrated ${oldRows.length} old key(s) → ${groupKey}`);
   }
 
-  // Seed Manage settings (portal toggles)
-  const manageExists = await M.Manage.findOne();
-  if (!manageExists) {
-    await M.Manage.create({
-      StudentsPortal: true, TeachersPortal: true, TimeTablePortal: true,
-      LiveSessionFunctionality: true, StudentsViewAttendance: true,
-      ForwardToRep: true, updatedBy: 'system'
-    });
-    console.log('✅ Manage settings seeded');
-  }
-
-  // ── Migrate: patch any old maintenance record missing new fields (runs once, harmless after)
+  // Patch old maintenance record missing affectedRoles / endTime
   await M.Settings.findOneAndUpdate(
     { key: 'maintenance', 'value.affectedRoles': { $exists: false } },
     { $set: { 'value.affectedRoles': ['teacher', 'student'], 'value.endTime': null, 'value.startedAt': null } }
   );
 
-  // Log server start (no credentials logged)
+  // Log server start
   await M.Log.create({
     userName: 'SYSTEM', role: 'system',
     action: 'Server Started',
@@ -88,10 +225,10 @@ async function seedDefaults() {
 }
 
 // ── Helper: log action to DB ──────────────────────────
-async function logAction(userId, userName, role, action, details, category = 'general', severity = 'info', ip = '', sessionId = '') {
+async function logAction(trackId, userName, role, action, details, category = 'general', severity = 'info', ip = '', sessionId = '') {
   try {
     await M.Log.create({
-      userId, userName, role, action, details, category, severity,
+      userName, role, action, details, category, severity,
       ip: ip || '', sessionId: sessionId || '',
       time: new Date()
     });
@@ -148,39 +285,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (!username || !password || !role)
       return res.status(400).json({ error: 'username, password and role required' });
 
+    const model = getRoleModel(role);
+    if (!model) return res.status(400).json({ error: 'Invalid role' });
 
-    const user = await M.User.findOne({ username: username.toLowerCase(), role, active: true });
+    const user = await model.findOne({ username: username.toLowerCase(), active: true });
     if (!user) {
       await logAction(null, username, role, 'Login Failed', 'User not found', 'security', 'warning', req.ip);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check account lock
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      const mins = Math.ceil((user.lockedUntil - new Date()) / 60000);
-      return res.status(429).json({ error: `Account locked. Try again in ${mins} minute(s).` });
-    }
-
-
     const match = await bcrypt.compare(password, user.password);
-
-
     if (!match) {
-      const security = await M.Settings.findOne({ key: 'security' });
-      const maxAttempts = security?.value?.maxLoginAttempts || 5;
-      const newFails = (user.failedLogins || 0) + 1;
-      const updates = { failedLogins: newFails };
-      if (newFails >= maxAttempts) {
-        updates.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // lock 15 mins
-        updates.failedLogins = 0;
-        // Auto-enable maintenance if too many failures (possible attack)
-        if (newFails >= maxAttempts * 2) {
-          await M.Settings.findOneAndUpdate({ key: 'maintenance' }, { 'value.active': true });
-          await logAction(user._id, user.name, role, 'Maintenance Auto-Enabled', 'Too many failed logins — possible attack', 'security', 'critical', req.ip);
-        }
-      }
-      await M.User.findByIdAndUpdate(user._id, updates);
-      await logAction(user._id, user.name, role, 'Login Failed', `Wrong password (attempt ${newFails})`, 'security', 'warning', req.ip);
+      await logAction(user.trackId || user._id, user.fullName || user.name, role, 'Login Failed', `Wrong password`, 'security', 'warning', req.ip);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -203,43 +319,100 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    // Reset failed logins — stamp firstLogin only on very first successful login
-    const _loginUpd = { failedLogins: 0, lockedUntil: null, lastLogin: new Date(), $inc: { loginCount: 1 } };
-    if (!user.firstLogin) _loginUpd.firstLogin = new Date();
-    await M.User.findByIdAndUpdate(user._id, _loginUpd);
+    // Ensure shadow user in legacy M.User collection exists and matches
+    let shadowUser = await M.User.findOne({ username: user.username, role });
+    if (!shadowUser) {
+      shadowUser = await M.User.create({
+        name: user.fullName || user.name,
+        username: user.username,
+        password: user.password,
+        role: role,
+        trackId: user.trackId,
+        status: 'active',
+        current: false
+      });
+    } else {
+      // Keep password and name in sync
+      shadowUser.password = user.password;
+      shadowUser.name = user.fullName || user.name;
+      shadowUser.trackId = user.trackId;
+      await shadowUser.save();
+    }
+
+    // Update firstLogin for role-specific user if null
+    if (!user.firstLogin) {
+      user.firstLogin = new Date();
+      await user.save();
+    }
 
     const token = jwt.sign(
-      { _id: user._id, name: user.name, username: user.username, role: user.role, dept: user.dept, empId: user.empId, desig: user.desig },
+      {
+        _id: shadowUser._id, // Keep legacy User _id for middleware / session checks
+        roleId: user._id, // Role-specific model ID
+        name: user.fullName || user.name,
+        username: user.username,
+        role: role,
+        trackId: user.trackId,
+        dept: user.department || user.deptName || '',
+        empId: user.employeeNo || '',
+        desig: user.designation || '',
+        regNo: user.registerNo || '',
+      },
       cfg.JWT_SECRET,
       { expiresIn: cfg.JWT_EXPIRES_IN }
     );
 
-    // Create session record
+    // Create session record referencing shadowUser._id
     const sessionId = crypto.randomBytes(16).toString('hex');
     await M.Session.create({
-      userId: user._id, username: user.username, role: user.role,
-      token, ip: req.ip, userAgent: req.headers['user-agent'] || '',
+      userId: shadowUser._id,
+      username: user.username,
+      role: role,
+      token,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'] || '',
     });
 
-    await logAction(user._id, user.name, role, 'Login', `${role} logged in from ${req.ip}`, 'login', 'info', req.ip, sessionId);
+    await logAction(user.trackId || shadowUser._id, user.fullName || user.name, role, 'Login', `${role} logged in from ${req.ip}`, 'login', 'info', req.ip, sessionId);
 
-    // Re-fetch user to get updated firstLogin value
-    const freshUser = await M.User.findById(user._id).lean();
+    // Determine HOD, Class Advisor and timetable coordinator status based on specials option
+    const isHodVal = role === 'teacher' && user.specials?.option === 'isHod';
+    const HoddeptNameVal = (role === 'teacher' && user.specials?.option === 'isHod' && user.specials?.key) || '';
+    
+    const isClassAdvisorVal = role === 'teacher' && user.specials?.option === 'isClassAdvisor';
+    const advisorClassNameVal = (role === 'teacher' && user.specials?.option === 'isClassAdvisor' && user.specials?.key) || '';
+
+    const isTTCoordVal = role === 'teacher' && user.specials?.option === 'isTimeTableCoordinator';
+    const TTdeptNameVal = (role === 'teacher' && user.specials?.option === 'isTimeTableCoordinator' && user.specials?.key) || '';
+
     res.json({
       token, sessionId,
-      mustChangePassword: freshUser.mustChangePassword,
+      mustChangePassword: user.mustChangePassword,
       user: {
-        _id: freshUser._id, name: freshUser.name, role: freshUser.role,
-        dept: freshUser.dept, empId: freshUser.empId, desig: freshUser.desig,
-        email: freshUser.email, username: freshUser.username,
-        isHOD: freshUser.isHOD, HoddeptName: freshUser.HoddeptName,
-        isClassAdvisor: freshUser.isClassAdvisor, advisorClassName: freshUser.advisorClassName,
-        isTimeTableCoordinator: freshUser.isTimeTableCoordinator, TTdeptName: freshUser.TTdeptName,
-        isAdmin: freshUser.isAdmin, adminRights: freshUser.adminRights,
-        isClassRep: freshUser.isClassRep, regNo: freshUser.regNo, deptName: freshUser.deptName,
-        loginCount: freshUser.loginCount, lastLogin: freshUser.lastLogin,
-        firstLogin: freshUser.firstLogin || null,
-        active: freshUser.active,
+        _id: shadowUser._id, // Return shadow User _id for legacy client code
+        roleId: user._id,
+        name: user.fullName || user.name,
+        role: role,
+        dept: user.department || user.deptName || '',
+        empId: user.employeeNo || '',
+        desig: user.designation || '',
+        email: user.email || '',
+        username: user.username,
+        isHOD: isHodVal,
+        HoddeptName: HoddeptNameVal,
+        isClassAdvisor: isClassAdvisorVal,
+        advisorClassName: advisorClassNameVal,
+        isTimeTableCoordinator: isTTCoordVal,
+        TTdeptName: TTdeptNameVal,
+        isAdmin: user.isAdmin || (role === 'admin'),
+        adminRights: user.adminRights || (role === 'admin' ? 'all' : []),
+        isClassRep: role === 'student' && user.isRep,
+        regNo: user.registerNo || '',
+        deptName: user.department || user.deptName || '',
+        loginCount: 1,
+        lastLogin: new Date(),
+        firstLogin: user.firstLogin || null,
+        active: user.active,
       }
     });
   } catch (err) {
@@ -259,15 +432,29 @@ app.post('/api/auth/logout', authMiddleware, async (req, res) => {
 app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = await M.User.findById(req.user._id);
+    const model = getRoleModel(req.user.role);
+    if (!model) return res.status(400).json({ error: 'Invalid role model' });
+
+    const user = await model.findOne({ username: req.user.username });
     if (!user) return res.status(404).json({ error: 'User not found' });
+
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(401).json({ error: 'Current password incorrect' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    user.password = await bcrypt.hash(newPassword, cfg.BCRYPT_ROUNDS);
+
+    const hashed = await bcrypt.hash(newPassword, cfg.BCRYPT_ROUNDS);
+    user.password = hashed;
     user.mustChangePassword = false;
     await user.save();
-    await logAction(user._id, user.name, user.role, 'Password Changed', 'User changed their password', 'security', 'info', req.ip);
+
+    // Sync shadow user
+    const shadowUser = await M.User.findOne({ username: req.user.username, role: req.user.role });
+    if (shadowUser) {
+      shadowUser.password = hashed;
+      await shadowUser.save();
+    }
+
+    await logAction(user.trackId || req.user._id, req.user.name, req.user.role, 'Password Changed', 'User changed their password', 'security', 'info', req.ip);
     res.json({ message: 'Password updated successfully' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -281,11 +468,22 @@ app.get('/api/auth/verify-session', authMiddleware, async (req, res) => {
 //  SETTINGS
 // ════════════════════════════════════════════════════════
 
+// GET /api/settings  — returns { institution:{…}, settings:{…}, academic:{…}, security:{…}, advanced:{…} }
 app.get('/api/settings', authMiddleware, adminOnly, async (req, res) => {
-  const settings = await M.Settings.find({ key: { $ne: 'special_delete_password' } });
-  const obj = {};
-  settings.forEach(s => { obj[s.key] = s.value; });
-  res.json(obj);
+  try {
+    const rows = await M.Settings.find({ key: { $ne: 'special_delete_password' } });
+    // Group rows: if the key IS one of the 5 card group keys, expose its value under that group name.
+    // Individual per-field keys (institution, settings, academic, security, advanced) are stored
+    // as a whole-object value under those exact key names.
+    const grouped = {};
+    const CARD_KEYS = ['institution', 'settings', 'academic', 'security', 'advanced', 'maintenance'];
+    rows.forEach(s => {
+      if (CARD_KEYS.includes(s.key)) {
+        grouped[s.key] = s.value;
+      }
+    });
+    res.json(grouped);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/settings/:key', authMiddleware, async (req, res) => {
@@ -321,17 +519,39 @@ app.put('/api/settings/:key', authMiddleware, adminOnly, async (req, res) => {
 app.post('/api/settings/verify-delete-password', authMiddleware, adminOnly, async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
-  // Check admin password
-  const user = await M.User.findById(req.user._id);
-  const adminMatch = await bcrypt.compare(password, user.password);
-  if (adminMatch) return res.json({ valid: true });
-  // Check special password
-  const setting = await M.Settings.findOne({ key: 'special_delete_password' });
-  if (!setting) return res.status(403).json({ valid: false });
-  const specialMatch = await bcrypt.compare(password, setting.value);
-  if (specialMatch) return res.json({ valid: true });
-  await logAction(req.user._id, req.user.name, req.user.role, 'Delete Auth Failed', 'Wrong delete password attempt', 'security', 'warning', req.ip);
+
+  // Check special delete password 
+  if (password === cfg.DELETE_DATA_PASSWORD) {
+    return res.json({ valid: true });
+  }
+
+  const useAdminPass = (await M.Settings.findOne({ key: 'settings' }))?.value?.moduleDelUseAdminPass;
+  if(useAdminPass){
+    // Check admin password from M.Admin
+    const adminUser = await M.Admin.findOne({ trackId: req.user.trackId });
+    if (adminUser) {
+      const adminMatch = await bcrypt.compare(password, adminUser.password);
+      if (adminMatch) return res.json({ valid: true });
+    }
+  }
+  await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Delete Auth Failed', 'Wrong delete password attempt', 'security', 'warning', req.ip);
   res.status(403).json({ valid: false, error: 'Incorrect password' });
+});
+
+app.get('/api/settings/value/:settingKey', authMiddleware, async (req, res) => {
+  try {
+    const settings = await M.Settings.findOne({ key: 'settings' }).lean();
+    if (!settings?.value) {
+      return res.status(404).json({ error: 'Settings not found' });
+    }
+    const value = settings.value[req.params.settingKey];
+    if (value === undefined) {
+      return res.status(404).json({ error: 'Key not found' });
+    }
+    res.json(value);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ════════════════════════════════════════════════════════
@@ -438,42 +658,153 @@ app.get('/api', authMiddleware, async (req, res) => {
   if (req.query.deptId) filter.deptId = req.query.deptId;
   if (req.query.classId) filter.classId = req.query.classId;
   if (req.query.section) filter.section = req.query.section;
-  res.json(await M.Student.find(filter).sort({ name: 1 }));
+  
+  const list = await M.Student.find(filter).sort({ fullName: 1 }).lean();
+  const mapped = list.map(s => ({
+    ...s,
+    name: s.fullName,
+    regNo: s.registerNo,
+  }));
+  res.json(mapped);
 });
+
 // Alias: GET /api/students (consistent with other routes)
 app.get('/api/students', authMiddleware, async (req, res) => {
   const filter = {};
   if (req.query.deptId) filter.deptId = req.query.deptId;
   if (req.query.classId) filter.classId = req.query.classId;
   if (req.query.section) filter.section = req.query.section;
-  res.json(await M.Student.find(filter).sort({ name: 1 }));
+  
+  const list = await M.Student.find(filter).sort({ fullName: 1 }).lean();
+  const mapped = list.map(s => ({
+    ...s,
+    name: s.fullName,
+    regNo: s.registerNo,
+    deptName: s.department,
+    academicYear: s.admissionYear,
+    className: s.class,
+  }));
+  res.json(mapped);
 });
+
 app.get('/api/students/count', authMiddleware, async (req, res) => {
   res.json({ count: await M.Student.countDocuments() });
 });
+
 app.post('/api/students', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const stu = await M.Student.create(req.body);
-    await logAction(req.user._id, req.user.name, req.user.role, 'Student Added', `${stu.name} (${stu.regNo})`, 'data', 'info', req.ip);
-    res.status(201).json(stu);
+    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, year, section, email, username, password, isRep } = req.body;
+    
+    // Check if student exists
+    const exists = await M.Student.findOne({ registerNo: regNo });
+    if (exists) return res.status(400).json({ error: 'Student with this Register No already exists' });
+
+    const generatedTrackId = 'TRSTU_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    
+    const defaultPassword = password || cfg.STUDENT_PASSWORD;
+    const hash = await bcrypt.hash(defaultPassword, cfg.BCRYPT_ROUNDS);
+
+    const generatedUsername = username || regNo.toLowerCase();
+
+    const stu = await M.Student.create({
+      fullName: name,
+      registerNo: regNo,
+      class: className || '',
+      classId,
+      section: section || 'A',
+      courseType: courseType || 'UG',
+      branch: branch || 'None',
+      department: deptName || '',
+      deptId,
+      admissionYear: academicYear || '',
+      email: email || '',
+      username: generatedUsername,
+      password: hash,
+      trackId: generatedTrackId,
+      isRep: !!isRep,
+      active: true,
+      mustChangePassword: true
+    });
+
+    // Create shadow user in M.User
+    await M.User.create({
+      name: name,
+      username: generatedUsername,
+      password: hash,
+      role: 'student',
+      trackId: generatedTrackId,
+      status: 'active',
+      current: false
+    });
+
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Added', `${stu.fullName} (${stu.registerNo})`, 'data', 'info', req.ip);
+    res.status(201).json({ ...stu.toObject(), name: stu.fullName, regNo: stu.registerNo });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.put('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
-  const stu = await M.Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  await logAction(req.user._id, req.user.name, req.user.role, 'Student Updated', stu?.name, 'data', 'info', req.ip);
-  res.json(stu);
+  try {
+    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, year, section, email, username, password, isRep, active } = req.body;
+    
+    const stu = await M.Student.findById(req.params.id);
+    if (!stu) return res.status(404).json({ error: 'Student not found' });
+
+    const oldUsername = stu.username;
+
+    if (name) stu.fullName = name;
+    if (regNo) stu.registerNo = regNo;
+    if (className !== undefined) stu.class = className;
+    if (classId !== undefined) stu.classId = classId;
+    if (section !== undefined) stu.section = section;
+    if (courseType !== undefined) stu.courseType = courseType;
+    if (branch !== undefined) stu.branch = branch;
+    if (deptName !== undefined) stu.department = deptName;
+    if (deptId !== undefined) stu.deptId = deptId;
+    if (academicYear !== undefined) stu.admissionYear = academicYear;
+    if (email !== undefined) stu.email = email;
+    if (username) stu.username = username.toLowerCase().trim();
+    if (isRep !== undefined) stu.isRep = isRep;
+    if (active !== undefined) stu.active = active;
+
+    if (password) {
+      stu.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+    }
+
+    await stu.save();
+
+    // Sync shadow user
+    let shadowUser = await M.User.findOne({ username: oldUsername, role: 'student' });
+    if (shadowUser) {
+      if (name) shadowUser.name = name;
+      if (username) shadowUser.username = username.toLowerCase().trim();
+      if (password) shadowUser.password = stu.password;
+      if (active !== undefined) shadowUser.status = active ? 'active' : 'inactive';
+      await shadowUser.save();
+    }
+
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Updated', stu.fullName, 'data', 'info', req.ip);
+    res.json({ ...stu.toObject(), name: stu.fullName, regNo: stu.registerNo });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.delete('/api/students/:id', authMiddleware, adminOnly, async (req, res) => {
-  const stu = await M.Student.findById(req.params.id).lean();
-  if (stu) {
+  try {
+    const stu = await M.Student.findById(req.params.id);
+    if (!stu) return res.status(404).json({ error: 'Student not found' });
+
     await M.UndoLog.create({
-      collectionName: 'students', label: `Student: ${stu.name} (${stu.regNo})`,
-      snapshot: stu, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+      collectionName: 'students', label: `Student: ${stu.fullName} (${stu.registerNo})`,
+      snapshot: stu.toObject(), deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
     });
+    
     await M.Student.findByIdAndDelete(req.params.id);
-  }
-  await logAction(req.user._id, req.user.name, req.user.role, 'Student Deleted', stu?.name, 'data', 'warning', req.ip);
-  res.json({ deleted: true });
+    
+    // Delete shadow user
+    await M.User.deleteOne({ username: stu.username, role: 'student' });
+
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Deleted', stu.fullName, 'data', 'warning', req.ip);
+    res.json({ deleted: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Bulk Upload Students ─────────────────────────────
@@ -483,7 +814,7 @@ app.post('/api/students/bulk-upload', authMiddleware, adminOnly, upload.single('
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(worksheet);
-    const VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'MBA', 'MCA', 'B.E', 'B.TECH', 'BE', 'BTECH'];
+    const VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'B.E', 'B.TECH'];
     let added = 0, skipped = 0, errors = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -495,19 +826,50 @@ app.post('/api/students/bulk-upload', authMiddleware, adminOnly, upload.single('
       if (!deptName) rowErrors.push('Department missing');
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) rowErrors.push('Invalid email');
       if (VALID_COURSE_TYPES.indexOf(courseType) === -1) rowErrors.push(`CourseType "${courseType}" unknown`);
-      if (await M.Student.findOne({ regNo })) rowErrors.push(`RegisterNo ${regNo} already exists`);
+      if (await M.Student.findOne({ registerNo: regNo })) rowErrors.push(`RegisterNo ${regNo} already exists`);
       if (username && await M.User.findOne({ username: username.toLowerCase() })) rowErrors.push(`Username "${username}" taken`);
       if (rowErrors.length) { skipped++; errors.push({ row: i + 2, name: name || '(blank)', issues: rowErrors }); continue; }
       const dept = await M.Department.findOne({ $or: [{ name: new RegExp(deptName, 'i') }, { code: new RegExp(deptName, 'i') }] });
       const cls = await M.Class.findOne({ name: className }).lean();
-      await M.Student.create({ name, regNo, academicYear: acadYear, courseType, branch, deptId: dept?._id, deptName: dept?.name || deptName, classId: cls?._id, className: cls?.name || className, year: yearStr, section, email });
-      if (username) {
-        const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-        await M.User.create({ name, username: username.toLowerCase(), password: hash, role: 'student', regNo, deptName: dept?.name || deptName, email });
-      }
+      
+      const generatedTrackId = 'TRSTU_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      const defaultPassword = password || cfg.STUDENT_PASSWORD;
+      const hash = await bcrypt.hash(defaultPassword, cfg.BCRYPT_ROUNDS);
+      const generatedUsername = username || regNo.toLowerCase();
+
+      await M.Student.create({
+        fullName: name,
+        registerNo: regNo,
+        class: className || cls?.name || '',
+        classId: cls?._id,
+        section,
+        courseType,
+        branch,
+        department: dept?.name || deptName,
+        deptId: dept?._id,
+        admissionYear: acadYear,
+        email,
+        username: generatedUsername,
+        password: hash,
+        trackId: generatedTrackId,
+        isRep: false,
+        active: true,
+        mustChangePassword: true
+      });
+
+      await M.User.create({
+        name: name,
+        username: generatedUsername,
+        password: hash,
+        role: 'student',
+        trackId: generatedTrackId,
+        status: 'active',
+        current: false
+      });
+
       added++;
     }
-    await logAction(req.user._id, req.user.name, req.user.role, 'Bulk Student Upload', `${added} added, ${skipped} skipped`, 'data', 'info', req.ip);
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Bulk Student Upload', `${added} added, ${skipped} skipped`, 'data', 'info', req.ip);
     res.json({ added, skipped, total: rows.length, errors: errors.slice(0, 20), message: `Import complete: ${added} added, ${skipped} skipped` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -520,49 +882,177 @@ app.get('/api/teachers/trackid/:trackId', authMiddleware, async (req, res) => {
   try {
     const teacher = await M.Teacher.findOne(
       { trackId: req.params.trackId.trim(), active: true },
-      'name isHOD trackId'
+      'fullName specials trackId'
     ).lean();
     if (!teacher) return res.status(404).json({ error: 'TrackID not found' });
-    res.json({ fullName: teacher.name, isHod: !!teacher.isHOD, trackId: teacher.trackId });
+    res.json({ fullName: teacher.fullName, isHod: teacher.specials?.option === 'isHod', trackId: teacher.trackId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/api/teachers', authMiddleware, async (req, res) => {
-  const teachers = await M.User.find({ role: 'teacher', active: true }, '-password').sort({ name: 1 });
-  res.json(teachers);
+  try {
+    const teachers = await M.Teacher.find({ active: true }, '-password').sort({ fullName: 1 });
+    const mapped = teachers.map(t => {
+      const isHodVal = t.specials?.option === 'isHod';
+      const isClassAdvisorVal = t.specials?.option === 'isClassAdvisor';
+      const isTTCoordVal = t.specials?.option === 'isTimeTableCoordinator';
+      return {
+        _id: t._id,
+        name: t.fullName,
+        fullName: t.fullName,
+        firstName: t.firstName,
+        lastName: t.lastName,
+        empId: t.employeeNo,
+        employeeNo: t.employeeNo,
+        dept: t.department,
+        department: t.department,
+        desig: t.designation,
+        designation: t.designation,
+        email: t.email,
+        username: t.username,
+        trackId: t.trackId,
+        isHOD: isHodVal,
+        isClassAdvisor: isClassAdvisorVal,
+        isTimeTableCoordinator: isTTCoordVal,
+        active: t.active,
+        current: t.current,
+        status: t.status,
+        mustChangePassword: t.mustChangePassword,
+        firstLogin: t.firstLogin,
+      };
+    });
+    res.json(mapped);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 app.post('/api/teachers', authMiddleware, adminOnly, async (req, res) => {
   try {
     const { name, empId, dept, desig, username, password, email, isHOD, isClassAdvisor, advisorClassId, advisorClassName, isWarden, isExamCoordinator, isPlacementCoord, qualifications, experience, joiningDate } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: 'name, username, password required' });
     const hash = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
 
-    const teacher = await M.User.create({ name, empId, dept, desig, username: username.toLowerCase(), password: hash, role: 'teacher', email, mustChangePassword: true, isHOD: !!isHOD, isClassAdvisor: !!isClassAdvisor, advisorClassId: advisorClassId || '', advisorClassName: advisorClassName || '', isWarden: !!isWarden, isExamCoordinator: !!isExamCoordinator, isPlacementCoord: !!isPlacementCoord, qualifications: qualifications || '', experience: experience || '', joiningDate: joiningDate || '' });
+    let specials = undefined;
+    if (isHOD) {
+      specials = { option: 'isHod', key: 'isHod_' + username.toLowerCase().trim(), value: dept };
+    } else if (isClassAdvisor) {
+      specials = { option: 'isClassAdvisor', key: 'isClassAdvisor_' + username.toLowerCase().trim(), value: advisorClassName };
+    } else if (req.body.isTimeTableCoordinator) {
+      specials = { option: 'isTimeTableCoordinator', key: 'isTimeTableCoordinator_' + username.toLowerCase().trim(), value: dept };
+    }
+
+    const generatedTrackId = 'TRTCH_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+    const teacher = await M.Teacher.create({
+      fullName: name,
+      firstName: req.body.firstName || '',
+      lastName: req.body.lastName || '',
+      employeeNo: empId || '',
+      department: dept || '',
+      designation: desig || '',
+      email: email || '',
+      username: username.toLowerCase().trim(),
+      password: hash,
+      trackId: req.body.trackId || generatedTrackId,
+      specials,
+      isAdmin: false,
+      active: true,
+      current: false,
+      status: 'active',
+      mustChangePassword: true
+    });
+
+    // Also create shadow user
+    const shadowUser = await M.User.create({
+      name: name,
+      username: username.toLowerCase().trim(),
+      password: hash,
+      role: 'teacher',
+      trackId: teacher.trackId,
+      status: 'active',
+      current: false
+    });
+
     const { password: _, ...teacherData } = teacher.toObject();
-    await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Added', `${name} (${username}) — initial password set`, 'data', 'info', req.ip);
-    res.status(201).json({ ...teacherData, _plainPassword: password }); // plaintext for admin UI display
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Teacher Added', `${name} (${username}) — initial password set`, 'data', 'info', req.ip);
+    res.status(201).json({ ...teacherData, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, desig: teacher.designation, _plainPassword: password });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.put('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
-  const { password, ...data } = req.body;
-  if (password) data.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-  const teacher = await M.User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password');
-  await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Updated', teacher?.name, 'data', 'info', req.ip);
-  res.json(teacher);
+  try {
+    const { password, name, empId, dept, desig, email, username, isHOD, isClassAdvisor, isTimeTableCoordinator, advisorClassName, active, status } = req.body;
+    const teacher = await M.Teacher.findById(req.params.id);
+    if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+
+    const oldUsername = teacher.username;
+
+    if (name) teacher.fullName = name;
+    if (empId !== undefined) teacher.employeeNo = empId;
+    if (dept !== undefined) teacher.department = dept;
+    if (desig !== undefined) teacher.designation = desig;
+    if (email !== undefined) teacher.email = email;
+    if (username) teacher.username = username.toLowerCase().trim();
+    if (active !== undefined) teacher.active = active;
+    if (status) teacher.status = status;
+
+    if (password) {
+      teacher.password = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
+    }
+
+    // Update specials
+    if (isHOD !== undefined || isClassAdvisor !== undefined || isTimeTableCoordinator !== undefined) {
+      if (isHOD) {
+        teacher.specials = { option: 'isHod', key: 'isHod_' + teacher.username, value: dept || teacher.department };
+      } else if (isClassAdvisor) {
+        teacher.specials = { option: 'isClassAdvisor', key: 'isClassAdvisor_' + teacher.username, value: advisorClassName || '' };
+      } else if (isTimeTableCoordinator) {
+        teacher.specials = { option: 'isTimeTableCoordinator', key: 'isTimeTableCoordinator_' + teacher.username, value: dept || teacher.department };
+      } else {
+        teacher.specials = undefined;
+      }
+    }
+
+    await teacher.save();
+
+    // Sync shadow user
+    let shadowUser = await M.User.findOne({ username: oldUsername, role: 'teacher' });
+    if (shadowUser) {
+      if (name) shadowUser.name = name;
+      if (username) shadowUser.username = username.toLowerCase().trim();
+      if (password) shadowUser.password = teacher.password;
+      if (active !== undefined) shadowUser.status = active ? 'active' : 'inactive';
+      await shadowUser.save();
+    }
+
+    const { password: _, ...safeTeacher } = teacher.toObject();
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Teacher Updated', teacher.fullName, 'data', 'info', req.ip);
+    res.json({ ...safeTeacher, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, desig: teacher.designation });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.delete('/api/teachers/:id', authMiddleware, adminOnly, async (req, res) => {
-  const teacher = await M.User.findById(req.params.id).lean();
-  if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
-  await M.UndoLog.create({
-    collectionName: 'teachers', label: `Teacher: ${teacher.name} (@${teacher.username})`,
-    snapshot: teacher, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
-  });
-  await M.User.findByIdAndDelete(req.params.id);
-  await M.Assignment.deleteMany({ teacherId: req.params.id });
-  await logAction(req.user._id, req.user.name, req.user.role, 'Teacher Deleted', teacher.name, 'data', 'warning', req.ip);
-  res.json({ deleted: true });
+  try {
+    const teacher = await M.Teacher.findById(req.params.id);
+    if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+    
+    await M.UndoLog.create({
+      collectionName: 'teachers', label: `Teacher: ${teacher.fullName} (@${teacher.username})`,
+      snapshot: teacher.toObject(), deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    });
+    
+    await M.Teacher.findByIdAndDelete(req.params.id);
+    
+    // Also delete shadow user
+    await M.User.deleteOne({ username: teacher.username, role: 'teacher' });
+    
+    // Also delete assignments
+    await M.Assignment.deleteMany({ teacherId: req.params.id });
+    
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Teacher Deleted', teacher.fullName, 'data', 'warning', req.ip);
+    res.json({ deleted: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ════════════════════════════════════════════════════════
@@ -643,7 +1133,7 @@ app.get('/api/live-session/active', authMiddleware, async (req, res) => {
   if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
   try {
     // Find student's classId
-    const student = await M.Student.findOne({ userId: req.user._id });
+    const student = await M.Student.findOne({ username: req.user.username });
     if (!student || !student.classId) return res.json({ active: false });
 
     // Find active session for this class
@@ -662,7 +1152,7 @@ app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
   const { sessionId, passcode } = req.body;
 
   try {
-    const student = await M.Student.findOne({ userId: req.user._id });
+    const student = await M.Student.findOne({ username: req.user.username });
     if (!student) return res.status(404).json({ error: 'Student profile not found' });
 
     const session = await M.LiveSession.findById(sessionId);
@@ -694,7 +1184,7 @@ app.post('/api/live-session/mark', authMiddleware, async (req, res) => {
 
     session.markedStudents.push({
       studentId: student._id,
-      regNo: student.regNo,
+      regNo: student.registerNo || student.regNo,
       time: new Date(),
       ip: req.ip
     });
@@ -729,21 +1219,10 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
     const user = await M.User.findById(req.user._id).select('-password').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // ── Student profile — try userId first, fall back to regNo then name, auto-link if found
-    let student = await M.Student.findOne({ userId: req.user._id }).lean();
-    if (!student && user.regNo) {
-      student = await M.Student.findOneAndUpdate(
-        { regNo: user.regNo },
-        { $set: { userId: req.user._id } },
-        { new: true }
-      ).lean();
-    }
-    if (!student) {
-      student = await M.Student.findOneAndUpdate(
-        { name: user.name },
-        { $set: { userId: req.user._id } },
-        { new: true }
-      ).lean();
+    // ── Student profile — look up by username or trackId
+    let student = await M.Student.findOne({ username: req.user.username }).lean();
+    if (!student && req.user.trackId) {
+      student = await M.Student.findOne({ trackId: req.user.trackId }).lean();
     }
     if (!student) {
       // No Student profile record at all — return user info with empty attendance so portal loads
@@ -751,10 +1230,20 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
       const minReq2 = academic2?.value?.minAttendance || 75;
       return res.json({
         user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: user.lastLogin, loginCount: user.loginCount },
-        student: { name: user.name, regNo: user.regNo || '—', deptName: user.deptName || '—', className: '—', year: '—', section: '—', academicYear: '—', courseType: '—', branch: '—', email: user.email || '—', bloodGroup: '—', parentContact: '—' },
+        student: { name: user.name, regNo: '—', deptName: '—', className: '—', year: '—', section: '—', academicYear: '—', courseType: '—', branch: '—', email: user.email || '—', bloodGroup: '—', parentContact: '—' },
         attendance: { subjects: [], totalPresent: 0, totalAbsent: 0, totalClasses: 0, overall: 0, minRequired: minReq2 },
       });
     }
+
+    // Normalize student fields for frontend consumption
+    const normalizedStudent = {
+      ...student,
+      name: student.fullName,
+      regNo: student.registerNo,
+      deptName: student.department,
+      className: student.class || '—',
+      academicYear: student.admissionYear || '—',
+    };
 
     // ── Minimum attendance requirement
     const academic = await M.Settings.findOne({ key: 'academic' });
@@ -783,7 +1272,7 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
       // Find this student's record in the attendance doc
       const myRecord = rec.records.find(r =>
         (r.studentId && String(r.studentId) === String(student._id)) ||
-        (r.regNo && r.regNo === student.regNo)
+        (r.regNo && (r.regNo === student.registerNo || r.regNo === student.regNo))
       );
       if (myRecord) {
         entry.total++;
@@ -807,7 +1296,7 @@ app.get('/api/student/me', authMiddleware, checkMaintenance, async (req, res) =>
 
     res.json({
       user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: user.lastLogin, loginCount: user.loginCount },
-      student,
+      student: normalizedStudent,
       attendance: {
         subjects,
         totalPresent,
@@ -1189,76 +1678,68 @@ app.delete('/api/assignments/:id', authMiddleware, adminOnly, async (req, res) =
 // ── GET /api/profile/me — full own user document (no password) ──
 app.get('/api/profile/me', authMiddleware, async (req, res) => {
   try {
-    const user = await M.User.findById(req.user._id).select('-password').lean();
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const targetModel = getRoleModel(req.user.role);
+    if (!targetModel) return res.status(400).json({ error: 'Invalid role' });
+    const userDoc = await targetModel.findOne({ username: req.user.username }).select('-password').lean();
+    if (!userDoc) return res.status(404).json({ error: 'User not found' });
 
-    // Build role-shaped profile view so frontends know exactly what to show
     const base = {
-      _id: user._id,
-      role: user.role,
-      name: user.name,
-      username: user.username,
-      email: user.email || '',
-      active: user.active,
-      // Session stats
-      loginCount: user.loginCount || 0,
-      lastLogin: user.lastLogin || null,
-      firstLogin: user.firstLogin || null,
-      mustChangePassword: user.mustChangePassword || false,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      _id: userDoc._id,
+      role: req.user.role,
+      name: userDoc.fullName,
+      username: userDoc.username,
+      email: userDoc.email || '',
+      active: userDoc.active,
+      loginCount: userDoc.loginCount || 0,
+      lastLogin: userDoc.lastLogin || null,
+      firstLogin: userDoc.firstLogin || null,
+      mustChangePassword: userDoc.mustChangePassword || false,
+      createdAt: userDoc.createdAt,
+      updatedAt: userDoc.updatedAt,
     };
 
-    if (user.role === 'admin') {
+    if (req.user.role === 'admin') {
       Object.assign(base, {
-        // AdminSchema fields mapped from legacy UserSchema
-        fullName: user.name,
-        firstName: user.name.split(' ')[0] || '',
-        lastName: user.name.split(' ').slice(1).join(' ') || '',
-        employeeNo: user.empId || '',
-        department: user.dept || '',
-        isAdmin: user.isAdmin !== false ? true : false,
-        adminRights: user.adminRights || 'all',
+        fullName: userDoc.fullName,
+        firstName: userDoc.firstName || '',
+        lastName: userDoc.lastName || '',
+        employeeNo: userDoc.employeeNo || '',
+        department: userDoc.department || '',
+        isAdmin: userDoc.isAdmin !== false ? true : false,
+        adminRights: userDoc.adminRights || 'all',
       });
-    } else if (user.role === 'teacher') {
+    } else if (req.user.role === 'teacher') {
+      const specials = userDoc.specials || {};
       Object.assign(base, {
-        // TeacherSchema fields
-        fullName: user.name,
-        firstName: user.name.split(' ')[0] || '',
-        lastName: user.name.split(' ').slice(1).join(' ') || '',
-        employeeNo: user.empId || '',
-        department: user.dept || '',
-        designation: user.desig || 'Assistant Professor',
-        // Display-only role flags
-        isHod: user.isHOD || false,
-        HoddeptName: user.HoddeptName || '',
-        isClassAdvisor: user.isClassAdvisor || false,
-        className: user.advisorClassName || '',
-        isTimeTableCoordinator: user.isTimeTableCoordinator || false,
-        TTdeptName: user.TTdeptName || '',
-        isAdmin: user.isAdmin || false,
-        adminRights: user.adminRights || 'all',
+        fullName: userDoc.fullName,
+        firstName: userDoc.firstName || '',
+        lastName: userDoc.lastName || '',
+        employeeNo: userDoc.employeeNo || '',
+        department: userDoc.department || '',
+        designation: userDoc.designation || 'Assistant Professor',
+        isHod: specials.option === 'isHod',
+        HoddeptName: specials.option === 'isHod' ? specials.value : '',
+        isClassAdvisor: specials.option === 'isClassAdvisor',
+        className: specials.option === 'isClassAdvisor' ? specials.value : '',
+        isTimeTableCoordinator: specials.option === 'isTimeTableCoordinator',
+        TTdeptName: specials.option === 'isTimeTableCoordinator' ? specials.value : '',
+        isAdmin: userDoc.isAdmin || false,
+        adminRights: userDoc.adminRights || '',
       });
-    } else if (user.role === 'student') {
-      // Also pull Student record for academic fields
-      const studentRec = await M.Student.findOne({ userId: user._id }).lean()
-        || await M.Student.findOne({ regNo: user.regNo }).lean()
-        || null;
+    } else if (req.user.role === 'student') {
       Object.assign(base, {
-        // StudentUserSchema fields
-        fullName: user.name,
-        firstName: user.name.split(' ')[0] || '',
-        lastName: user.name.split(' ').slice(1).join(' ') || '',
-        registerNo: user.regNo || studentRec?.regNo || '',
-        class: studentRec?.className || '',
-        section: studentRec?.section || '',
-        branch: studentRec?.branch || '',
-        course: studentRec?.courseType || '',
-        department: studentRec?.deptName || user.deptName || '',
-        currentYear: studentRec?.year || '',
-        academicYear: studentRec?.academicYear || '',
-        // Display-only
-        isRep: user.isClassRep || false,
+        fullName: userDoc.fullName,
+        firstName: userDoc.firstName || '',
+        lastName: userDoc.lastName || '',
+        registerNo: userDoc.registerNo || '',
+        class: userDoc.class || '',
+        section: userDoc.section || '',
+        branch: userDoc.branch || '',
+        course: userDoc.courseType || '',
+        department: userDoc.department || '',
+        currentYear: userDoc.currentYear || '',
+        academicYear: userDoc.admissionYear || '',
+        isRep: userDoc.isRep || false,
       });
     }
 
@@ -1267,13 +1748,13 @@ app.get('/api/profile/me', authMiddleware, async (req, res) => {
 });
 
 // ── PUT /api/profile/me — update own editable fields ──
-//    Protected / display-only fields are stripped server-side
 app.put('/api/profile/me', authMiddleware, async (req, res) => {
   try {
-    const user = await M.User.findById(req.user._id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const targetModel = getRoleModel(req.user.role);
+    if (!targetModel) return res.status(400).json({ error: 'Invalid role' });
+    const user = await targetModel.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'Profile not found' });
 
-    // Fields users can NEVER self-edit (role flags, auth state, etc.)
     const ALWAYS_PROTECTED = [
       'role', 'isAdmin', 'adminRights',
       'isHOD', 'HoddeptName', 'isClassAdvisor', 'advisorClassName', 'advisorClassId',
@@ -1287,22 +1768,45 @@ app.put('/api/profile/me', authMiddleware, async (req, res) => {
     const updates = { ...req.body };
     ALWAYS_PROTECTED.forEach(k => delete updates[k]);
 
-    // Map friendly field names → UserSchema field names
-    if (updates.fullName) { updates.name = updates.fullName; delete updates.fullName; }
-    if (updates.firstName || updates.lastName) {
-      const fn = updates.firstName || user.name.split(' ')[0];
-      const ln = updates.lastName || user.name.split(' ').slice(1).join(' ');
-      updates.name = (fn + ' ' + ln).trim();
-      delete updates.firstName; delete updates.lastName;
+    if (updates.fullName || updates.name) {
+      user.fullName = updates.fullName || updates.name;
     }
-    if (updates.employeeNo) { updates.empId = updates.employeeNo; delete updates.employeeNo; }
-    if (updates.department) { updates.dept = updates.department; delete updates.department; }
-    if (updates.designation) { updates.desig = updates.designation; delete updates.designation; }
+    if (updates.firstName) user.firstName = updates.firstName;
+    if (updates.lastName) user.lastName = updates.lastName;
+    if (updates.email !== undefined) user.email = updates.email;
 
-    Object.assign(user, updates);
+    if (req.user.role === 'admin' || req.user.role === 'teacher') {
+      if (updates.employeeNo !== undefined) user.employeeNo = updates.employeeNo;
+      if (updates.empId !== undefined) user.employeeNo = updates.empId;
+      if (updates.department !== undefined) user.department = updates.department;
+      if (updates.dept !== undefined) user.department = updates.dept;
+      if (req.user.role === 'teacher') {
+        if (updates.designation !== undefined) user.designation = updates.designation;
+        if (updates.desig !== undefined) user.designation = updates.desig;
+      }
+    }
+    if (req.user.role === 'student') {
+      if (updates.registerNo !== undefined) user.registerNo = updates.registerNo;
+      if (updates.regNo !== undefined) user.registerNo = updates.regNo;
+      if (updates.class !== undefined) user.class = updates.class;
+      if (updates.className !== undefined) user.class = updates.className;
+      if (updates.section !== undefined) user.section = updates.section;
+      if (updates.branch !== undefined) user.branch = updates.branch;
+      if (updates.department !== undefined) user.department = updates.department;
+      if (updates.deptName !== undefined) user.department = updates.deptName;
+    }
+
     await user.save();
 
-    await logAction(user._id, user.name, user.role, 'Profile Updated', 'Own profile self-edited', 'data', 'info', req.ip);
+    // Sync shadow user
+    const shadowUser = await M.User.findOne({ username: user.username, role: req.user.role });
+    if (shadowUser) {
+      shadowUser.name = user.fullName;
+      shadowUser.email = user.email || '';
+      await shadowUser.save();
+    }
+
+    await logAction(user.trackId || req.user._id, user.fullName, req.user.role, 'Profile Updated', 'Own profile self-edited', 'data', 'info', req.ip);
     const { password: _pw, ...safe } = user.toObject();
     res.json(safe);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1485,12 +1989,16 @@ app.get('/api/system/health', authMiddleware, adminOnly, async (req, res) => {
   try {
     const dbState = mongoose.connection.readyState;
     const dbStateMap = { 0: 'Disconnected', 1: 'Connected', 2: 'Connecting', 3: 'Disconnecting' };
-    const [errorCount, warnCount, totalUsers, activeTeachers] = await Promise.all([
+    const activeTeachersCount = await M.Teacher.countDocuments({ active: true });
+    const activeStudentsCount = await M.Student.countDocuments({ active: true });
+    const activeAdminsCount = await M.Admin.countDocuments({ active: true });
+    
+    const [errorCount, warnCount] = await Promise.all([
       M.Log.countDocuments({ severity: { $in: ['critical', 'error'] } }),
       M.Log.countDocuments({ severity: 'warning' }),
-      M.User.countDocuments({ active: true }),
-      M.User.countDocuments({ role: 'teacher', active: true }),
     ]);
+    const totalUsers = activeTeachersCount + activeStudentsCount + activeAdminsCount;
+    const activeTeachers = activeTeachersCount;
     const recentErrors = await M.Log.find({ severity: { $in: ['critical', 'error', 'warning'] } })
       .sort({ time: -1 }).limit(5).lean();
     res.json({
@@ -1525,11 +2033,38 @@ app.post('/api/undo/:id', authMiddleware, adminOnly, async (req, res) => {
     if (entry.collectionName === 'departments') restored = await M.Department.create(body);
     else if (entry.collectionName === 'classes') restored = await M.Class.create(body);
     else if (entry.collectionName === 'subjects') restored = await M.Subject.create(body);
-    else if (entry.collectionName === 'students') restored = await M.Student.create(body);
-    else if (entry.collectionName === 'teachers') restored = await M.User.create(snap);
-    else return res.status(400).json({ error: 'Cannot restore collection: ' + entry.collectionName });
+    else if (entry.collectionName === 'students') {
+      restored = await M.Student.create(body);
+      await M.User.create({
+        name: restored.fullName,
+        username: restored.username,
+        password: restored.password,
+        role: 'student',
+        trackId: restored.trackId,
+        status: 'active',
+        current: false
+      });
+    } else if (entry.collectionName === 'teachers') {
+      const { _id: _, ...cleanSnap } = snap;
+      restored = await M.Teacher.create({
+        ...cleanSnap,
+        fullName: cleanSnap.fullName || cleanSnap.name,
+        employeeNo: cleanSnap.employeeNo || cleanSnap.empId,
+        department: cleanSnap.department || cleanSnap.dept,
+        designation: cleanSnap.designation || cleanSnap.desig
+      });
+      await M.User.create({
+        name: restored.fullName,
+        username: restored.username,
+        password: restored.password,
+        role: 'teacher',
+        trackId: restored.trackId,
+        status: 'active',
+        current: false
+      });
+    } else return res.status(400).json({ error: 'Cannot restore collection: ' + entry.collectionName });
     await M.UndoLog.findByIdAndDelete(req.params.id);
-    await logAction(req.user._id, req.user.name, req.user.role, 'Undo Restore', entry.label, 'data', 'info', req.ip);
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Undo Restore', entry.label, 'data', 'info', req.ip);
     res.json({ restored: true, label: entry.label });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1546,7 +2081,7 @@ app.post('/api/system/backup', authMiddleware, adminOnly, async (req, res) => {
   try {
     const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
       M.Student.find().lean(),
-      M.User.find({ role: 'teacher' }, '-password').lean(),
+      M.Teacher.find({}, '-password').lean(),
       M.Department.find().lean(),
       M.Class.find().lean(),
       M.Subject.find().lean(),
@@ -1564,7 +2099,7 @@ app.post('/api/system/backup', authMiddleware, adminOnly, async (req, res) => {
     // await uploadToGDrive('backupfolder', backupPassword, JSON.stringify(backupPayload));
     // await sendMail('mainMail', backupPassword, 'EAMS Backup Password', `Your backup password is: ${backupPassword}`);
     // ────────────────────────────────────────────────────
-    await logAction(req.user._id, req.user.name, req.user.role, 'System Backup Created',
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'System Backup Created',
       `${totalDocs} docs — GDrive upload pending`, 'data', 'info', req.ip);
     res.json({
       ok: true, totalDocs, backupPassword, createdAt: backupPayload.meta.createdAt,
@@ -1593,7 +2128,7 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
     let payload;
     if (type === 'all') {
       const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
-        M.Student.find().lean(), M.User.find({ role: 'teacher' }, '-password').lean(),
+        M.Student.find().lean(), M.Teacher.find({}, '-password').lean(),
         M.Department.find().lean(), M.Class.find().lean(), M.Subject.find().lean(),
         M.Attendance.find().lean(), M.Assignment.find().lean(),
       ]);
@@ -1606,7 +2141,7 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
     } else {
       const dataMap = {
         students: () => M.Student.find().lean(),
-        teachers: () => M.User.find({ role: 'teacher' }, '-password').lean(),
+        teachers: () => M.Teacher.find({}, '-password').lean(),
         attendance: () => M.Attendance.find().lean(),
       };
       const data = dataMap[type] ? await dataMap[type]() : [];
@@ -1621,64 +2156,348 @@ app.post('/api/system/export', authMiddleware, adminOnly, async (req, res) => {
     // ─── Stub (wire when ready) ──────────────────────────
     // await exportMail(req.user.email || 'admin', exportPassword, JSON.stringify(payload));
     // ────────────────────────────────────────────────────
-    await logAction(req.user._id, req.user.name, req.user.role, 'Data Exported',
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Data Exported',
       `Type: ${type} — password mailed (stub)`, 'data', 'info', req.ip);
     res.json({ ok: true, payload, exportPassword, totalStudents: studentCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ════════════════════════════════════════════════════════
-//  MANAGE
+//  CALENDAR DAY ROUTES
 // ════════════════════════════════════════════════════════
 
-app.get('/api/manage', async (req, res) => {
-  try {
-    let manage = await M.Manage.findOne();
-    if (!manage) manage = await M.Manage.create({});
-    res.json(manage);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+// Helper: compute day-of-week string from "YYYY-MM-DD"
+function dateToDow(dateStr) {
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(dateStr + 'T00:00:00').getDay()];
+}
+
+// Helper: returns 1-based ordinal of a Saturday within its month (1st Sat, 2nd Sat…)
+function satOrdinal(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (d.getDay() !== 6) return 0;
+  let count = 0;
+  for (let day = 1; day <= d.getDate(); day++) {
+    const nd = new Date(d.getFullYear(), d.getMonth(), day);
+    if (nd.getDay() === 6) count++;
   }
+  return count; // 1, 2, 3…
+}
+
+// Helper: auto-update exam statuses based on today
+async function refreshExamStatuses() {
+  const today = new Date().toISOString().split('T')[0];
+  await M.Exam.updateMany({ status: { $nin: ['cancelled'] }, endDate: { $lt: today } },   { $set: { status: 'completed' } });
+  await M.Exam.updateMany({ status: { $nin: ['cancelled'] }, startDate: { $lte: today }, endDate: { $gte: today } }, { $set: { status: 'ongoing' } });
+  await M.Exam.updateMany({ status: { $nin: ['cancelled'] }, startDate: { $gt: today } }, { $set: { status: 'upcoming' } });
+}
+
+// GET /api/calendar  — all days in a month
+app.get('/api/calendar', authMiddleware, async (req, res) => {
+  try {
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year  = parseInt(req.query.year)  || new Date().getFullYear();
+    const mm    = String(month).padStart(2, '0');
+    const start = `${year}-${mm}-01`;
+    const end   = `${year}-${mm}-31`;
+    const days  = await M.CalendarDay.find({ date: { $gte: start, $lte: end } }).sort({ date: 1 });
+    res.json(days);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/manage', authMiddleware, adminOnly, async (req, res) => {
+// GET /api/calendar/check/:date  — single day status + exam info
+app.get('/api/calendar/check/:date', authMiddleware, async (req, res) => {
   try {
-    const allowed = ['StudentsPortal', 'TeachersPortal', 'TimeTablePortal', 'LiveSessionFunctionality', 'StudentsViewAttendance', 'ForwardToRep'];
-    const update = {};
-    for (const key of allowed) {
-      if (typeof req.body[key] === 'boolean') update[key] = req.body[key];
+    const { date } = req.params;
+    const [day, exams] = await Promise.all([
+      M.CalendarDay.findOne({ date }),
+      M.Exam.find({ startDate: { $lte: date }, endDate: { $gte: date }, status: { $in: ['upcoming','ongoing'] } })
+    ]);
+    const defaults = {
+      isWorkingDay: new Date(date + 'T00:00:00').getDay() !== 0,
+      dayType: 'regular',
+      timing: { start: '08:30', end: '16:30' }
+    };
+    res.json({ ...(day ? day.toObject() : defaults), hasExam: exams.length > 0, exams });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/calendar  — upsert a single day (admin only)
+app.post('/api/calendar', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { date, isWorkingDay, dayType, notes, timing, affectedYears, isOverride } = req.body;
+    if (!date) return res.status(400).json({ error: 'date required' });
+    const doc = await M.CalendarDay.findOneAndUpdate(
+      { date },
+      { $set: { date, dayOfWeek: dateToDow(date), isWorkingDay, dayType, notes, timing, affectedYears: affectedYears || [], isOverride: isOverride !== false, markedBy: req.user.name } },
+      { new: true, upsert: true }
+    );
+    await logAction(req.user._id, req.user.name, req.user.role, 'Calendar Day Updated', `${date} → ${dayType}`, 'manage', 'info', req.ip);
+    res.json(doc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/calendar/:date  — same as POST
+app.put('/api/calendar/:date', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { date } = req.params;
+    const { isWorkingDay, dayType, notes, timing, affectedYears, isOverride } = req.body;
+    const doc = await M.CalendarDay.findOneAndUpdate(
+      { date },
+      { $set: { dayOfWeek: dateToDow(date), isWorkingDay, dayType, notes, timing, affectedYears: affectedYears || [], isOverride: isOverride !== false, markedBy: req.user.name } },
+      { new: true, upsert: true }
+    );
+    res.json(doc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/calendar/:date  — remove override, revert to auto-default
+app.delete('/api/calendar/:date', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await M.CalendarDay.deleteOne({ date: req.params.date });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/calendar/bulk-generate  — auto-fill month with default rules
+app.post('/api/calendar/bulk-generate', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const month = parseInt(req.body.month) || new Date().getMonth() + 1;
+    const year  = parseInt(req.body.year)  || new Date().getFullYear();
+    const overwriteExisting = req.body.overwriteExisting === true;
+    const lastDay = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, '0');
+    let generated = 0, skipped = 0;
+    const ops = [];
+    for (let day = 1; day <= lastDay; day++) {
+      const dateStr = `${year}-${mm}-${String(day).padStart(2,'0')}`;
+      const d = new Date(dateStr + 'T00:00:00');
+      const dow = d.getDay();
+      let isWorkingDay, dayType;
+      if (dow === 0) { isWorkingDay = false; dayType = 'leave'; }
+      else if (dow === 6) {
+        const sn = satOrdinal(dateStr);
+        isWorkingDay = sn % 2 === 0;    // 2nd,4th Sat = working; 1st,3rd,5th = leave
+        dayType = isWorkingDay ? 'regular' : 'leave';
+      } else { isWorkingDay = true; dayType = 'regular'; }
+      if (!overwriteExisting) {
+        const existing = await M.CalendarDay.findOne({ date: dateStr, isOverride: true });
+        if (existing) { skipped++; continue; }
+      }
+      ops.push({ updateOne: { filter: { date: dateStr }, update: { $set: { date: dateStr, dayOfWeek: dateToDow(dateStr), isWorkingDay, dayType, timing: { start: '08:30', end: '16:30' }, affectedYears: [], isOverride: false, markedBy: 'system' } }, upsert: true } });
+      generated++;
     }
-    update.updatedBy = req.user.name;
-    const manage = await M.Manage.findOneAndUpdate({}, { $set: update }, { new: true, upsert: true });
-    await logAction(req.user._id, req.user.name, req.user.role, 'Manage Settings Updated',
-      JSON.stringify(update), 'admin', 'info', req.ip);
-    res.json(manage);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    if (ops.length) await M.CalendarDay.bulkWrite(ops);
+    res.json({ generated, skipped, month, year });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/manage', async (req, res) => {
+// ════════════════════════════════════════════════════════
+//  EXAM ROUTES
+// ════════════════════════════════════════════════════════
+
+// GET /api/exams  — list with optional filters
+app.get('/api/exams', authMiddleware, async (req, res) => {
   try {
-    const data = await M.Manage.find();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    await refreshExamStatuses();
+    const filter = {};
+    if (req.query.examType)    filter.examType    = req.query.examType;
+    if (req.query.studentYear) filter.studentYear = req.query.studentYear;
+    if (req.query.status)      filter.status      = req.query.status;
+    if (req.query.academicYear)filter.academicYear= req.query.academicYear;
+    if (req.query.deptId)      filter.deptId      = req.query.deptId;
+    const exams = await M.Exam.find(filter).sort({ startDate: -1 });
+    res.json(exams);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/manage/:field', async (req, res) => {
+// GET /api/exams/active  — ongoing or starting today/upcoming within 7 days
+app.get('/api/exams/active', authMiddleware, async (req, res) => {
   try {
-    const field = req.params.field;
+    await refreshExamStatuses();
+    const exams = await M.Exam.find({ status: { $in: ['upcoming','ongoing'] } }).sort({ startDate: 1 });
+    res.json(exams);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
-    const data = await Manage.findOne().select(field);
+// GET /api/exams/:id
+app.get('/api/exams/:id', authMiddleware, async (req, res) => {
+  try {
+    const exam = await M.Exam.findById(req.params.id);
+    if (!exam) return res.status(404).json({ error: 'Not found' });
+    res.json(exam);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
-    if (!data) return res.json({ value: false });
+// POST /api/exams  — create exam + auto-mark calendar days
+app.post('/api/exams', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { title, examType, academicYear, studentYear, deptId, deptName, startDate, endDate, timing, notes, status } = req.body;
+    if (!title || !examType || !startDate || !endDate) return res.status(400).json({ error: 'title, examType, startDate, endDate required' });
+    if (startDate > endDate) return res.status(400).json({ error: 'startDate must be ≤ endDate' });
+    const exam = await M.Exam.create({ title, examType, academicYear, studentYear: studentYear || 'All', deptId: deptId || null, deptName: deptName || '', startDate, endDate, timing: timing || { start: '09:00', end: '16:00' }, notes: notes || '', status: status || 'upcoming', createdBy: req.user.name });
+    // Auto-mark calendar days
+    const affYears = studentYear && studentYear !== 'All' ? [studentYear] : [];
+    const cur = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate   + 'T00:00:00');
+    const calOps = [];
+    while (cur <= end) {
+      const ds = cur.toISOString().split('T')[0];
+      calOps.push({ updateOne: { filter: { date: ds }, update: { $set: { date: ds, dayOfWeek: dateToDow(ds), isWorkingDay: true, dayType: 'exam', timing: timing || { start: '09:00', end: '16:00' }, affectedYears: affYears, isOverride: false, markedBy: 'exam:'+exam._id } }, upsert: true } });
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (calOps.length) await M.CalendarDay.bulkWrite(calOps);
+    await logAction(req.user._id, req.user.name, req.user.role, 'Exam Created', `${title} (${startDate}–${endDate})`, 'manage', 'info', req.ip);
+    res.json(exam);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
-    res.json({ value: data[field] }); // dynamic access
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// PUT /api/exams/:id
+app.put('/api/exams/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const exam = await M.Exam.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    if (!exam) return res.status(404).json({ error: 'Not found' });
+    res.json(exam);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/exams/:id
+app.delete('/api/exams/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const exam = await M.Exam.findByIdAndDelete(req.params.id);
+    if (!exam) return res.status(404).json({ error: 'Not found' });
+    // Remove auto-generated calendar entries for this exam
+    await M.CalendarDay.deleteMany({ markedBy: 'exam:' + req.params.id });
+    await logAction(req.user._id, req.user.name, req.user.role, 'Exam Deleted', exam.title, 'manage', 'warn', req.ip);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  EXAM ATTENDANCE ROUTES
+// ════════════════════════════════════════════════════════
+
+// GET /api/exam-attendance  — filter by examId, date, teacherId
+app.get('/api/exam-attendance', authMiddleware, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.examId)    filter.examId    = req.query.examId;
+    if (req.query.date)      filter.date      = req.query.date;
+    if (req.query.teacherId) filter.teacherId = req.query.teacherId;
+    if (req.query.hallNo)    filter.hallNo    = req.query.hallNo;
+    const records = await M.ExamAttendance.find(filter).sort({ markedAt: -1 });
+    res.json(records);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/exam-attendance/halls-today  — summary per hall for a date
+app.get('/api/exam-attendance/halls-today', authMiddleware, async (req, res) => {
+  try {
+    const { examId, date } = req.query;
+    if (!examId) return res.status(400).json({ error: 'examId required' });
+    const today = date || new Date().toISOString().split('T')[0];
+    const records = await M.ExamAttendance.find({ examId, date: today }).sort({ markedAt: 1 });
+    res.json(records);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/exam-attendance/:id
+app.get('/api/exam-attendance/:id', authMiddleware, async (req, res) => {
+  try {
+    const rec = await M.ExamAttendance.findById(req.params.id);
+    if (!rec) return res.status(404).json({ error: 'Not found' });
+    res.json(rec);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/exam-attendance  — upsert by (examId, date, hallNo, teacherId)
+app.post('/api/exam-attendance', authMiddleware, async (req, res) => {
+  try {
+    const { examId, date, hallNo, records } = req.body;
+    if (!examId || !date || !hallNo) return res.status(400).json({ error: 'examId, date, hallNo required' });
+    const exam = await M.Exam.findById(examId).select('title examType');
+    const totalPresent = (records || []).filter(r => r.status === 'present').length;
+    const totalAbsent  = (records || []).filter(r => r.status === 'absent').length;
+    const doc = await M.ExamAttendance.findOneAndUpdate(
+      { examId, date, hallNo, teacherId: req.user._id },
+      { $set: { examId, date, hallNo, teacherId: req.user._id, teacherName: req.user.name, examTitle: exam ? exam.title : '', examType: exam ? exam.examType : '', records: records || [], totalPresent, totalAbsent, markedAt: new Date() } },
+      { new: true, upsert: true }
+    );
+    await logAction(req.user._id, req.user.name, req.user.role, 'Exam Attendance Submitted', `Hall ${hallNo} | ${date} | P:${totalPresent} A:${totalAbsent}`, 'attendance', 'info', req.ip);
+    res.json(doc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  STUDENT EXAM SEARCH
+// ════════════════════════════════════════════════════════
+
+// GET /api/students/exam-search?q=7140&depts=CSE,ECE&year=III
+app.get('/api/students/exam-search', authMiddleware, async (req, res) => {
+  try {
+    const { q, depts, year } = req.query;
+    if (!q || q.length < 3) return res.json([]);
+    const filter = { regNo: { $regex: `^${q}`, $options: 'i' } };
+    if (depts) filter.deptName = { $in: depts.split(',').map(d => d.trim()).filter(Boolean) };
+    if (year)  filter.year = year;
+    const students = await M.Student.find(filter).select('name regNo deptName year classId _id').limit(20);
+    res.json(students);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  MANAGE ADMIN ROUTES
+// ════════════════════════════════════════════════════════
+
+// GET /api/manage-admins
+app.get('/api/manage-admins', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const admins = await M.ManageAdmin.find().select('-password').sort({ createdAt: -1 });
+    res.json(admins);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/manage-admins
+app.post('/api/manage-admins', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { name, username, password, email, permissions } = req.body;
+    if (!name || !username || !password) return res.status(400).json({ error: 'name, username, password required' });
+    const exists = await M.ManageAdmin.findOne({ username: username.toLowerCase().trim() });
+    if (exists) return res.status(400).json({ error: 'Username already taken' });
+    const bcrypt = require('bcryptjs');
+    const hashed = await bcrypt.hash(password, 10);
+    const admin  = await M.ManageAdmin.create({ name: name.trim(), username: username.toLowerCase().trim(), password: hashed, email: email || '', permissions: permissions || ['calendar','exam','attendance'], addedBy: req.user.name });
+    await logAction(req.user._id, req.user.name, req.user.role, 'Manage Admin Created', name, 'manage', 'info', req.ip);
+    const { password: _, ...safe } = admin.toObject();
+    res.json(safe);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/manage-admins/:id
+app.put('/api/manage-admins/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const update = {};
+    if (req.body.name)        update.name        = req.body.name.trim();
+    if (req.body.email)       update.email       = req.body.email;
+    if (req.body.permissions) update.permissions = req.body.permissions;
+    if (typeof req.body.active === 'boolean') update.active = req.body.active;
+    if (req.body.password) {
+      const bcrypt = require('bcryptjs');
+      update.password = await bcrypt.hash(req.body.password, 10);
+    }
+    const admin = await M.ManageAdmin.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
+    if (!admin) return res.status(404).json({ error: 'Not found' });
+    res.json(admin);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/manage-admins/:id
+app.delete('/api/manage-admins/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const admin = await M.ManageAdmin.findByIdAndDelete(req.params.id);
+    if (!admin) return res.status(404).json({ error: 'Not found' });
+    await logAction(req.user._id, req.user.name, req.user.role, 'Manage Admin Deleted', admin.name, 'manage', 'warn', req.ip);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Start Server ──────────────────────────────────────

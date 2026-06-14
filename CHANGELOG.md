@@ -1,6 +1,41 @@
-## 🔹 v2.1.1 — 06 June 2026
+## 🔹 `v2.2.0` — 14 June 2026 (Major Update)
 
-### Forced Update
+### General Changes & Fixes
+- `admin.html`
+    - Deleted `pg-maintenance` an unused page.
+    - `Add Subject` model bug fixed and improved user experience.
+    - Fixed `No Student Found` and `No Teacher Found` messages bug  in Students and Teachers page - `initDB()` function fixed.
+    - `Activity Log` page and `Analytics/Reports` No Data Found message bug fixed.
+    - Add Class & Add Subject modal auto-select dept bug
+    - `initAdminReports`, `tab('dept')`, `genDeptRpt()`, `genOverallRpt()`, `genStuRpt()`, `expAdminRpt('current','xlsx')`functions fixed.
+
+- `models.js`
+    - Removed `PasswordSchema`, `ManageSchema`, `StudentUserSchema` 
+    - Added `LoginHistorySchema` for tracking login history.
+    - Updated UserSchema, AdminSchema, TeacherSchema, StudentSchema, SettingsSchema and small changes made in models.
+    - Default passwords are now refered from `.env` -> `config.js` file for more security.
+
+- `server.js`
+    - Seed Defaults(admin) to both UserSchema and AdminSchema, Moved M.Manage into settings menu. Changed all `M.User` to `M.user`. Fixed `StudentUser` and `Student`.
+    - Delete password is redefined. 
+    - Fixed Login (`api/auth/login`, `api/auth/change-password`) shifted `User` to respective user Schema.
+    - `GET /api/students` and `GET /api/users` endpoints fixed and UserSchema changes.
+
+- `control.html`
+    - Updated with many settings in `control.html`. Each page, model and function has settings.
+    - Added key label for more information.
+
+### Manage Page (new)
+A new Manage page is added to admin.html. This page defines College working days and exam dates. To Mark working days, leaves, holidays, and daily working timings and scheduling exams and track hall-wise attendance.
+
+- Changes made:
+    - `server.js` - `api/manage` endpoints for manage page.
+    - `models.js` - `ManageSchema` added in models
+    - `admin.html` - Reference added for `manage.html`.
+
+----------------------------------
+
+## 🔹 v2.1.1 — 06 June 2026 (Forced Update)
 
 - `server.js`
     - Waste update, forgetten log of update :(.
@@ -24,9 +59,7 @@
 
 ----------------------------------
 
-## 🔹 v2.1.0 — 05 May 2026
-
-### Complete Update
+## 🔹 v2.1.0 — 05 May 2026 (Complete Update)
 
 - `admin.html`
     - CSS converted to compact format.
@@ -51,9 +84,7 @@
 - Bug in class & section page, clicking on department is not functioning
 
 ----------------------------------
-## 🔹 v2.0.0 — 27 Apr 2026
-
-### Complete Update
+## 🔹 v2.0.0 — 27 Apr 2026 (Complete Update)
 
 ### ✨ Added
 - Introduction of Track ID generation
@@ -88,9 +119,7 @@
 - `control.html` ---- `Major fixes`  
 <br><br>
 ----------------------
-## 🔹 v1.1.0 — 27 Apr 2026
-
-### Complete Update
+## 🔹 v1.1.0 — 27 Apr 2026 (Complete Update)
 
 ### ✨ Added
 - Introduced ChangeLog.md file

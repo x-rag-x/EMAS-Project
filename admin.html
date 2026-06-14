@@ -414,6 +414,7 @@ color: var(--td); outline: none; width: 100%; transition: all .2s; }
 .btn-form-pri:hover { background: var(--gM); }
 .btn-form-ghost { background: var(--gP); color: var(--tmu); border: 1px solid var(--br); border-radius: 10px; padding: 9px 18px;
    font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+.btn-form-ghost:hover { background: #fff0f0; color: #d32f2f; border-color: #f5c2c2;}
 .modal-search { background: var(--gP); border: 1.5px solid var(--br); border-radius: 10px; padding: 8px 14px; font-size: 13px; 
   font-family: 'Poppins', sans-serif; color: var(--td); outline: none; width: 100%; margin-bottom: 12px; }
 .modal-search:focus { border-color: var(--gM); }
@@ -641,6 +642,10 @@ to { transform: rotate(360deg) }
 .checkbx-btn:hover { background:var(--gLt); color:var(--gK); }
 .chkbx-input { accent-color:var(--p); width:14px; height:14px; }
 
+.required-note{ height: 40px; background: #fff8db; color: #9a6b00; border: 1px solid #f7d774; padding: 10px 14px;
+    border-radius: 12px; font-size: 14px; font-weight: 400; margin-top: 12px; cursor: help;
+}
+
   </style>
 </head>
 
@@ -675,6 +680,7 @@ to { transform: rotate(360deg) }
     <nav class="sb">
       <div class="sb-logo">
         <div class="sb-brand">EAMS Admin</div>
+        <button class="btn-form-ghost" onclick="window.location.reload()">Refresh</button>
       </div>
 
       <div class="nav-section" style="flex:1;overflow-y:auto;padding:6px 0;">
@@ -683,24 +689,27 @@ to { transform: rotate(360deg) }
 
         <div class="sb-section-label">Management</div>
         <button class="sb-item" data-page="depts" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments<span class="sb-badge"
-            id="sb-dept-badge">0</span></button>
+          id="sb-dept-badge">0</span></button>
         <button class="sb-item" data-page="struct" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes &amp; Subjects</button>
         <button class="sb-item" data-page="students" onclick="nav('students')"><span class="sbi-ic">👨‍🎓</span>Students<span
-            class="sb-badge" id="sb-stu-badge">0</span></button>
+          class="sb-badge" id="sb-stu-badge">0</span></button>
         <button class="sb-item" data-page="teachers" onclick="nav('teachers')"><span class="sbi-ic">👩‍🏫</span>Teachers<span
-            class="sb-badge" id="sb-teach-badge">0</span></button>
-        <!-- Timetable – Management section -->
+          class="sb-badge" id="sb-teach-badge">0</span></button>
+          
+        <button class="sb-item" onclick="alert('Page under development')"><span class="sbi-ic">+</span>Adder</button>
+        <!-- <button class="sb-item" onclick="window.location.href='adder.html'"><span class="sbi-ic">+</span>Adder</button> -->
+
         <button class="sb-item" onclick="window.location.href='timetable.html'"><span class="sbi-ic">🗓️</span>Timetable</button>
+        <button class="sb-item" onclick="window.location.href='manage.html'"><span class="sbi-ic">📤</span>Manage</button>
 
         <div class="sb-section-label">Reports & Logs</div>
         <button class="sb-item" data-page="reports" onclick="nav('reports')"><span class="sbi-ic">📈</span>Analytics</button>
-        <button class="sb-item" onclick="window.location.href='bulk.html'"><span class="sbi-ic">📤</span>Bulk Upload      🡭</button>
+        <button class="sb-item" onclick="window.location.href='bulk.html'"><span class="sbi-ic">📤</span>Bulk Upload</button>
         <button class="sb-item" data-page="logs" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity Logs</button>
 
 
         <div class="sb-section-label">System</div>
-        <button class="sb-item" onclick="window.location.href='control.html'" style="color:#dc2626;"><span
-            class="sbi-ic">&#9881;&#65039;</span>Control Panel</button>
+        <button class="sb-item" onclick="window.location.href='control.html'"><span class="sbi-ic">&#9881;&#65039;</span>Control Panel</button>
       </div>
 
       <div class="sb-bottom">
@@ -1015,7 +1024,6 @@ to { transform: rotate(360deg) }
             <div class="shd">
               <div class="stl"><span class="sdo"></span>Subjects</div>
               <div style="display:flex;gap:7px;">
-                <!-- <button class="btn-pri" onclick="om('m-upload-subj')">📤 Upload</button> -->
                 <button class="btn-pri" onclick="openAddSubj()">+ Add Subject</button>
               </div>
             </div>
@@ -1296,182 +1304,7 @@ to { transform: rotate(360deg) }
         </div><!-- /page-wrap -->
       </div><!-- /pg-logs -->
 
-      <!-- ══════════════════════ MAINTENANCE MODE PAGE ══════════════════════ -->
-      <div class="pg" id="pg-maintenance">
-        <div class="page-wrap">
-          <div class="page-hd">
-            <div>
-              <div class="page-title">🔧 Maintenance Mode</div>
-              <div class="page-sub">Control system access for teachers, students, and sub-admins.</div>
-            </div>
-            <div class="page-actions">
-              <button class="btn-out btn-sm" onclick="loadMaintSettings()">🔄 Refresh</button>
-            </div>
-          </div>
-
-          <!-- Status Banner -->
-          <div id="maint-status-banner"
-            style="border-radius:16px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px;border:2px solid;transition:all .3s;">
-            <div style="font-size:32px;" id="maint-banner-icon">🟢</div>
-            <div style="flex:1;">
-              <div style="font-size:16px;font-weight:800;color:var(--td);" id="maint-banner-title">System is Online
-              </div>
-              <div style="font-size:12px;color:var(--tmu);margin-top:2px;" id="maint-banner-sub">All users can log in
-                normally.</div>
-            </div>
-            <button id="maint-toggle-btn" onclick="toggleMaintenance()"
-              style="padding:10px 24px;border-radius:22px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .2s;">Enable
-              Maintenance</button>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-
-            <!-- LEFT: Configuration -->
-            <div class="card">
-              <div class="card-hd">
-                <div class="card-title">⚙️ Maintenance Configuration</div>
-              </div>
-              <div class="card-body-p">
-
-                <!-- Affected Roles -->
-                <div class="fg" style="margin-bottom:16px;">
-                  <label class="fl">Who is affected (blocked from login)</label>
-                  <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;" id="maint-roles-wrap">
-                    <label
-                      style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;"
-                      id="role-lbl-teacher">
-                      <input type="checkbox" id="maint-role-teacher" value="teacher"
-                        onchange="updateRoleLabel('teacher')" style="accent-color:var(--gD);width:15px;height:15px;">
-                      👩‍🏫 Teachers
-                    </label>
-                    <label
-                      style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;"
-                      id="role-lbl-student">
-                      <input type="checkbox" id="maint-role-student" value="student"
-                        onchange="updateRoleLabel('student')" style="accent-color:var(--gD);width:15px;height:15px;">
-                      👨‍🎓 Students
-                    </label>
-                    <label
-                      style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:8px 14px;transition:all .2s;"
-                      id="role-lbl-subadmin">
-                      <input type="checkbox" id="maint-role-subadmin" value="subadmin"
-                        onchange="updateRoleLabel('subadmin')" style="accent-color:var(--gD);width:15px;height:15px;">
-                      🧑‍💼 Sub-Admins
-                    </label>
-                  </div>
-                  <div style="font-size:10.5px;color:var(--tdi);margin-top:6px;">⚠️ Admins are never blocked regardless
-                    of this setting.</div>
-                </div>
-
-                <!-- End Time -->
-                <div class="fg" style="margin-bottom:16px;">
-                  <label class="fl">Estimated End Date & Time (optional)</label>
-                  <input type="datetime-local" class="fc2" id="maint-end-time" style="margin-top:4px;">
-                  <div style="font-size:10.5px;color:var(--tdi);margin-top:4px;">A countdown timer will be shown to
-                    affected users.</div>
-                </div>
-
-                <!-- Message -->
-                <div class="fg" style="margin-bottom:20px;">
-                  <label class="fl">Message shown to blocked users</label>
-                  <textarea class="fc2" id="maint-message" rows="4"
-                    style="resize:vertical;margin-top:4px;line-height:1.5;"
-                    placeholder="e.g. System is under scheduled maintenance from 10 PM to 2 AM. Please try again later."></textarea>
-                </div>
-
-                <div style="display:flex;gap:10px;">
-                  <button class="btn-form-pri" onclick="saveMaintSettings()" style="flex:1;">💾 Save
-                    Configuration</button>
-                  <button class="btn-form-ghost" onclick="clearMaintEndTime()">Clear End Time</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- RIGHT: Status & Preview -->
-            <div style="display:flex;flex-direction:column;gap:16px;">
-
-              <!-- Current State card -->
-              <div class="card">
-                <div class="card-hd">
-                  <div class="card-title">📊 Current State</div>
-                </div>
-                <div class="card-body-p" style="padding-top:8px;">
-                  <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
-                    <div class="sh-ic" style="background:var(--gLt);font-size:18px;">🔌</div>
-                    <div class="sh-body">
-                      <div class="sh-label">Maintenance Mode</div>
-                      <div class="sh-val" id="ms-active-val">Checking…</div>
-                    </div>
-                    <span class="sh-pill" id="ms-active-pill">—</span>
-                  </div>
-                  <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
-                    <div class="sh-ic" style="background:#fef3c7;font-size:18px;">👥</div>
-                    <div class="sh-body">
-                      <div class="sh-label">Affected Roles</div>
-                      <div class="sh-val" id="ms-roles-val">—</div>
-                    </div>
-                  </div>
-                  <div class="sh-item" style="padding:10px 0;border-bottom:1px solid var(--brl);">
-                    <div class="sh-ic" style="background:#e0f2fe;font-size:18px;">🏁</div>
-                    <div class="sh-body">
-                      <div class="sh-label">End Time</div>
-                      <div class="sh-val" id="ms-end-val">Not set</div>
-                    </div>
-                  </div>
-                  <div class="sh-item" style="padding:10px 0;">
-                    <div class="sh-ic" style="background:#fce7f3;font-size:18px;">⏱️</div>
-                    <div class="sh-body">
-                      <div class="sh-label">Started At</div>
-                      <div class="sh-val" id="ms-started-val">—</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Quick Actions card -->
-              <div class="card">
-                <div class="card-hd">
-                  <div class="card-title">⚡ Quick Actions</div>
-                </div>
-                <div class="card-body-p" style="display:flex;flex-direction:column;gap:8px;">
-                  <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(1)">⏱ Set
-                    1-hour maintenance window</button>
-                  <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(2)">⏱ Set
-                    2-hour maintenance window</button>
-                  <button class="btn bout" style="width:100%;justify-content:center;" onclick="setMaintPreset(6)">⏱ Set
-                    6-hour maintenance window</button>
-                  <div style="border-top:1px solid var(--brl);margin:4px 0;"></div>
-                  <button class="btn bout" style="width:100%;justify-content:center;" onclick="selectAllRoles()">✅
-                    Select All Roles</button>
-                  <button class="btn bout" style="width:100%;justify-content:center;" onclick="clearAllRoles()">☐ Clear
-                    All Roles</button>
-                  <div style="border-top:1px solid var(--brl);margin:4px 0;"></div>
-                  <a href="maintenance.html" target="_blank" class="btn bout"
-                    style="width:100%;justify-content:center;text-decoration:none;">👁 Preview Maintenance Page</a>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Log of recent maintenance activity -->
-          <div class="card" style="margin-top:18px;">
-            <div class="card-hd">
-              <div class="card-title">📋 Maintenance Activity Log</div>
-            </div>
-            <div id="maint-log-list" class="card-body-p">
-              <div class="empty-state"><span class="ei">📋</span>
-                <p>Loading logs…</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /mc -->
-  </div><!-- /app-shell -->
-
-  <!-- ══════════════════════════ MODALS ══════════════════════════ -->
+<!-- ══════════════════════════ MODALS ══════════════════════════ -->
 
   <!-- Add Department -->
   <div class="modal-bg" id="m-add-dept">
@@ -1792,13 +1625,19 @@ to { transform: rotate(360deg) }
         <div class="modal-title">📚 Add Subject</div>
         <div class="modal-close" onclick="closeModalBg('m-add-subj-ctx')">✖</div>
       </div>
-      <div class="fg" style="margin-bottom:12px;"><label class="fl">Subject Name</label><input type="text" class="fc2"
+      <div class="fg"><label class="fl">Subject Name</label><input type="text" class="fc2"
           id="ns-nm" placeholder="e.g. Data Structures Algorithm"></div>
+          <div style="height:16px;"></div>
+      <div class="fg"><label class="fl">Department</label>
+          <select class="fc2" id="ns-dept">
+            <option value="">— Select —</option>
+          </select>
+        </div><div style="height:16px;"></div>
       <div class="form-grid form-grid-2">
-        <div class="fg"><label class="fl">Subject Short Code</label><input type="text" class="fc2"
-          id="ns-ssc" placeholder="e.g. DSA" oninput="nsScAuto()" minlength="2" maxlength="4"></div>
-        <div class="fg"><label class="fl">Code</label><input type="text" class="fc2" id="ns-cd" placeholder="25CSE201" oninput="nsScAuto()">
+        <div class="fg"><label class="fl"> Subject Code</label><input type="text" class="fc2" id="ns-cd" placeholder="e.g. 25CSE201" oninput="nsScAuto()">
         </div>
+        <div class="fg"><label class="fl">Subject Short Code</label><input type="text" class="fc2"
+          id="ns-ssc" placeholder="e.g. DSA" oninput="nsScAuto()" minlength="2" maxlength="5"></div>
 
         <div class="fg"><label class="fl">Credits</label><input type="number" class="fc2" id="ns-cr" value="3" min="1"
             max="6"></div>
@@ -1807,13 +1646,13 @@ to { transform: rotate(360deg) }
             <option>Lab</option>
             <option>Project</option>
           </select></div>
-
-        <div class="fg"><label class="fl">Subject Code <span class = "auto-txt">(auto)</span></label><input type="text" class="fc2" id="ns-sc" placeholder="Auto filled" readonly>
-        </div>
-        <div class="fg"><label class="fl">Assign Teacher</label><select class="fc2" id="ns-tch">
-            <option value="">— Optional —</option>
-          </select></div>
       </div>
+      <div class="fg"><label class="fl">Subject Code <span class = "auto-txt">(auto)</span></label><input type="text" class="fc2" id="ns-sc" style="cursor: not-allowed;" placeholder="Auto filled" readonly>
+        </div>
+
+      <div class="required-note">⚠️ All the above fields are required.</div>
+      <div style="height:16px;"></div>
+
       <div class="form-actions"><button class="btn-form-ghost"
           onclick="closeModalBg('m-add-subj-ctx')">Cancel</button><button class="btn-form-pri" onclick="addSubCtx()">Add
           Subject</button></div>
@@ -1845,9 +1684,9 @@ to { transform: rotate(360deg) }
         <div class="fg"><label class="fl">Subject Code <span class="auto-txt">(auto)</span>
             </label><input type="text" class="fc2" id="es-sc" placeholder="Auto filled" readonly></div>
       </div>
-      <div class="form-actions"><button class="btn-form-ghost"
-          onclick="closeModalBg('m-edit-subj')">Cancel</button><button class="btn-form-pri" onclick="saveEditSubj()">💾
-          Save</button></div>
+      <div class="form-actions">
+        <button class="btn-form-ghost" onclick="closeModalBg('m-edit-subj')">Cancel</button>
+        <button class="btn-form-pri" onclick="saveEditSubj()">💾 Save</button></div>
     </div>
   </div>
 
@@ -2729,7 +2568,7 @@ to { transform: rotate(360deg) }
       // Stat counts from unfiltered set (always show full counts)
       var counts = { admin: 0, teacher: 0, student: 0, system: 0 };
       allLogs.forEach(function (l) {
-        var r = (l.role || l.userName === 'SYSTEM' ? 'system' : l.role) || '';
+        var r = (l.userName === 'SYSTEM' ? 'system' : (l.role || '')).toLowerCase();
         if (counts[r] !== undefined) counts[r]++;
       });
       renderLogStatCards(allLogs.length, counts);
@@ -2858,6 +2697,338 @@ to { transform: rotate(360deg) }
     }
     var elogs = exportLogs;
     var rl    = renderLogs;
+
+    // ─── ANALYTICS & REPORTS ──────────────────────────────────────────────────────
+    function initAdminReports() {
+      // Set default date range to last 30 days
+      var today = new Date();
+      var thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      
+      var todayStr = today.toISOString().split('T')[0];
+      var thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+      ['ard-fr', 'aro-fr', 'arstu-fr'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = thirtyDaysAgoStr;
+      });
+      ['ard-to', 'aro-to', 'arstu-to'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = todayStr;
+      });
+
+      // Populate department dropdowns
+      var depts = DB.get('depts') || [];
+      ['ars-dept', 'ars-o-dept', 'arstu-dept'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = '<option value="">All Departments</option>'
+            + depts.map(function(d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');
+        }
+      });
+
+      // Generate the initial report
+      genDeptRpt();
+    }
+
+    function arTab(tabName) {
+      var tabs = ['dept', 'overall', 'student'];
+      tabs.forEach(function(t) {
+        var el = document.getElementById('rpt-' + t);
+        if (el) el.style.display = (t === tabName) ? 'block' : 'none';
+      });
+
+      // Update active tab buttons
+      var btnContainer = document.querySelector('.rep-tab-bar');
+      if (btnContainer) {
+        var buttons = btnContainer.querySelectorAll('.rtab');
+        buttons.forEach(function(btn) {
+          var onclickVal = btn.getAttribute('onclick') || '';
+          btn.classList.toggle('act', onclickVal.indexOf("'" + tabName + "'") !== -1 || onclickVal.indexOf('"' + tabName + '"') !== -1);
+        });
+      }
+
+      // Generate the active tab report
+      if (tabName === 'dept') genDeptRpt();
+      else if (tabName === 'overall') genOverallRpt();
+      else if (tabName === 'student') genStuRpt();
+    }
+
+    function genDeptRpt() {
+      var deptId = document.getElementById('ars-dept') ? document.getElementById('ars-dept').value : '';
+      var from = document.getElementById('ard-fr') ? document.getElementById('ard-fr').value : '';
+      var to = document.getElementById('ard-to') ? document.getElementById('ard-to').value : '';
+      var tbody = document.getElementById('arb-dept');
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">⏳ Loading report data...</td></tr>';
+
+      var url = '/attendance?';
+      if (from) url += 'from=' + encodeURIComponent(from) + '&';
+      if (to) url += 'to=' + encodeURIComponent(to) + '&';
+
+      apiCall('GET', url).then(function(attendance) {
+        attendance = Array.isArray(attendance) ? attendance : [];
+        var classes = DB.get('classes') || [];
+
+        var filtered = attendance.filter(function(att) {
+          if (!deptId) return true;
+          var cls = classes.find(function(c) { return c._id === att.classId; });
+          return cls && cls.deptId === deptId;
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--tdi);">'
+            + '<span style="font-size:38px;display:block;margin-bottom:10px;">📊</span>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">No attendance records found.</div>'
+            + '<div style="font-size:12px;color:var(--tdi);">Try selecting a different department or date range.</div>'
+            + '</td></tr>';
+          return;
+        }
+
+        // Group by classId + subjectId
+        var groups = {};
+        filtered.forEach(function(att) {
+          var cls = classes.find(function(c) { return c._id === att.classId; });
+          var key = att.classId + '_' + att.subjectId;
+          if (!groups[key]) {
+            groups[key] = {
+              className: att.className || '—',
+              subjectName: att.subjectName || '—',
+              deptName: (cls && cls.deptName) || '—',
+              totalPresent: 0,
+              totalAbsent: 0,
+              sessions: 0
+            };
+          }
+          groups[key].totalPresent += (att.totalPresent || 0);
+          groups[key].totalAbsent += (att.totalAbsent || 0);
+          groups[key].sessions += 1;
+        });
+
+        var rowsHtml = Object.keys(groups).map(function(key, index) {
+          var g = groups[key];
+          var total = g.totalPresent + g.totalAbsent;
+          var pct = total > 0 ? ((g.totalPresent / total) * 100).toFixed(1) : '0.0';
+          return '<tr>'
+            + '<td>' + (index + 1) + '</td>'
+            + '<td>' + g.className + '</td>'
+            + '<td>' + g.subjectName + '</td>'
+            + '<td>' + g.deptName + '</td>'
+            + '<td>' + g.sessions + '</td>'
+            + '<td>' + g.totalPresent + '</td>'
+            + '<td>' + g.totalAbsent + '</td>'
+            + '<td class="b" style="color: ' + (parseFloat(pct) >= 75 ? 'var(--gD)' : 'var(--red)') + '">' + pct + '%</td>'
+            + '</tr>';
+        }).join('');
+
+        tbody.innerHTML = rowsHtml;
+      }).catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--red);">Error loading report: ' + (err.message || 'unknown error') + '</td></tr>';
+      });
+    }
+
+    function genOverallRpt() {
+      var deptId = document.getElementById('ars-o-dept') ? document.getElementById('ars-o-dept').value : '';
+      var from = document.getElementById('aro-fr') ? document.getElementById('aro-fr').value : '';
+      var to = document.getElementById('aro-to') ? document.getElementById('aro-to').value : '';
+      var tbody = document.getElementById('arb-overall');
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">⏳ Loading report data...</td></tr>';
+
+      var url = '/attendance?';
+      if (from) url += 'from=' + encodeURIComponent(from) + '&';
+      if (to) url += 'to=' + encodeURIComponent(to) + '&';
+
+      apiCall('GET', url).then(function(attendance) {
+        attendance = Array.isArray(attendance) ? attendance : [];
+        
+        var depts = DB.get('depts') || [];
+        var classes = DB.get('classes') || [];
+        var students = DB.get('students') || [];
+
+        // Group by department
+        var deptGroups = {};
+        depts.forEach(function(d) {
+          if (deptId && d._id !== deptId) return;
+          deptGroups[d._id] = {
+            name: d.name,
+            classCount: 0,
+            studentCount: 0,
+            totalPresent: 0,
+            totalAbsent: 0,
+            recordCount: 0
+          };
+        });
+
+        classes.forEach(function(c) {
+          if (deptGroups[c.deptId]) {
+            deptGroups[c.deptId].classCount++;
+          }
+        });
+
+        students.forEach(function(s) {
+          if (deptGroups[s.deptId]) {
+            deptGroups[s.deptId].studentCount++;
+          }
+        });
+
+        attendance.forEach(function(att) {
+          var cls = classes.find(function(c) { return c._id === att.classId; });
+          if (cls && deptGroups[cls.deptId]) {
+            var dg = deptGroups[cls.deptId];
+            dg.totalPresent += (att.totalPresent || 0);
+            dg.totalAbsent += (att.totalAbsent || 0);
+            dg.recordCount += (att.records ? att.records.length : 0);
+          }
+        });
+
+        var activeDepts = Object.keys(deptGroups);
+        if (activeDepts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--tdi);">'
+            + '<span style="font-size:38px;display:block;margin-bottom:10px;">📊</span>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">No departments found or matches.</div>'
+            + '</td></tr>';
+          return;
+        }
+
+        var rowsHtml = activeDepts.map(function(id, index) {
+          var dg = deptGroups[id];
+          var total = dg.totalPresent + dg.totalAbsent;
+          var pct = total > 0 ? ((dg.totalPresent / total) * 100).toFixed(1) : '0.0';
+          return '<tr>'
+            + '<td>' + (index + 1) + '</td>'
+            + '<td class="b">' + dg.name + '</td>'
+            + '<td>' + dg.classCount + '</td>'
+            + '<td>' + dg.studentCount + '</td>'
+            + '<td>' + dg.recordCount + '</td>'
+            + '<td>' + dg.totalPresent + '</td>'
+            + '<td>' + dg.totalAbsent + '</td>'
+            + '<td class="b" style="color: ' + (parseFloat(pct) >= 75 ? 'var(--gD)' : 'var(--red)') + '">' + pct + '%</td>'
+            + '</tr>';
+        }).join('');
+
+        tbody.innerHTML = rowsHtml;
+      }).catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--red);">Error loading report: ' + (err.message || 'unknown error') + '</td></tr>';
+      });
+    }
+
+    function genStuRpt() {
+      var deptId = document.getElementById('arstu-dept') ? document.getElementById('arstu-dept').value : '';
+      var from = document.getElementById('arstu-fr') ? document.getElementById('arstu-fr').value : '';
+      var to = document.getElementById('arstu-to') ? document.getElementById('arstu-to').value : '';
+      var tbody = document.getElementById('arb-student');
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--tdi);">⏳ Loading report data...</td></tr>';
+
+      var url = '/attendance?';
+      if (from) url += 'from=' + encodeURIComponent(from) + '&';
+      if (to) url += 'to=' + encodeURIComponent(to) + '&';
+
+      apiCall('GET', url).then(function(attendance) {
+        attendance = Array.isArray(attendance) ? attendance : [];
+        var students = DB.get('students') || [];
+        if (deptId) {
+          students = students.filter(function(s) { return s.deptId === deptId; });
+        }
+
+        if (students.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:36px;color:var(--tdi);">'
+            + '<span style="font-size:38px;display:block;margin-bottom:10px;">👨‍🎓</span>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">No students found.</div>'
+            + '</td></tr>';
+          return;
+        }
+
+        var studentStats = {};
+        students.forEach(function(s) {
+          studentStats[s.regNo] = {
+            name: s.name,
+            regNo: s.regNo,
+            deptName: s.deptName || '—',
+            present: 0,
+            absent: 0
+          };
+        });
+
+        attendance.forEach(function(att) {
+          if (Array.isArray(att.records)) {
+            att.records.forEach(function(rec) {
+              if (studentStats[rec.regNo]) {
+                if (rec.status === 'present') studentStats[rec.regNo].present++;
+                else if (rec.status === 'absent') studentStats[rec.regNo].absent++;
+              }
+            });
+          }
+        });
+
+        var rowsHtml = students.map(function(s, index) {
+          var stat = studentStats[s.regNo];
+          var total = stat.present + stat.absent;
+          var pct = total > 0 ? ((stat.present / total) * 100).toFixed(1) : '0.0';
+          return '<tr>'
+            + '<td>' + (index + 1) + '</td>'
+            + '<td class="b">' + stat.name + '</td>'
+            + '<td>' + stat.regNo + '</td>'
+            + '<td>' + stat.deptName + '</td>'
+            + '<td class="b" style="color: ' + (parseFloat(pct) >= 75 ? 'var(--gD)' : 'var(--red)') + '">' + pct + '%</td>'
+            + '</tr>';
+        }).join('');
+
+        tbody.innerHTML = rowsHtml;
+      }).catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--red);">Error loading report: ' + (err.message || 'unknown error') + '</td></tr>';
+      });
+    }
+
+    function expAdminRpt(type, format) {
+      var activeTab = 'dept';
+      if (document.getElementById('rpt-overall') && document.getElementById('rpt-overall').style.display !== 'none') activeTab = 'overall';
+      else if (document.getElementById('rpt-student') && document.getElementById('rpt-student').style.display !== 'none') activeTab = 'student';
+
+      var tableBodyEl = document.getElementById('arb-' + activeTab);
+      if (!tableBodyEl) return;
+
+      var headers = [];
+      var rows = [];
+
+      var headerSelector = '#pg-reports #rpt-' + activeTab + ' table thead tr th';
+      document.querySelectorAll(headerSelector).forEach(function(th) {
+        headers.push(th.textContent.trim());
+      });
+
+      tableBodyEl.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('td').forEach(function(td) {
+          row.push(td.textContent.trim());
+        });
+        if (row.length > 0) rows.push(row);
+      });
+
+      if (rows.length === 0 || (rows.length === 1 && rows[0][0].indexOf('No') === 0 || rows[0][0].indexOf('⏳') === 0)) {
+        showToast('No data to export', 'warn');
+        return;
+      }
+
+      var allData = [headers].concat(rows);
+      var fileName = 'Attendance_Report_' + activeTab + '_' + new Date().toISOString().split('T')[0];
+
+      if (format === 'csv') {
+        downloadCSV(allData, fileName);
+      } else if (format === 'xlsx') {
+        if (typeof XLSX === 'undefined') {
+          showToast('XLSX library not loaded yet', 'warn');
+          return;
+        }
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(allData);
+        XLSX.book_append_sheet(wb, ws, "Report");
+        XLSX.writeFile(wb, fileName + ".xlsx");
+      }
+    }
 
     // ─── DASHBOARD ───────────────────────────────────────────────────────────────
     function initDash() {
@@ -4171,9 +4342,13 @@ to { transform: rotate(360deg) }
         return;
       }
 
+      // Auto-select current dept from structure context
+      var deptSel = document.getElementById('ns-dept');
+      if (deptSel) deptSel.value = structureContext.deptId;
+
       // Show active dept in modal title
       var titleEl = document.querySelector('#m-add-subj-ctx .modal-title');
-      if (titleEl) titleEl.textContent = '📚 Add Subject — ' + (structureContext.deptName || 'Department');
+      if (titleEl) titleEl.textContent = '📚 Add Subject';
 
       // Clear previous input values
       ['ns-nm','ns-ssc','ns-cd','ns-sc'].forEach(function (id) {
@@ -4182,23 +4357,17 @@ to { transform: rotate(360deg) }
       });
       var crEl = document.getElementById('ns-cr');
       if (crEl) crEl.value = '3';
-
-      var teachers = Array.isArray(DB.get('users')) ? DB.get('users') : [];
-      document.getElementById('ns-tch').innerHTML = '<option value="">— Optional —</option>'
-        + teachers.filter(function (t) { return t.role === 'teacher'; })
-          .map(function (t) {
-            return '<option value="' + t._id + '">' + t.name + ' (' + (t.dept || '') + ')</option>';
-          }).join('');
       openModal_('m-add-subj-ctx');
     }
 
     function nsScAuto() {
-      var deptCode = getFieldValue('ns-dc');
+      var deptId = getFieldValue('ns-dept'); 
       var shortCode = getFieldValue('ns-ssc');
-      var code = getFieldValue('ns-cd').slice(-3);
+      var code = getFieldValue('ns-cd');
       var type = getFieldValue('ns-tp')[0].toUpperCase();
-      if (deptCode && code && type) {
-        var subjectCode = deptCode + '-' + type + code + '-' + shortCode;
+      if (deptId && code && type) {
+        var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
+        var subjectCode = code + '-' + shortCode;
         document.getElementById('ns-sc').value = subjectCode;
       } else {
         document.getElementById('ns-sc').value = '';
@@ -4223,12 +4392,12 @@ to { transform: rotate(360deg) }
     function esScAuto() {
       var deptCode = getFieldValue('es-dc');
       var shortCode = getFieldValue('es-ssc');
-      var code = getFieldValue('es-cd').slice(-3);
+      var code = getFieldValue('es-cd');
       var type = getFieldValue('es-tp')[0].toUpperCase();
       var editedSubjId = window.activeEditSubjId || '';
 
       if (deptCode && code && type) {
-        var subjectCode = deptCode + '-' + type + code + '-' + shortCode;
+        var subjectCode = code + '-' + shortCode;
         document.getElementById('es-sc').value = subjectCode ;
       } else {
         document.getElementById('es-sc').value = '';
@@ -4258,7 +4427,6 @@ to { transform: rotate(360deg) }
       var type = getFieldValue('ns-tp') || 'Theory';
       var shortCode = getFieldValue('ns-ssc');
       var subjectName = shortCode + '-' + type + ' ' + code;
-      var tchId = document.getElementById('ns-tch').value;
       var subjectCode = getFieldValue('ns-sc');
       if (!name || !code) { showToast('Name and code required', 'warn'); return; }
       if (!structureContext.deptId) { showToast('Please select a department first by exploring structure', 'warn'); return; }
@@ -4267,20 +4435,7 @@ to { transform: rotate(360deg) }
       apiAddSubject({ name: name, code: code, credits: credits, type: type, deptId: structureContext.deptId, deptName: dept.name, deptCode: dept.code, subjectCode: subjectCode })
         .then(function (newSubject) {
           if (!newSubject || newSubject.error) return;
-          if (tchId) {
-            var teacher = DB.get('users').find(function (u) { return u._id === tchId; });
-            DB.get('classes').filter(function (c) { return c.deptId === structureContext.deptId; })
-              .forEach(function (cls) {
-                if (!DB.one('assignments', { classId: cls._id, subjectId: newSubject._id })) {
-                  DB.insert('assignments', {
-                    classId: cls._id, className: cls.name,
-                    subjectId: newSubject._id, subjectName: name,
-                    teacherId: tchId, teacherName: teacher ? teacher.name : '',
-                    deptName: cls.deptName, deptCode: cls.deptCode
-                  });
-                }
-              });
-          }
+          
           closeModalBg('m-add-subj-ctx');
           renderClassSubjectView(structureContext.deptId);
           addLog('Subject Added', '"' + name + '" (' + code + ')');
@@ -5515,7 +5670,7 @@ to { transform: rotate(360deg) }
           + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
       });
 
-      ['nc-dept'].forEach(function (id) {
+      ['nc-dept', 'ns-dept'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = '<option value="">— Select —</option>'
           + depts.map(function (d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');

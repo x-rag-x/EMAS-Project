@@ -106,7 +106,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 /* ── TOGGLE SWITCH ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--br);}
 .toggle-row:last-child{border-bottom:none;}
-.toggle-label{font-size:13.5px;font-weight:600;color:var(--td);}
+.toggle-label{font-size:14px;font-weight:600;color:var(--td);}
 .toggle-hint{font-size:11.5px;color:var(--tmu);margin-top:3px;}
 .toggle-wrap{position:relative;display:inline-flex;align-items:center;gap:10px;}
 .toggle{position:relative;width:48px;height:26px;cursor:pointer;}
@@ -123,54 +123,26 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .form-group{display:flex;flex-direction:column;gap:6px;}
 .form-group.full{grid-column:1/-1;}
-.form-label{font-size:12px;font-weight:600;color:var(--tmu);text-transform:uppercase;letter-spacing:.6px;}
+.form-label{font-size:13.5px;font-weight:600;color:var(--tmu);}
 .form-input{padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13.5px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;transition:border-color .2s;}
 .form-input:focus{border-color:var(--gM);box-shadow:0 0 0 3px rgba(56,142,60,.1);}
 .form-input[readonly]{background:#f8fafc;color:var(--tmu);}
 select.form-input{cursor:pointer;}
+.key-label{
+    font-family:'JetBrains Mono', monospace;font-size:10px;background:#f1f5f9;padding:1px 6px;border-radius:4px;color:var(--gD); font-weight: 60;
+}
+.set-title {font-size:14px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:1.2px;padding:14px 0 8px;border-bottom:1px solid var(--brl);margin-bottom:2px;}
+
 
 /* ── ANIMATED LOGOUT BUTTON ─────────────────────── */
-.sb-logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 45px;
-  height: 45px;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: width .3s ease, border-radius .3s ease;
-  box-shadow: 2px 2px 10px rgba(239, 68, 68, .25);
-  background-color: #ff4141;
-  margin: 0 auto;
-  padding: 0;
-  flex-shrink: 0;
-}
-.sb-logout-btn .logout-sign {
-  width: 100%;
-  transition: width .3s, padding .3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+.sb-logout-btn { display: flex; align-items: center; justify-content: flex-start; width: 45px; height: 45px; border: none; border-radius: 50%; cursor: pointer; 
+  position: relative; overflow: hidden; transition: width .3s ease, border-radius .3s ease; box-shadow: 2px 2px 10px rgba(239, 68, 68, .25); 
+  background-color: #ff4141; margin: 0 auto; padding: 0; flex-shrink: 0; }
+.sb-logout-btn .logout-sign { width: 100%; transition: width .3s, padding .3s; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
 .sb-logout-btn .logout-sign svg { width: 17px; flex-shrink: 0; }
 .sb-logout-btn .logout-sign svg path { fill: white; }
-.sb-logout-btn .logout-text {
-  position: absolute;
-  right: 0;
-  width: 0;
-  opacity: 0;
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  transition: opacity .3s, width .3s, padding .3s;
-  white-space: nowrap;
-  font-family: 'Poppins', sans-serif;
-  overflow: hidden;
-}
+.sb-logout-btn .logout-text { position: absolute; right: 0; width: 0; opacity: 0; color: white; font-size: 13px; font-weight: 600; 
+  transition: opacity .3s, width .3s, padding .3s; white-space: nowrap; font-family: 'Poppins', sans-serif; overflow: hidden; }
 .sb-logout-btn:hover { width: 130px; border-radius: 40px; }
 .sb-logout-btn:hover .logout-sign { width: 35%; padding-left: 18px; }
 .sb-logout-btn:hover .logout-text { opacity: 1; width: 65%; padding-right: 12px; }
@@ -306,7 +278,7 @@ select.form-input{cursor:pointer;}
     <button class="sb-item" onclick="nav('maintenance')"><span class="sbi-ic">🔧</span>Maintenance Mode</button>
 
     <div class="sb-section-label">Configuration</div>
-    <button class="sb-item" onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Basic Settings</button>
+    <button class="sb-item" onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Settings</button>
     <button class="sb-item" onclick="nav('security')"><span class="sbi-ic">🔐</span>Security</button>
     <button class="sb-item" onclick="nav('advanced')"><span class="sbi-ic">🧪</span>Advanced</button>
   </div>
@@ -850,80 +822,221 @@ select.form-input{cursor:pointer;}
   <!-- ══ SETTINGS PAGE ══ -->
   <div class="pg" id="pg-settings">
     <div class="page-hd">
-      <div class="page-title">⚙️ Basic Settings</div>
+      <div class="page-title">⚙️ Settings</div>
       <div class="page-sub">Configure your EAMS instance</div>
     </div>
 
+    <!-- ── card: Institution Details ─────────────────────── -->
     <div class="card">
       <div class="card-hd">
         <div class="card-icon blue">🏫</div>
-        <div><div class="card-title">Institution Details</div><div class="card-desc">Displayed across the application</div></div>
+        <div>
+          <div class="card-title">Institution Details</div>
+          <div class="card-desc">Displayed across the application &nbsp;·&nbsp; DB key group: <code class="key-label">institution</code></div>
+        </div>
       </div>
       <div class="settings-grid">
         <div class="form-group">
-          <label class="form-label">Institution Name</label>
-          <input type="text" class="form-input" id="inst-name" placeholder="Sri Shakthi Institute of Engineering">
+          <label class="form-label">Institution Name <span class="key-label">institutionName</span></label>
+          <input type="text" class="form-input" id="inst-name" placeholder="Sri Shakthi Institute of Engineering and Technology">
         </div>
         <div class="form-group">
-          <label class="form-label">Short Name / Acronym</label>
+          <label class="form-label">Short Name / Acronym <span class="key-label">institutionShort</span></label>
           <input type="text" class="form-input" id="inst-short" placeholder="SIET">
         </div>
         <div class="form-group full">
-          <label class="form-label">Address</label>
+          <label class="form-label">Address <span class="key-label">institutionAddress</span></label>
           <input type="text" class="form-input" id="inst-addr" placeholder="Coimbatore, Tamil Nadu">
         </div>
         <div class="form-group">
-          <label class="form-label">Contact Email</label>
-          <input type="email" class="form-input" id="inst-email" placeholder="admin@siet.ac.in">
+          <label class="form-label">Contact Email <span class="key-label">institutionEmail</span></label>
+          <input type="email" class="form-input" id="inst-email" placeholder="info@siet.ac.in">
         </div>
         <div class="form-group">
-          <label class="form-label">Phone</label>
-          <input type="text" class="form-input" id="inst-phone" placeholder="+91 XXXXXXXXXX">
+          <label class="form-label">Phone <span class="key-label">institutionPhone</span></label>
+          <input type="text" class="form-input" id="inst-phone" placeholder="+91 XXXXX XXXXX">
         </div>
       </div>
       <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('institution')">💾 Save Institution Info</button></div>
     </div>
 
+    <!-- ── card: Settings ────────────────────────────────── -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-icon red">⚙️</div>
+        <div>
+          <div class="card-title">Settings</div>
+          <div class="card-desc">Pages, models &amp; feature flags &nbsp;·&nbsp; DB key group: <code class="key-label">settings</code></div>
+        </div>
+      </div>
+
+      <!-- Pages -->
+      <div class="set-title">Pages</div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Students Page <span class="key-label">pageStudents</span></div>
+          <div class="toggle-hint">Enable student.html access for students</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-stud" checked onchange="syncLabel(this,'set-stud-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-stud-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Teachers Page <span class="key-label">pageTeachers</span></div>
+          <div class="toggle-hint">Enable teacher.html access for teachers</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-teach" checked onchange="syncLabel(this,'set-teach-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-teach-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Manage Page <span class="key-label">pageManage</span></div>
+          <div class="toggle-hint">Enable manage.html</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-manage" checked onchange="syncLabel(this,'set-manage-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-manage-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Bulk Page <span class="key-label">pageBulk</span></div>
+          <div class="toggle-hint">Enable bulk.html</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-bulk" checked onchange="syncLabel(this,'set-bulk-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-bulk-label">ON</span>
+        </div>
+      </div>
+
+      <!-- Models -->
+      <div class="set-title">Models</div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Backup Model <span class="key-label">modelBackup</span></div>
+          <div class="toggle-hint">Enable the Backup data model</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-backup" checked onchange="syncLabel(this,'set-backup-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-backup-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Undo Model <span class="key-label">modelUndo</span></div>
+          <div class="toggle-hint">Enable soft-delete recovery (Undo model)</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-undo" checked onchange="syncLabel(this,'set-undo-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-undo-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Maintenance Model <span class="key-label">modelMaintenance</span></div>
+          <div class="toggle-hint">Enable the Maintenance mode model</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-mainten" checked onchange="syncLabel(this,'set-mainten-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-mainten-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Adder Model <span class="key-label">modelAdder</span></div>
+          <div class="toggle-hint">Enable adder.html</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-adder" checked onchange="syncLabel(this,'set-adder-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-adder-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Add Student <span class="key-label">modelAddStudent</span></div>
+          <div class="toggle-hint">Allow new students to be added to the database</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-addStud" checked onchange="syncLabel(this,'set-addStud-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-addStud-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Export as Sheet <span class="key-label">modelExportSheet</span></div>
+          <div class="toggle-hint">Allow teachers to export data as a spreadsheet</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-export" checked onchange="syncLabel(this,'set-export-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-export-label">ON</span>
+        </div>
+      </div>
+
+      <!-- Attendance -->
+      <div class="set-title">Attendance</div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Mark Attendance <span class="key-label">markAttendance</span></div>
+          <div class="toggle-hint">Allow teachers to mark attendance</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-att" checked onchange="syncLabel(this,'set-att-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-att-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Live Sessions <span class="key-label">liveSessions</span></div>
+          <div class="toggle-hint">Allow attendance marking via Live Sessions</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-live" checked onchange="syncLabel(this,'set-live-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-live-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Forward to REP <span class="key-label">forwardToRep</span></div>
+          <div class="toggle-hint">Allow attendance marking via Forward To REP</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="set-rep" checked onchange="syncLabel(this,'set-rep-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-state on" id="set-rep-label">ON</span>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('settings')">💾 Save Settings</button></div>
+    </div>
+
+    <!-- ── card: Academic Settings ───────────────────────── -->
     <div class="card">
       <div class="card-hd">
         <div class="card-icon green">📅</div>
-        <div><div class="card-title">Academic Settings</div><div class="card-desc">Current academic year and term configuration</div></div>
+        <div>
+          <div class="card-title">Academic Settings</div>
+          <div class="card-desc">Academic year, attendance &amp; display config &nbsp;·&nbsp; DB key group: <code class="key-label">academic</code></div>
+        </div>
       </div>
       <div class="settings-grid">
         <div class="form-group">
-          <label class="form-label">Current Academic Year</label>
+          <label class="form-label">Current Academic Year <span class="key-label">academicYear</span></label>
           <input type="text" class="form-input" id="acad-year" placeholder="2025-26">
         </div>
         <div class="form-group">
-          <label class="form-label">Current Semester</label>
-          <select class="form-input" id="acad-sem">
-            <option>I</option><option>II</option><option>III</option>
-            <option>IV</option><option>V</option><option>VI</option>
-            <option>VII</option><option>VIII</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Semester Start Date</label>
-          <input type="date" class="form-input" id="acad-start">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Semester End Date</label>
-          <input type="date" class="form-input" id="acad-end">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Min Attendance % Required</label>
+          <label class="form-label">Min Attendance % Required <span class="key-label">minAttendance</span></label>
           <input type="number" class="form-input" id="acad-minatt" placeholder="75" min="0" max="100">
         </div>
         <div class="form-group">
-          <label class="form-label">Working Days / Week</label>
-          <select class="form-input" id="acad-wdays">
-            <option value="5">5 Days (Mon–Fri)</option>
-            <option value="6">6 Days (Mon–Sat)</option>
-          </select>
+          <label class="form-label">Working Days per Week <span class="key-label">workingDays</span></label>
+          <input type="number" class="form-input" id="acad-wdays" placeholder="6" min="1" max="7">
         </div>
         <div class="form-group">
-          <label class="form-label">Recent Errors Count (N)</label>
-          <input type="number" class="form-input" id="acad-errorsN" placeholder="20" min="5" max="200" title="Number of error logs shown in System Overview">
+          <label class="form-label">Recent Errors Count (N) <span class="key-label">errorsCount</span></label>
+          <input type="number" class="form-input" id="acad-errorsN" value="20" min="5" max="100">
           <span style="font-size:11px;color:var(--tmu);margin-top:3px;">Errors shown in System Overview → Last N logs</span>
         </div>
       </div>
@@ -941,37 +1054,49 @@ select.form-input{cursor:pointer;}
     <div class="card">
       <div class="card-hd">
         <div class="card-icon red">🔐</div>
-        <div><div class="card-title">Password Policy</div><div class="card-desc">Enforce password requirements for all users</div></div>
+        <div>
+          <div class="card-title">Password Policy</div>
+          <div class="card-desc">Authentication &amp; access requirements &nbsp;·&nbsp; DB key group: <code class="key-label">security</code></div>
+        </div>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Force Password Change on First Login</div><div class="toggle-hint">New teachers/students must change their default password immediately.</div></div>
+        <div>
+          <div class="toggle-label">Force Password Change on First Login <span class="key-label">forcePasswordChange</span></div>
+          <div class="toggle-hint">New teachers/students must change their default password immediately.</div>
+        </div>
         <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="sec-forcepw" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <label class="toggle"><input type="checkbox" id="sec-forcepw" checked onchange="syncLabel(this,'sec-forcepw-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
           <span class="toggle-state on" id="sec-forcepw-label">ON</span>
         </div>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Require Strong Passwords</div><div class="toggle-hint">Minimum 8 characters with uppercase, number, and symbol.</div></div>
+        <div>
+          <div class="toggle-label">Require Strong Passwords <span class="key-label">requireStrongPassword</span></div>
+          <div class="toggle-hint">Minimum 8 characters with uppercase, number, and symbol.</div>
+        </div>
         <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="sec-strongpw"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <label class="toggle"><input type="checkbox" id="sec-strongpw" onchange="syncLabel(this,'sec-strongpw-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
           <span class="toggle-state off" id="sec-strongpw-label">OFF</span>
         </div>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Session Timeout</div><div class="toggle-hint">Automatically log out inactive users.</div></div>
+        <div>
+          <div class="toggle-label">Session Timeout <span class="key-label">sessionTimeout</span></div>
+          <div class="toggle-hint">Automatically log out inactive users.</div>
+        </div>
         <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="sec-timeout"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <label class="toggle"><input type="checkbox" id="sec-timeout" onchange="syncLabel(this,'sec-timeout-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
           <span class="toggle-state off" id="sec-timeout-label">OFF</span>
         </div>
       </div>
       <div class="settings-grid" style="margin-top:14px;">
         <div class="form-group">
-          <label class="form-label">Session Timeout (minutes)</label>
-          <input type="number" class="form-input" id="sec-timeout-mins" placeholder="60" min="5">
+          <label class="form-label">Session Timeout (minutes) <span class="key-label">sessionTimeoutMins</span></label>
+          <input type="number" class="form-input" id="sec-timeout-mins" min="5">
         </div>
         <div class="form-group">
-          <label class="form-label">Max Login Attempts</label>
-          <input type="number" class="form-input" id="sec-maxlogin" placeholder="5" min="1">
+          <label class="form-label">Max Login Attempts <span class="key-label">maxLoginAttempts</span></label>
+          <input type="number" class="form-input" id="sec-maxlogin" min="1">
         </div>
       </div>
       <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('security')">💾 Save Security Settings</button></div>
@@ -1008,12 +1133,18 @@ select.form-input{cursor:pointer;}
     <div class="card">
       <div class="card-hd">
         <div class="card-icon gray">🛠️</div>
-        <div><div class="card-title">System Utilities</div><div class="card-desc">Tools for diagnostics and maintenance</div></div>
+        <div>
+          <div class="card-title">System Utilities</div>
+          <div class="card-desc">Developer tools and diagnostics &nbsp;·&nbsp; DB key group: <code class="key-label">advanced</code></div>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
 
         <div class="toggle-row">
-          <div><div class="toggle-label">Debug Mode</div><div class="toggle-hint">Enable verbose server logging to console.</div></div>
+          <div>
+            <div class="toggle-label">Debug Mode <span class="key-label">debugMode</span></div>
+            <div class="toggle-hint">Enable verbose server logging to console.</div>
+          </div>
           <div class="toggle-wrap">
             <label class="toggle"><input type="checkbox" id="adv-debug" onchange="syncLabel(this,'adv-debug-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
             <span class="toggle-state off" id="adv-debug-label">OFF</span>
@@ -1021,7 +1152,10 @@ select.form-input{cursor:pointer;}
         </div>
 
         <div class="toggle-row">
-          <div><div class="toggle-label">Allow Multiple Admin Sessions</div><div class="toggle-hint">Allow the same admin to be logged in from multiple devices.</div></div>
+          <div>
+            <div class="toggle-label">Allow Multiple Admin Sessions <span class="key-label">multiAdminSession</span></div>
+            <div class="toggle-hint">Allow the same admin to be logged in from multiple devices.</div>
+          </div>
           <div class="toggle-wrap">
             <label class="toggle"><input type="checkbox" id="adv-multisess" checked onchange="syncLabel(this,'adv-multisess-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
             <span class="toggle-state on" id="adv-multisess-label">ON</span>
@@ -1029,13 +1163,17 @@ select.form-input{cursor:pointer;}
         </div>
 
         <div class="toggle-row">
-          <div><div class="toggle-label">Auto-seed Demo Data</div><div class="toggle-hint">Automatically seed sample data if database is empty on startup.</div></div>
+          <div>
+            <div class="toggle-label">Auto-seed Demo Data <span class="key-label">autoSeedDemoData</span></div>
+            <div class="toggle-hint">Automatically seed sample data if database is empty on startup.</div>
+          </div>
           <div class="toggle-wrap">
             <label class="toggle"><input type="checkbox" id="adv-seed" onchange="syncLabel(this,'adv-seed-label')"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
             <span class="toggle-state off" id="adv-seed-label">OFF</span>
           </div>
         </div>
 
+        <div style="margin-top:18px;"><button class="btn btn-pri" onclick="saveSettings('advanced')">💾 Save System Utilities</button></div>
       </div>
     </div>
 
@@ -1414,7 +1552,7 @@ function nav(page) {
   var idx = PAGE_NAMES.indexOf(page);
   var items = document.querySelectorAll('.sb-item');
   if (idx >= 0 && items[idx]) items[idx].classList.add('act');
-  if (page === 'overview')    { loadOverview(); loadHealth(); }
+  if (page === 'overview')    { renderModels(); loadOverview(); loadHealth(); }
   if (page === 'usergrid')   { ugLoadData(); }
   if (page === 'data')        refreshExportCount();
   if (page === 'backup')      loadBackupPage();
@@ -2090,116 +2228,180 @@ function clearMaintEndTime() {
 // ── Toggle label sync ──────────────────────────────────
 function syncLabel(checkbox, labelId) {
   var lbl = document.getElementById(labelId);
+  if (!lbl) return;
   lbl.textContent = checkbox.checked ? 'ON' : 'OFF';
   lbl.className   = 'toggle-state ' + (checkbox.checked ? 'on' : 'off');
 }
-// Wire security toggles
-['sec-forcepw','sec-strongpw','sec-timeout','show-logo'].forEach(function(id) {
-  var el = document.getElementById(id);
-  if (el) el.addEventListener('change', function() { syncLabel(this, id+'-label'); });
-});
 
-// ── Save settings ──────────────────────────────────────
-// ── Settings: save to DB only ─────────────────────────
+// ── Save settings — all sections write to DB only ─────
 function saveSettings(section) {
-  var payload = {};
-  if (section === 'institution') {
-    payload = {
-      name:  document.getElementById('inst-name').value,
-      short: document.getElementById('inst-short').value,
-      addr:  document.getElementById('inst-addr').value,
-      email: document.getElementById('inst-email').value,
-      phone: document.getElementById('inst-phone').value,
-    };
-  } else if (section === 'academic') {
-    payload = {
-      year:   document.getElementById('acad-year').value,
-      sem:    document.getElementById('acad-sem').value,
-      start:  document.getElementById('acad-start').value,
-      end:    document.getElementById('acad-end').value,
-      minAtt: document.getElementById('acad-minatt').value,
-      wdays:  document.getElementById('acad-wdays').value,
-      errorsN: document.getElementById('acad-errorsN') ? document.getElementById('acad-errorsN').value : 20,
-    };
-  } else if (section === 'security') {
-    payload = {
-      forcePw:    document.getElementById('sec-forcepw').checked,
-      strongPw:   document.getElementById('sec-strongpw').checked,
-      timeout:    document.getElementById('sec-timeout').checked,
-      timeoutMin: document.getElementById('sec-timeout-mins').value,
-      maxLogin:   document.getElementById('sec-maxlogin').value,
-    };
-  }
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
-  showToast('⏳ Saving ' + section + ' to database…');
-  fetch('/api/settings/' + section, {
-    method: 'PUT',
+  var key, payload;
+
+  // helper: safe element read
+  function val(id)  { var e = document.getElementById(id); return e ? e.value  : ''; }
+  function chk(id)  { var e = document.getElementById(id); return e ? e.checked : true; }
+  function num(id, def) { return parseInt(val(id)) || def; }
+
+  if (section === 'institution') {
+    key = 'institution';
+    payload = {
+      institutionName:    val('inst-name'),
+      institutionShort:   val('inst-short'),
+      institutionAddress: val('inst-addr'),
+      institutionEmail:   val('inst-email'),
+      institutionPhone:   val('inst-phone'),
+    };
+
+  } else if (section === 'settings') {
+    key = 'settings';
+    payload = {
+      // Pages
+      pageStudents:    chk('set-stud'),
+      pageTeachers:    chk('set-teach'),
+      pageManage:      chk('set-manage'),
+      pageBulk:        chk('set-bulk'),
+      // Models
+      modelBackup:     chk('set-backup'),
+      modelUndo:       chk('set-undo'),
+      modelMaintenance:chk('set-mainten'),
+      modelAdder:      chk('set-adder'),
+      modelAddStudent: chk('set-addStud'),
+      modelExportSheet:chk('set-export'),
+      // Attendance
+      markAttendance:  chk('set-att'),
+      liveSessions:    chk('set-live'),
+      forwardToRep:    chk('set-rep'),
+    };
+
+  } else if (section === 'academic') {
+    key = 'academic';
+    var errN = num('acad-errorsN', 20);
+    payload = {
+      academicYear:  val('acad-year'),
+      minAttendance: num('acad-minatt', 75),
+      workingDays:   num('acad-wdays', 6),
+      errorsCount:   errN,
+    };
+
+  } else if (section === 'security') {
+    key = 'security';
+    payload = {
+      forcePasswordChange:  chk('sec-forcepw'),
+      requireStrongPassword:chk('sec-strongpw'),
+      sessionTimeout:       chk('sec-timeout'),
+      sessionTimeoutMins:   num('sec-timeout-mins', 60),
+      maxLoginAttempts:     num('sec-maxlogin', 5),
+    };
+
+  } else if (section === 'advanced') {
+    key = 'advanced';
+    payload = {
+      debugMode:        chk('adv-debug'),
+      multiAdminSession:chk('adv-multisess'),
+      autoSeedDemoData: chk('adv-seed'),
+    };
+
+  } else {
+    showToast('⚠️ Unknown settings section: ' + section);
+    return;
+  }
+
+  dbToast('⏳ Saving…', 'saving');
+  fetch('/api/settings/' + key, {
+    method:  'PUT',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-    body: JSON.stringify({ value: payload })
+    body:    JSON.stringify({ value: payload })
   }).then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d && d.error) { showToast('❌ ' + d.error); return; }
-      logLine('Settings saved to DB: ' + section, 'success');
-      showToast('✅ ' + section.charAt(0).toUpperCase()+section.slice(1) + ' settings saved to database');
-      // Update errorsN display if academic
-      if (section === 'academic' && payload.errorsN) {
-        var n = parseInt(payload.errorsN) || 20;
-        var el = document.getElementById('err-n-disp'); if (el) el.textContent = n;
-        var el2 = document.getElementById('errors-count-label'); if (el2) el2.textContent = n;
+      if (d && d.error) { dbToast('❌ ' + d.error, 'error'); return; }
+      dbToast('✅ Saved', 'success');
+      logLine('Settings saved to DB [' + key + ']', 'success');
+      showToast('✅ ' + section.charAt(0).toUpperCase() + section.slice(1) + ' saved to database');
+      // Sync errorsN live if academic saved
+      if (section === 'academic') {
+        var n = parseInt(payload.errorsCount) || 20;
+        var e1 = document.getElementById('err-n-disp');         if (e1) e1.textContent = n;
+        var e2 = document.getElementById('errors-count-label'); if (e2) e2.textContent = n;
         _errorsN = n;
       }
-    }).catch(function(err) { showToast('❌ Save failed: ' + (err.message || 'network')); });
+    }).catch(function(err) { dbToast('❌ Save failed', 'error'); showToast('❌ Save failed: ' + (err.message || 'network')); });
 }
 
-// ── Load settings from DB into form ───────────────────
+// ── Load all settings from DB into form (called on boot) ─
 function loadAllSettings() {
   var tok = sessionStorage.getItem('eams_token') || TOKEN || '';
   fetch('/api/settings', { headers: { 'Authorization': 'Bearer ' + tok } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data || data.error) {
-        // Fallback: try loading from localStorage cache
-        _applySettingsToForm(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
-        return;
-      }
-      // Cache a copy in localStorage as fallback
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+      if (!data || data.error) { showToast('⚠️ Could not load settings from DB'); return; }
       _applySettingsToForm(data);
     })
-    .catch(function() {
-      // Offline fallback
-      _applySettingsToForm(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
-    });
+    .catch(function(err) { showToast('⚠️ Settings load error: ' + (err.message || 'network')); });
 }
 
+// ── Apply DB data to all form fields ──────────────────
 function _applySettingsToForm(data) {
   if (!data) return;
+
+  function setVal(id, v) { var e = document.getElementById(id); if (e && v !== undefined && v !== null) e.value = v; }
+  function setChk(id, v) {
+    var e = document.getElementById(id);
+    if (!e || v === undefined) return;
+    e.checked = !!v;
+    syncLabel(e, id + '-label');
+  }
+
+  // ── Institution Details (key: 'institution') ─────────
   var inst = data.institution || {};
-  var acad = data.academic    || {};
-  var sec  = data.security    || {};
-  if (inst.name)  { var el = document.getElementById('inst-name');  if (el) el.value = inst.name; }
-  if (inst.short) { var el = document.getElementById('inst-short'); if (el) el.value = inst.short; }
-  if (inst.addr)  { var el = document.getElementById('inst-addr');  if (el) el.value = inst.addr; }
-  if (inst.email) { var el = document.getElementById('inst-email'); if (el) el.value = inst.email; }
-  if (inst.phone) { var el = document.getElementById('inst-phone'); if (el) el.value = inst.phone; }
-  if (acad.year)   { var el = document.getElementById('acad-year');   if (el) el.value = acad.year; }
-  if (acad.sem)    { var el = document.getElementById('acad-sem');    if (el) el.value = acad.sem; }
-  if (acad.start)  { var el = document.getElementById('acad-start');  if (el) el.value = acad.start; }
-  if (acad.end)    { var el = document.getElementById('acad-end');    if (el) el.value = acad.end; }
-  if (acad.minAtt) { var el = document.getElementById('acad-minatt'); if (el) el.value = acad.minAtt; }
-  if (acad.wdays)  { var el = document.getElementById('acad-wdays');  if (el) el.value = acad.wdays; }
-  if (acad.errorsN) {
-    var n = parseInt(acad.errorsN) || 20;
-    var el = document.getElementById('acad-errorsN'); if (el) el.value = n;
-    var el2 = document.getElementById('err-n-disp'); if (el2) el2.textContent = n;
-    var el3 = document.getElementById('errors-count-label'); if (el3) el3.textContent = n;
+  setVal('inst-name',  inst.institutionName);
+  setVal('inst-short', inst.institutionShort);
+  setVal('inst-addr',  inst.institutionAddress);
+  setVal('inst-email', inst.institutionEmail);
+  setVal('inst-phone', inst.institutionPhone);
+
+  // ── Settings (key: 'settings') ───────────────────────
+  var sett = data.settings || {};
+  setChk('set-stud',    sett.pageStudents    !== undefined ? sett.pageStudents    : true);
+  setChk('set-teach',   sett.pageTeachers    !== undefined ? sett.pageTeachers    : true);
+  setChk('set-manage',  sett.pageManage      !== undefined ? sett.pageManage      : true);
+  setChk('set-bulk',    sett.pageBulk        !== undefined ? sett.pageBulk        : true);
+  setChk('set-backup',  sett.modelBackup     !== undefined ? sett.modelBackup     : true);
+  setChk('set-undo',    sett.modelUndo       !== undefined ? sett.modelUndo       : true);
+  setChk('set-mainten', sett.modelMaintenance !== undefined ? sett.modelMaintenance : true);
+  setChk('set-adder',   sett.modelAdder      !== undefined ? sett.modelAdder      : true);
+  setChk('set-addStud', sett.modelAddStudent !== undefined ? sett.modelAddStudent : true);
+  setChk('set-export',  sett.modelExportSheet !== undefined ? sett.modelExportSheet : true);
+  setChk('set-att',     sett.markAttendance  !== undefined ? sett.markAttendance  : true);
+  setChk('set-live',    sett.liveSessions    !== undefined ? sett.liveSessions    : true);
+  setChk('set-rep',     sett.forwardToRep    !== undefined ? sett.forwardToRep    : true);
+
+  // ── Academic Settings (key: 'academic') ─────────────
+  var acad = data.academic || {};
+  setVal('acad-year',   acad.academicYear);
+  setVal('acad-minatt', acad.minAttendance);
+  setVal('acad-wdays',  acad.workingDays);
+  if (acad.errorsCount !== undefined) {
+    var n = parseInt(acad.errorsCount) || 20;
+    setVal('acad-errorsN', n);
+    var e1 = document.getElementById('err-n-disp');         if (e1) e1.textContent = n;
+    var e2 = document.getElementById('errors-count-label'); if (e2) e2.textContent = n;
     _errorsN = n;
   }
-  if (sec.forcePw !== undefined)  { var el = document.getElementById('sec-forcepw');    if (el) el.checked = sec.forcePw; }
-  if (sec.strongPw !== undefined) { var el = document.getElementById('sec-strongpw');   if (el) el.checked = sec.strongPw; }
-  if (sec.timeout !== undefined)  { var el = document.getElementById('sec-timeout');    if (el) el.checked = sec.timeout; }
-  if (sec.timeoutMin) { var el = document.getElementById('sec-timeout-mins'); if (el) el.value = sec.timeoutMin; }
-  if (sec.maxLogin)   { var el = document.getElementById('sec-maxlogin');     if (el) el.value = sec.maxLogin; }
+
+  // ── Password Policy (key: 'security') ────────────────
+  var sec = data.security || {};
+  setChk('sec-forcepw',  sec.forcePasswordChange   !== undefined ? sec.forcePasswordChange   : true);
+  setChk('sec-strongpw', sec.requireStrongPassword !== undefined ? sec.requireStrongPassword : false);
+  setChk('sec-timeout',  sec.sessionTimeout        !== undefined ? sec.sessionTimeout        : false);
+  setVal('sec-timeout-mins', sec.sessionTimeoutMins);
+  setVal('sec-maxlogin',     sec.maxLoginAttempts);
+
+  // ── System Utilities (key: 'advanced') ───────────────
+  var adv = data.advanced || {};
+  setChk('adv-debug',     adv.debugMode         !== undefined ? adv.debugMode         : false);
+  setChk('adv-multisess', adv.multiAdminSession !== undefined ? adv.multiAdminSession : true);
+  setChk('adv-seed',      adv.autoSeedDemoData  !== undefined ? adv.autoSeedDemoData  : false);
 }
 loadAllSettings();
 

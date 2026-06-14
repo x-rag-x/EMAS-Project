@@ -1,10 +1,14 @@
 // ═══════════════════════════════════════════════════════
 //  EAMS — MongoDB Models (Mongoose)
-//  Separate schemas: AdminSchema, TeacherSchema, StudentUserSchema
-//  Legacy UserSchema kept for backward-compat auth lookup
 // ═══════════════════════════════════════════════════════
 
+// userId: trackId,
+// subjectId: subjectCode,
+// classId: className,
+// deptId: code,
+
 const mongoose = require('mongoose');
+const cfg = require('./config');
 
 // ── ADMIN User Schema ─────────────────────────────────
 const AdminSchema = new mongoose.Schema({
@@ -16,15 +20,12 @@ const AdminSchema = new mongoose.Schema({
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
+  trackId:      { type: String, trim: true, required:true },
   isAdmin:      { type: Boolean, default: true },
   adminRights:  { type: mongoose.Schema.Types.Mixed, default: 'all' },
   active:               { type: Boolean, default: true },
   mustChangePassword:   { type: Boolean, default: false },
-  lastLogin:    { type: Date,   default: null },
   firstLogin:   { type: Date,   default: null },
-  loginCount:   { type: Number, default: 0 },
-  failedLogins: { type: Number, default: 0 },
-  lockedUntil:  { type: Date,   default: null },
 }, { timestamps: true });
 
 // ── TEACHER User Schema ────────────────────────────────
@@ -38,26 +39,23 @@ const TeacherSchema = new mongoose.Schema({
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
-  trackId:      { type: String, default: '', trim: true },
-  isHod:              { type: Boolean, default: false },
-  HoddeptName:        { type: String,  default: '' },
-  isClassAdvisor:     { type: Boolean, default: false },
-  className:          { type: String,  default: '' },
-  isTimeTableCoordinator: { type: Boolean, default: false },
-  TTdeptName:         { type: String,  default: '' },
+  trackId:      { type: String, trim: true, required:true },
+  specials:{
+    option:     { type: String, enum: ['isHod', 'HodDeptTrackId', 'isClassAdvisor', 'ClassAdvisorTrackId', 'isTimeTableCoordinator', 'TTDeptTrackId'] , required: true },
+    key:        { type: String, required: true, unique: true },
+    value:      { type: mongoose.Schema.Types.Mixed },
+  },
   isAdmin:            { type: Boolean, default: false },
-  adminRights:        { type: mongoose.Schema.Types.Mixed, default: 'all' },
+  adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModule', 'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'all' },
   active:               { type: Boolean, default: true },
+  current:              { type: Boolean, default: false},
+  status:               { type: String, enum : ['active', 'locked', 'banned', 'onleave'], default: 'active'},
   mustChangePassword:   { type: Boolean, default: false },
-  lastLogin:    { type: Date,   default: null },
   firstLogin:   { type: Date,   default: null },
-  loginCount:   { type: Number, default: 0 },
-  failedLogins: { type: Number, default: 0 },
-  lockedUntil:  { type: Date,   default: null },
 }, { timestamps: true });
 
 // ── STUDENT User Schema ────────────────────────────────
-const StudentUserSchema = new mongoose.Schema({
+const StudentSchema = new mongoose.Schema({
   fullName:     { type: String, required: true, trim: true },
   firstName:    { type: String, default: '', trim: true },
   lastName:     { type: String, default: '', trim: true },
@@ -74,98 +72,84 @@ const StudentUserSchema = new mongoose.Schema({
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
+  trackId:      { type: String, trim: true, required:true },
   isRep:        { type: Boolean, default: false },
   active:               { type: Boolean, default: true },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
-  lastLogin:    { type: Date,   default: null },
   firstLogin:   { type: Date,   default: null },
-  loginCount:   { type: Number, default: 0 },
-  failedLogins: { type: Number, default: 0 },
-  lockedUntil:  { type: Date,   default: null },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 // Virtual properties to dynamically fetch from DataManagement
-StudentUserSchema.virtual('currentYear').get(function() {
+StudentSchema.virtual('currentYear').get(function() {
   if (this.manageId && this.manageId.value) {
     return this.manageId.value.currentYear || '';
   }
   return '';
 });
 
-StudentUserSchema.virtual('currentSem').get(function() {
+StudentSchema.virtual('currentSem').get(function() {
   if (this.manageId && this.manageId.value) {
     return this.manageId.value.currentSem || '';
   }
   return '';
 });
 
-StudentUserSchema.virtual('batch').get(function() {
+StudentSchema.virtual('batch').get(function() {
   if (this.manageId && this.manageId.value) {
     return this.manageId.value.batch || '';
   }
   return '';
 });
 
-// ── LEGACY UserSchema ─────────────────────────────────
+// ── UserSchema ─────────────────────────────────
 const UserSchema = new mongoose.Schema({
   name:       { type: String, required: true, trim: true },
   username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:   { type: String, required: true },
   role:       { type: String, enum: ['admin','teacher','student'], required: true },
-  empId:      { type: String, default: '' },
-  dept:       { type: String, default: '' },
-  desig:      { type: String, default: 'Assistant Professor' },
-  email:      { type: String, default: '', lowercase: true },
-  phone:      { type: String, default: '' },
-  regNo:      { type: String, default: '' },
-  deptName:   { type: String, default: '' },
-  active:             { type: Boolean, default: true },
-  mustChangePassword: { type: Boolean, default: true },
-  trackId:      { type: String,  default: '', trim: true },
-  isHOD:            { type: Boolean, default: false },
-  HoddeptName:      { type: String,  default: '' },
-  isClassAdvisor:   { type: Boolean, default: false },
-  advisorClassId:   { type: String,  default: '' },
-  advisorClassName: { type: String,  default: '' },
-  isTimeTableCoordinator: { type: Boolean, default: false },
-  TTdeptName:       { type: String,  default: '' },
-  isWarden:         { type: Boolean, default: false },
-  isExamCoordinator:{ type: Boolean, default: false },
-  isPlacementCoord: { type: Boolean, default: false },
-  qualifications:   { type: String,  default: '' },
-  experience:       { type: String,  default: '' },
-  joiningDate:      { type: String,  default: '' },
-  isAdmin:      { type: Boolean, default: false },
-  adminRights:  { type: mongoose.Schema.Types.Mixed, default: 'all' },
-  isClassRep:       { type: Boolean, default: false },
-  isAssiClassRep:   { type: Boolean, default: false },
-  isSportsRep:      { type: Boolean, default: false },
-  isCulturalRep:    { type: Boolean, default: false },
-  bloodGroup:       { type: String,  default: '' },
-  parentContact:    { type: String,  default: '' },
-  address:          { type: String,  default: '' },
-  lastLogin:        { type: Date,   default: null },
-  firstLogin:       { type: Date,   default: null },
-  loginCount:       { type: Number, default: 0 },
-  failedLogins:     { type: Number, default: 0 },
-  lockedUntil:      { type: Date,   default: null },
+  trackId:    { type: String,  unique: true, sparse: true },
+  status:     { type: String, enum: ['active', 'inactive', 'locked'], default: 'active' },
+  current:     { type: Boolean, default: false }, // to get currently active users count
 }, { timestamps: true });
 
-const SessionSchema = new mongoose.Schema({
-  userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+const LoginHistorySchema = new mongoose.Schema({
+  name:       { type: String, required: true, trim: true },
+  username:   { type: String, required: true, trim: true, lowercase: true, unique: true},
+  trackId:    { type: String,  unique: true, sparse: true },
+  role:       { type: String, enum: ['student', 'teacher', 'admin'], required: true},
+  date:       { type: String, required: true },
+  history: [{
+    ip:         { type: String, required: true },
+    userAgent:  { type: String, required: true },
+    loginTime:  { type: Date, required: true },
+    logoutTime: { type: Date, default: null },
+    deviceType: { type: String, enum: ['Desktop', 'Mobile', 'Tablet', 'Unknown'], required: true },
+    browser:    { type: String, enum: ['Chrome','Firefox','Edge','Safari','Opera','Brave','Other'], required: true },
+    os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'], required: true },
+    status:     { type: String, enum: ['success', 'failed'], required: true },
+  }],
+  session: [{ // Shifting SessionSchema into LoginHistorySchema for less collection calls
+    token:      { type: String, required: true, unique: true },
+    createdAt:  { type: Date, required: true, default: Date.now, expires: cfg.JWT_EXPIRES_IN || '1h' },
+    active:     { type: Boolean, required: true, default: true },
+  }],
+}, { timestamps: true });
+
+const SessionSchema = new mongoose.Schema({  // to be shifted to LoginHistorySchema
   username:   { type: String, required: true },
   role:       { type: String, required: true },
   token:      { type: String, required: true, unique: true },
-  ip:         { type: String, default: '' },
-  userAgent:  { type: String, default: '' },
-  createdAt:  { type: Date, default: Date.now, expires: 86400 },
-  active:     { type: Boolean, default: true },
+  ip:         { type: String, required: true },
+  userAgent:  { type: String, required: true },
+  createdAt:  { type: Date, required: true, default: Date.now, expires: 86400 },
+  active:     { type: Boolean, required: true, default: true },
 });
 
 const SettingsSchema = new mongoose.Schema({
+  card:     { type: String, enum: ['Institution Details', 'Settings', 'Academic Settings' , 'Password Policy', 'System Utilities'] , required: true },
   key:   { type: String, required: true, unique: true },
   value: { type: mongoose.Schema.Types.Mixed },
-  updatedBy: { type: String, default: 'admin' },
+  updatedBy: { type: String, required: true },
 }, { timestamps: true });
 
 const DepartmentSchema = new mongoose.Schema({
@@ -185,32 +169,13 @@ const ClassSchema = new mongoose.Schema({
   deptId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
   deptName: { type: String, required: true },
   deptCode: { type: String, required: true },
-  year:     { type: String, default: '' },
-  batch:    { type: String, default: '' },
-  sem:      { type: String, default: '' },
-  section:  { type: String, default: '' },
-  hallNo:   { type: String, default: '' },
+  year:     { type: String, required: true },
+  batch:    { type: String, required: true },
+  sem:      { type: String, required: true },
+  section:  { type: String, required: true },
+  hallNo:   { type: String, required: true },
 }, { timestamps: true });
 
-const StudentSchema = new mongoose.Schema({
-  name:         { type: String, required: true, trim: true },
-  firstName:    { type: String, default: '', trim: true },
-  lastName:     { type: String, default: '', trim: true },
-  regNo:        { type: String, required: true, unique: true, trim: true },
-  trackId:      { type: String, default: '', trim: true, unique: true, sparse: true }, // e.g. TRCS25208
-  academicYear: { type: String, default: '' },
-  batch:        { type: String, default: '' },
-  courseType:   { type: String, enum: ['UG','PG'], default: 'UG' },
-  branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: '' },
-  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
-  deptName:     { type: String, default: '' },
-  classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
-  className:    { type: String, default: '' },
-  year:         { type: String, default: '' },
-  section:      { type: String, default: '' },
-  email:        { type: String, default: '', lowercase: true },
-  userId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-}, { timestamps: true });
 
 const SubjectSchema = new mongoose.Schema({
   subjectCode:  { type: String, required: true, trim: true, unique: true, sparse: true },
@@ -236,7 +201,7 @@ const AssignmentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const TimetableSchema = new mongoose.Schema({
-  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  trackId:      { type: String, required: true }, //teacherId
   teacherName:  { type: String, required: true },
   classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
   className:    { type: String, required: true },
@@ -248,7 +213,7 @@ const TimetableSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const AttendanceSchema = new mongoose.Schema({
-  teacherId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  trackId:      { type: String, required: true }, //teacherId
   teacherName:  { type: String, required: true },
   classId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
   className:    { type: String, required: true },
@@ -256,6 +221,7 @@ const AttendanceSchema = new mongoose.Schema({
   subjectName:  { type: String, required: true },
   date:         { type: String, required: true },
   records: [{
+    trackId:    { type: String, required: true }, //studentId
     studentId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     regNo:      { type: String },
     name:       { type: String },
@@ -295,7 +261,6 @@ const GrievanceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const LogSchema = new mongoose.Schema({
-  userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   userName:  { type: String, required: true },
   role:      { type: String, default: 'admin' },
   action:    { type: String, required: true },
@@ -318,7 +283,7 @@ const UndoLogSchema = new mongoose.Schema({
 UndoLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const LiveSessionSchema = new mongoose.Schema({
-  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  trackId:   { type: String, required: true }, //teacherId
   classId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
   subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   date:      { type: String, required: true },
@@ -352,46 +317,105 @@ const DataManagementSchema = new mongoose.Schema({
   updatedBy : String,
 }, { timestamps:true }); 
 
-const ManageSchema = new mongoose.Schema({
-  StudentsPortal  : {type: Boolean, default: true},
-  TeachersPortal  : {type: Boolean, default: true},
-  TimeTablePortal : {type: Boolean, default: true},
-  LiveSessionFunctionality : {type: Boolean, default: true},
-  StudentsViewAttendance : {type: Boolean, default: true},
-  ForwardToRep      : {type: Boolean, default: true},
-
-  updatedBy : String,
-}, { timestamps:true }); 
-
-const PasswordSchema = new mongoose.Schema({
-  studentPassword    : { type: String, default: 'student123' },
-  teacherPassword    : { type: String, default: 'teacher123' },
-  adminPassword      : { type: String, default: 'admin123' },
-  deleteDataPassword : { type: String, default: 'EAMS-DELETE-6969' },
-  updatedBy          : String,
+const editFieldHistory = new mongoose.Schema({
+  editedModule : { type: String, required: true},
+  editedField : { type: String, required: true},
+  updatedBy : {
+    role:     { type: String, required: true},
+    username: { type: String, required: true},
+    trackId:  { type: String, required: true},
+  },
+  time: { type: Date, default: Date.now },
 }, { timestamps:true });
 
-module.exports = {
-  Admin:        mongoose.model('Admin',        AdminSchema),
-  Teacher:      mongoose.model('Teacher',      TeacherSchema),
-  StudentUser:  mongoose.model('StudentUser',  StudentUserSchema),
-  User:         mongoose.model('User',         UserSchema),
-  Session:      mongoose.model('Session',      SessionSchema),
-  Settings:     mongoose.model('Settings',     SettingsSchema),
-  Department:   mongoose.model('Department',   DepartmentSchema),
-  Class:        mongoose.model('Class',        ClassSchema),
-  Student:      mongoose.model('Student',      StudentSchema),
-  Subject:      mongoose.model('Subject',      SubjectSchema),
-  Assignment:   mongoose.model('Assignment',   AssignmentSchema),
-  Timetable:    mongoose.model('Timetable',    TimetableSchema),
-  Attendance:   mongoose.model('Attendance',   AttendanceSchema),
-  Notification: mongoose.model('Notification', NotificationSchema),
-  Grievance:    mongoose.model('Grievance',    GrievanceSchema),
-  Log:          mongoose.model('Log',          LogSchema),
-  UndoLog:      mongoose.model('UndoLog',      UndoLogSchema),
-  LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
-  Manage:       mongoose.model('Manage',       ManageSchema),
-  SectionTimetable : mongoose.model('SectionTimetable', SectionTimetableSchema),
-  DataManagement: mongoose.model('DataManagement', DataManagementSchema),
-  Passwords:    mongoose.model('Passwords',    PasswordSchema),
+// ── CALENDAR DAY Schema ───────────────────────────────
+const CalendarDaySchema = new mongoose.Schema({
+  date         : { type: String, required: true, unique: true }, // "YYYY-MM-DD"
+  dayOfWeek    : { type: String, default: '' },                  // "Mon","Tue",…,"Sun"
+  isWorkingDay : { type: Boolean, default: true },
+  dayType      : { type: String, enum: ['regular','leave','holiday','exam','half-day','optional'], default: 'regular'},
+  notes        : { type: String, default: '' },
+  timing       : { start : { type: String, default: '08:30' }, end: { type: String, default: '16:30' }},
+  affectedYears : { type: [String], default: [] },               // [] = ALL years
+  isOverride    : { type: Boolean, default: false },             // admin explicitly set — skip bulk-generate
+  markedBy      : { type: String, default: 'system' },
+}, { timestamps: true });
+
+// ── EXAM Schema ───────────────────────────────────────
+const ExamSchema = new mongoose.Schema({
+  title        : { type: String, required: true, trim: true },
+  examType     : { type: String, enum: ['Internal1','Internal2','Practicals','Semester'], required: true },
+  academicYear : { type: String, default: '' },
+  studentYear  : { type: String, enum: ['I','II','III','IV','All'], default: 'All' },
+  deptId       : { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null },
+  deptName     : { type: String, default: '' },
+  startDate    : { type: String, required: true },
+  endDate      : { type: String, required: true },
+  timing       : { start : { type: String, default: '09:30' }, end: { type: String, default: '12:30' } },
+  notes        : { type: String, default: '' },
+  status       : { type: String, enum: ['upcoming','ongoing','completed','cancelled'], default: 'upcoming' },
+  createdBy    : { type: String, default: 'admin' },
+}, { timestamps: true });
+
+// ── EXAM ATTENDANCE Schema ────────────────────────────
+const ExamAttendanceSchema = new mongoose.Schema({
+  examId       : { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
+  examTitle    : { type: String, default: '' },
+  examType     : { type: String, default: '' },
+  date         : { type: String, required: true },
+  hallNo       : { type: String, required: true, trim: true },
+  teacherId    : { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName  : { type: String, required: true },
+  records : [{
+    studentId  : { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    regNo      : { type: String, required: true },
+    name       : { type: String, default: '' },
+    deptName   : { type: String, default: '' },
+    year       : { type: String, default: '' },
+    status     : { type: String, enum: ['present','absent'], default: 'present' }
+  }],
+  totalPresent : { type: Number, default: 0 },
+  totalAbsent  : { type: Number, default: 0 },
+  markedAt     : { type: Date, default: Date.now }
+}, { timestamps: true });
+ExamAttendanceSchema.index({ examId: 1, date: 1, hallNo: 1, teacherId: 1 }, { unique: true });
+
+// ── MANAGE ADMIN Schema ───────────────────────────────
+const ManageAdminSchema = new mongoose.Schema({
+  name        : { type: String, required: true, trim: true },
+  username    : { type: String, required: true, unique: true, trim: true, lowercase: true },
+  password    : { type: String, required: true },
+  email       : { type: String, default: '', lowercase: true, trim: true },
+  active      : { type: Boolean, default: true },
+  permissions : { type: [String], default: ['calendar','exam','attendance'] },
+  addedBy     : { type: String, default: 'admin' },
+  lastLogin   : { type: Date, default: null },
+}, { timestamps: true });
+
+module.exports = {  
+  Admin:            mongoose.model('Admin',             AdminSchema),
+  Teacher:          mongoose.model('Teacher',           TeacherSchema),
+  Student:          mongoose.model('Student',           StudentSchema),
+  User:             mongoose.model('User',              UserSchema),
+  LoginHistory:     mongoose.model('LoginHistory',      LoginHistorySchema),
+  Session:          mongoose.model('Session',           SessionSchema),
+  Settings:         mongoose.model('Settings',          SettingsSchema),
+  Department:       mongoose.model('Department',        DepartmentSchema),
+  Class:            mongoose.model('Class',             ClassSchema),
+  Subject:          mongoose.model('Subject',           SubjectSchema),
+  Assignment:       mongoose.model('Assignment',        AssignmentSchema),
+  Timetable:        mongoose.model('Timetable',         TimetableSchema),
+  Attendance:       mongoose.model('Attendance',        AttendanceSchema),
+  Notification:     mongoose.model('Notification',      NotificationSchema),
+  Grievance:        mongoose.model('Grievance',         GrievanceSchema),
+  Log:              mongoose.model('Log',               LogSchema),
+  UndoLog:          mongoose.model('UndoLog',           UndoLogSchema),
+  LiveSession:      mongoose.model('LiveSession',       LiveSessionSchema),
+  SectionTimetable: mongoose.model('SectionTimetable',  SectionTimetableSchema),
+  DataManagement:   mongoose.model('DataManagement',    DataManagementSchema),
+  editFieldHistory: mongoose.model('editFieldHistory',  editFieldHistory),
+  CalendarDay:      mongoose.model('CalendarDay',       CalendarDaySchema),
+  Exam:             mongoose.model('Exam',              ExamSchema),
+  ExamAttendance:   mongoose.model('ExamAttendance',    ExamAttendanceSchema),
+  ManageAdmin:      mongoose.model('ManageAdmin',       ManageAdminSchema),
 };
