@@ -2785,10 +2785,45 @@ function clearAllBrowserCache() {
   sessionStorage.clear();
 }
 
-function doLogout() {
-  clearAllBrowserCache();
-  window.location.href = 'index.html';
+async function doLogout() {
+  try {
+    const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+    if (token) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    }
+  } catch (err) {}
+  localStorage.clear();
+  sessionStorage.clear();
+
+  history.replaceState(null, '', 'index.html');
+  window.location.replace('index.html');
 }
+
+// ── Session Auto-Logout after 45 minutes
+(function() {
+  function checkSessionExpiry() {
+    var loginTime = sessionStorage.getItem('eams_login_time');
+    if (loginTime) {
+      var elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed > 45 * 60 * 1000) {
+        if (typeof dbToast === 'function') {
+          dbToast('⚠️ Session expired. Logging out...', 'error');
+        } else if (typeof showToast === 'function') {
+          showToast('⚠️ Session expired. Logging out...');
+        }
+        setTimeout(function() {
+          doLogout();
+        }, 1500);
+      }
+    }
+  }
+  checkSessionExpiry();
+  setInterval(checkSessionExpiry, 15000);
+})();
 
 // ── Health stats (for Overview live strip) ─────────────
 function loadHealth() {

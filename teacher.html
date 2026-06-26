@@ -807,13 +807,43 @@ body{-webkit-user-select:none;user-select:none;}
     }).catch(function(){});
   }
 
-  function doLogout() {
-    currentUser = null;
+  async function doLogout() {
+    try {
+      const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (err) {}
+    localStorage.clear();
     sessionStorage.clear();
-    var tok = sessionStorage.getItem('eams_token');
-    if (tok) fetch('/api/auth/logout', { method:'POST', headers:{'Authorization':'Bearer '+tok} }).catch(function(){});
-    window.location.href = 'index.html';
+
+    history.replaceState(null, '', 'index.html');
+    window.location.replace('index.html');
   }
+
+  // ── Session Auto-Logout after 45 minutes
+  (function() {
+    function checkSessionExpiry() {
+      var loginTime = sessionStorage.getItem('eams_login_time');
+      if (loginTime) {
+        var elapsed = Date.now() - parseInt(loginTime, 10);
+        if (elapsed > 45 * 60 * 1000) {
+          if (typeof toast === 'function') {
+            toast('⚠️ Session expired. Logging out...', 'error');
+          }
+          setTimeout(function() {
+            doLogout();
+          }, 1500);
+        }
+      }
+    }
+    checkSessionExpiry();
+    setInterval(checkSessionExpiry, 15000);
+  })();
 
   function toggleSidebar() {
     const sidebar      = document.getElementById('sidebar');

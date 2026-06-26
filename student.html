@@ -550,12 +550,21 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     </div>
     <div class="fg">
       <label class="fl">New Password</label>
-      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-new" placeholder="Min. 6 characters" oninput="updateStrength(this.value,'chpw-strength')"><button type="button" class="pw-eye" onclick="togglePw('chpw-new',this)">👁</button></div>
-      <div class="strength-bar"><div class="strength-fill" id="chpw-strength" style="width:0%;"></div></div>
+      <div class="pw-wrap">
+        <input type="password" class="fc2" id="chpw-new" placeholder="Min. 6 characters" 
+          oninput="updateStrength(this.value,'chpw-strength')">
+        <button type="button" class="pw-eye" onclick="togglePw('chpw-new',this)">👁</button>
+      </div>
+      <div class="strength-bar">
+        <div class="strength-fill" id="chpw-strength" style="width:0%;"></div>
+      </div>
     </div>
     <div class="fg">
       <label class="fl">Confirm New Password</label>
-      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password"><button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button></div>
+      <div class="pw-wrap">
+        <input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password">
+        <button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:4px;">
       <button class="btn-pri" onclick="doChangePw()" style="flex:2;">Update Password</button>
@@ -671,10 +680,43 @@ function toast(msg, type) {
 }
 
 // ══ LOGOUT ════════════════════════════════════════════════════════════
-function doLogout() {
+async function doLogout() {
+  try {
+    const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+    if (token) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    }
+  } catch (err) {}
+  localStorage.clear();
   sessionStorage.clear();
-  window.location.href = 'index.html';
+
+  history.replaceState(null, '', 'index.html');
+  window.location.replace('index.html');
 }
+
+// ── Session Auto-Logout after 45 minutes
+(function() {
+  function checkSessionExpiry() {
+    var loginTime = sessionStorage.getItem('eams_login_time');
+    if (loginTime) {
+      var elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed > 45 * 60 * 1000) {
+        if (typeof toast === 'function') {
+          toast('⚠️ Session expired. Logging out...', 'error');
+        }
+        setTimeout(function() {
+          doLogout();
+        }, 1500);
+      }
+    }
+  }
+  checkSessionExpiry();
+  setInterval(checkSessionExpiry, 15000);
+})();
 
 // ══ MODAL HELPERS ════════════════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -714,6 +756,9 @@ function doChangePw() {
   if (!oldPw || !newPw || !cfm) { errEl.textContent = 'All fields required.'; errEl.style.display = 'block'; return; }
   if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
   if (newPw !== cfm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+  if(oldPw === newPw) {errEl.textContent = 'Old and new password must not be same'; errEl.style.display = 'block'; return; }
+  if(newPw.toUpperCase().includes('STUDENT')) {errEl.textContent = 'Password must not contain STUDENT'; errEl.style.display = 'block'; return; }
+  
   api('/api/auth/change-password', { method:'POST', body:JSON.stringify({ currentPassword:oldPw, newPassword:newPw }) }, true)
   .then(function(d) {
     if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
@@ -1279,8 +1324,8 @@ function saveProfileEdit() {
     toast('Please enter a valid email address.', 'error'); return;
   }
 
-  api('/api/student/profile', {
-    method: 'PATCH',
+  api('/api/profile/me', {
+    method: 'PUT',
     body: JSON.stringify({ email: email, firstName: firstName, lastName: lastName, currentYear: year })
   })
   .then(function(d) {

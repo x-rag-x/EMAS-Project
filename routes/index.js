@@ -1,0 +1,56 @@
+const express = require('express');
+const router = express.Router();
+
+// Require all route files
+const assignmentRoutes = require('./assignments.routes');
+const attendanceRoutes = require('./attendance.routes');
+const authRoutes = require('./auth.routes');
+const calendarRoutes = require('./calendar.routes');
+const classRoutes = require('./classes.routes');
+const dashboardRoutes = require('./dashboard.routes');
+const deptRoutes = require('./departments.routes');
+const examAttendanceRoutes = require('./examAttendance.routes');
+const examRoutes = require('./exams.routes');
+const grievanceRoutes = require('./grievances.routes');
+const liveSessionRoutes = require('./liveSession.routes');
+const manageAdminRoutes = require('./manageAdmins.routes');
+const notifRoutes = require('./notifications.routes');
+const profileRoutes = require('./profile.routes');
+const settingsRoutes = require('./settings.routes');
+const studentPortalRoutes = require('./studentPortal.routes');
+const studentRoutes = require('./students.routes');
+const subjectRoutes = require('./subjects.routes');
+const systemRoutes = require('./system.routes');
+const teacherRoutes = require('./teachers.routes');
+const timetableRoutes = require('./timetable.routes');
+const undoRoutes = require('./undo.routes');
+const userRoutes = require('./users.routes');
+const logRoutes = require('./logs.routes');
+
+// Mount routes
+router.use('/assignments',      assignmentRoutes);
+router.use('/attendance',       attendanceRoutes);
+router.use('/auth',             authRoutes);
+router.use('/calendar',         calendarRoutes);
+router.use('/classes',          classRoutes);
+router.use('/dashboard',        dashboardRoutes);
+router.use('/depts',            deptRoutes);
+router.use('/exam-attendance',  examAttendanceRoutes);
+router.use('/exams',            examRoutes);
+router.use('/grievances',       grievanceRoutes);
+router.use('/live-session',     liveSessionRoutes);
+router.use('/manage-admins',    manageAdminRoutes);
+router.use('/notifications',    notifRoutes);
+router.use('/profile',          profileRoutes);
+router.use('/settings',         settingsRoutes);
+router.use('/student',          studentPortalRoutes);
+router.use('/students',         studentRoutes);
+router.use('/subjects',         subjectRoutes);
+router.use('/system',           systemRoutes);
+router.use('/teachers',         teacherRoutes);
+router.use('/timetable',        timetableRoutes);
+router.use('/undo',             undoRoutes);
+router.use('/users',            userRoutes);
+router.use('/logs',             logRoutes);
+
+module.exports = router;

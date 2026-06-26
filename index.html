@@ -453,6 +453,7 @@
           sessionStorage.setItem('eams_user', JSON.stringify(data.user));
           sessionStorage.setItem('eams_sessionId', data.sessionId || '');
           sessionStorage.setItem('eams_mustChangePw', data.mustChangePassword ? '1' : '0');
+          sessionStorage.setItem('eams_login_time', Date.now().toString());
           if (selectedRole === 'student') {
             window.location.href = 'student.html';
           } else if (selectedRole === 'teacher') {
@@ -502,7 +503,7 @@
       }, 1500);
     })();
 
-    // ─── PLAYFUL INTERACTIVE BOX GRID BACKGROUND ───────────────────────────
+    /* // ─── PLAYFUL INTERACTIVE BOX GRID BACKGROUND ───────────────────────────
     const canvas = document.createElement('canvas');
     canvas.id = 'bgCanvas';
     canvas.style.position = 'absolute';
@@ -629,7 +630,7 @@
       }
       requestAnimationFrame(animate);
     }
-    animate();
+    animate();*/
   </script>
 </body>
 </html>

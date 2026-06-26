@@ -1,3 +1,54 @@
+## 🔹 `v2.2.4` — 26 June 2026 (Complete Update)
+
+### General Changes & Fixes
+- `admin.html`
+    - Tried to removed localStorage method completely. (paritially)
+    - Reworked Add Teacher model.
+    - Reworked trackId generation & last name spilter modal.
+    - Edit Teacher modal in the Admin panel updated. (Still a bug exist)
+
+- `student.html`
+    - Updated Force Password Change menu.
+
+- `model.js`
+    - - Merged `SessionSchema` fields into `LoginHistorySchema`
+    - Added `lastActivity` tracking field to session history in `LoginHistorySchema`.
+    - Updated `TeacherSchema` specials options.
+    - `UserSchema` updated and related apis.
+
+- Added `/ping` POST endpoint in auth routes to report user activity and extend active sessions.
+- Created `utils/sessionMonitor.js` to monitor active user sessions and handle auto-logout/extensions in the background.
+- Updated authentication routes, middleware, and user/student/teacher routes to transition from the deprecated `active` boolean field to the new `status` enum field on `User`.
+- Rewrote the client-side session checker in `services/logout.services.js` to perform backend-driven active session checks and pinging.
+- Removed `start.js` from public directory.
+
+### Introduction to File Structure v1.0 (new)
+Each file has huge lines of code. Introduction of file structures will make it easy to understand the code and easy for file accessing. Version v1.0 brings `server.js` file separation.
+
+#### Backend:
+- Changes made:
+    - `/config` - new dir contains - `index.js`, `db.js`.
+    - `/middleware` - new dir contains - `auth.js`, `maintenance.js`.
+    - `/routes` - new dir contains - `assignments.routes.js`, `attendance.routes.js`, `auth.routes.js`, `calendar.routes.js`, `classes.routes.js`, `dashboard.routes.js`, `departments.routes.js`, `examAttendance.routes.js`, `exams.routes.js`, `grievances.routes.js`, `index.js`, `liveSession.routes.js`, `logs.routes.js`, `manageAdmins.routes.js`, `notifications.routes.js`, `profile.routes.js`, `settings.routes.js`, `studentPortal.routes.js`, `students.routes.js`, `subjects.routes.js`, `system.routes.js`, `teachers.routes.js`, `timetable.routes.js`, `undo.routes.js`, `users.routes.js`.
+    - `/utils` - new dir contains - `dateUtils.js`, `examUtils.js`, `logAction.js`, `serverState.js`.
+
+    - `files/` - collections of files for readability. Project program files are now much easier to access and understand. Moved `CHANGELOG.MD` to `files/` directory.
+
+### Security Improvements v1.0 
+Made first step to improve logins and logouts. Introduction of `checkSessionExpiry()` function in all html files brings auto logout of user login after *45* minutes. This improvements needs more changes currently its at version 1, futher changes will include more improvements.
+
+#### Login
+- `checkSessionExpiry()` - auto logout of user login after *45* minutes.
+- Improved backend api.
+
+#### Logout
+- `doLogut()` - completely reworked.
+- Improved backend api.
+
+### `Total 54 Files changed and updated in v2.2.4`
+
+----------------------------------
+
 ## 🔹 `v2.2.0` — 14 June 2026 (Major Update)
 
 ### General Changes & Fixes

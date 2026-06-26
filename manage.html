@@ -840,11 +840,46 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function fmtDate(s){ if(!s)return'—'; var d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function pad2(n){ return String(n).padStart(2,'0'); }
-function doLogout(){
-  var tok = sessionStorage.getItem('eams_token');
-  if(tok) fetch('/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+tok}});
-  sessionStorage.clear(); location.href='index.html';
+
+async function doLogout() {
+  try {
+    const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+    if (token) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    }
+  } catch (err) {}
+  localStorage.clear();
+  sessionStorage.clear();
+
+  history.replaceState(null, '', 'index.html');
+  window.location.replace('index.html');
 }
+
+// ── Session Auto-Logout after 45 minutes
+(function() {
+  function checkSessionExpiry() {
+    var loginTime = sessionStorage.getItem('eams_login_time');
+    if (loginTime) {
+      var elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed > 45 * 60 * 1000) {
+        if (typeof showToast === 'function') {
+          showToast('⚠️ Session expired. Logging out...');
+        } else if (typeof dbToast === 'function') {
+          dbToast('⚠️ Session expired. Logging out...', 'error');
+        }
+        setTimeout(function() {
+          doLogout();
+        }, 1500);
+      }
+    }
+  }
+  checkSessionExpiry();
+  setInterval(checkSessionExpiry, 15000);
+})();
 function toggleSidebar(){
   var sb=document.querySelector('.sb'), btn=document.getElementById('sbtoggle');
   sb.classList.toggle('sb-hidden');

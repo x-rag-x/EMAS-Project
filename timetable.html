@@ -1499,7 +1499,7 @@ const API = {
   },
   async getStudentProfile() {
     try {
-      const r = await fetch(`${API_BASE}/student/profile`, { headers: ah() });
+      const r = await fetch(`${API_BASE}/profile/me`, { headers: ah() });
       if (!r.ok) throw 0;
       return await r.json();
     } catch { return null; }
@@ -1589,11 +1589,44 @@ function e(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function doLogout() {
-  fetch(`${API_BASE}/auth/logout`, { method:'POST', headers: ah() }).catch(()=>{});
+async function doLogout() {
+  try {
+    const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+    if (token) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    }
+  } catch (err) {}
+  localStorage.clear();
   sessionStorage.clear();
-  location.href = 'index.html';
+
+  history.replaceState(null, '', 'index.html');
+  window.location.replace('index.html');
 }
+
+// ── Session Auto-Logout after 45 minutes
+(function() {
+  function checkSessionExpiry() {
+    var loginTime = sessionStorage.getItem('eams_login_time');
+    var min = cfg.JWT_SECRET;
+    if (loginTime) {
+      var elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed > min * 60 * 1000) {
+        if (typeof dbToast === 'function') {
+          dbToast('⚠️ Session expired. Logging out...', 'error');
+        }
+        setTimeout(function() {
+          doLogout();
+        }, 1500);
+      }
+    }
+  }
+  checkSessionExpiry();
+  setInterval(checkSessionExpiry, 15000);
+})();
 
 // Navigate back to the portal that opened this page
 function goHome() {

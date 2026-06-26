@@ -8,7 +8,19 @@
 // deptId: code,
 
 const mongoose = require('mongoose');
-const cfg = require('./config');
+const { toIndianTime } = require('./utils/dateFormatter');
+
+const IndianDate = {
+  type: String,
+  default: () => toIndianTime(new Date()),
+  set: toIndianTime
+};
+
+const NullableIndianDate = {
+  type: String,
+  default: null,
+  set: v => v ? toIndianTime(v) : null
+};
 
 // ── ADMIN User Schema ─────────────────────────────────
 const AdminSchema = new mongoose.Schema({
@@ -23,9 +35,7 @@ const AdminSchema = new mongoose.Schema({
   trackId:      { type: String, trim: true, required:true },
   isAdmin:      { type: Boolean, default: true },
   adminRights:  { type: mongoose.Schema.Types.Mixed, default: 'all' },
-  active:               { type: Boolean, default: true },
   mustChangePassword:   { type: Boolean, default: false },
-  firstLogin:   { type: Date,   default: null },
 }, { timestamps: true });
 
 // ── TEACHER User Schema ────────────────────────────────
@@ -40,18 +50,16 @@ const TeacherSchema = new mongoose.Schema({
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
   password:     { type: String, required: true },
   trackId:      { type: String, trim: true, required:true },
-  specials:{
-    option:     { type: String, enum: ['isHod', 'HodDeptTrackId', 'isClassAdvisor', 'ClassAdvisorTrackId', 'isTimeTableCoordinator', 'TTDeptTrackId'] , required: true },
-    key:        { type: String, required: true, unique: true },
+  specials:[{
+    option:     { type: String, enum: ['isHod', 'HodDeptTrackId', 'isClassAdvisor', 'ClassAdvisorTrackId', 
+      'isTimeTableCoordinator', 'TTDeptTrackId', 'isWarden', 'isExamCoordinator', 'isPlacementCoordinator']},
+    key:        { type: String },
     value:      { type: mongoose.Schema.Types.Mixed },
-  },
+  }],
   isAdmin:            { type: Boolean, default: false },
-  adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModule', 'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'all' },
-  active:               { type: Boolean, default: true },
-  current:              { type: Boolean, default: false},
-  status:               { type: String, enum : ['active', 'locked', 'banned', 'onleave'], default: 'active'},
+  adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModule', 
+    'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'all' },
   mustChangePassword:   { type: Boolean, default: false },
-  firstLogin:   { type: Date,   default: null },
 }, { timestamps: true });
 
 // ── STUDENT User Schema ────────────────────────────────
@@ -74,9 +82,7 @@ const StudentSchema = new mongoose.Schema({
   password:     { type: String, required: true },
   trackId:      { type: String, trim: true, required:true },
   isRep:        { type: Boolean, default: false },
-  active:               { type: Boolean, default: true },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
-  firstLogin:   { type: Date,   default: null },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 // Virtual properties to dynamically fetch from DataManagement
@@ -103,50 +109,44 @@ StudentSchema.virtual('batch').get(function() {
 
 // ── UserSchema ─────────────────────────────────
 const UserSchema = new mongoose.Schema({
-  name:       { type: String, required: true, trim: true },
   username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:   { type: String, required: true },
   role:       { type: String, enum: ['admin','teacher','student'], required: true },
   trackId:    { type: String,  unique: true, sparse: true },
   status:     { type: String, enum: ['active', 'inactive', 'locked'], default: 'active' },
-  current:     { type: Boolean, default: false }, // to get currently active users count
+  online:     { type: Boolean, default: false }, // to get currently active users count
 }, { timestamps: true });
 
 const LoginHistorySchema = new mongoose.Schema({
-  name:       { type: String, required: true, trim: true },
   username:   { type: String, required: true, trim: true, lowercase: true, unique: true},
   trackId:    { type: String,  unique: true, sparse: true },
   role:       { type: String, enum: ['student', 'teacher', 'admin'], required: true},
-  date:       { type: String, required: true },
+  firstLogin: NullableIndianDate,
+  lastLogin:  NullableIndianDate,
+  totalLogins: { type: Number, default: 0 },
   history: [{
-    ip:         { type: String, required: true },
-    userAgent:  { type: String, required: true },
-    loginTime:  { type: Date, required: true },
-    logoutTime: { type: Date, default: null },
-    deviceType: { type: String, enum: ['Desktop', 'Mobile', 'Tablet', 'Unknown'], required: true },
-    browser:    { type: String, enum: ['Chrome','Firefox','Edge','Safari','Opera','Brave','Other'], required: true },
-    os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'], required: true },
-    status:     { type: String, enum: ['success', 'failed'], required: true },
-  }],
-  session: [{ // Shifting SessionSchema into LoginHistorySchema for less collection calls
-    token:      { type: String, required: true, unique: true },
-    createdAt:  { type: Date, required: true, default: Date.now, expires: cfg.JWT_EXPIRES_IN || '1h' },
-    active:     { type: Boolean, required: true, default: true },
+    sessionId:  { type: String },
+    time:       IndianDate,
+    current:    { type: String, enum: ['Logged In', 'Logged Out'] },
+    ip:         { type: String },
+    userAgent:  { type: String },
+    loginTime:  IndianDate,
+    logoutTime: NullableIndianDate,
+    deviceType: { type: String, enum: ['Desktop', 'Mobile', 'Tablet', 'Unknown'] },
+    browser:    { type: String, enum: ['Chrome','Firefox','Edge','Safari','Opera','Brave','Other'] },
+    os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'] },
+    status:     { type: String, enum: ['success', 'failed'] },
+    
+    authToken:  { type: String, required: true },
+    createdAt:  IndianDate,
+    expiresAt:  { type: String, required: true, set: toIndianTime },
+    active:     { type: Boolean, required: true, default: false },
+    lastActivity: IndianDate,
   }],
 }, { timestamps: true });
 
-const SessionSchema = new mongoose.Schema({  // to be shifted to LoginHistorySchema
-  username:   { type: String, required: true },
-  role:       { type: String, required: true },
-  token:      { type: String, required: true, unique: true },
-  ip:         { type: String, required: true },
-  userAgent:  { type: String, required: true },
-  createdAt:  { type: Date, required: true, default: Date.now, expires: 86400 },
-  active:     { type: Boolean, required: true, default: true },
-});
-
 const SettingsSchema = new mongoose.Schema({
-  card:     { type: String, enum: ['Institution Details', 'Settings', 'Academic Settings' , 'Password Policy', 'System Utilities'] , required: true },
+  card:     { type: String, enum: ['Institution Details', 'Settings', 'Academic Settings',
+     'Password Policy', 'System Utilities'] , required: true },
   key:   { type: String, required: true, unique: true },
   value: { type: mongoose.Schema.Types.Mixed },
   updatedBy: { type: String, required: true },
@@ -229,7 +229,7 @@ const AttendanceSchema = new mongoose.Schema({
   }],
   totalPresent: { type: Number, default: 0 },
   totalAbsent:  { type: Number, default: 0 },
-  markedAt:     { type: Date,   default: Date.now },
+  markedAt:     IndianDate,
 }, { timestamps: true });
 
 const NotificationSchema = new mongoose.Schema({
@@ -243,9 +243,9 @@ const NotificationSchema = new mongoose.Schema({
   status:        { type: String, enum: ['Pending','Solved','Cancelled'], default: 'Pending' },
   read:          { type: Boolean, default: false },
   grievanceId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Grievance', default: null },
-  solvedAt:      { type: Date, default: null },
-  cancelledAt:   { type: Date, default: null },
-  time:          { type: Date, default: Date.now },
+  solvedAt:      NullableIndianDate,
+  cancelledAt:   NullableIndianDate,
+  time:          IndianDate,
 }, { timestamps: true });
 
 const GrievanceSchema = new mongoose.Schema({
@@ -256,8 +256,8 @@ const GrievanceSchema = new mongoose.Schema({
   detail:      { type: String, required: true },
   status:      { type: String, enum: ['Pending','Resolved','Cancelled'], default: 'Pending' },
   resolvedBy:  { type: String, default: '' },
-  resolvedAt:  { type: Date, default: null },
-  cancelledAt: { type: Date, default: null },
+  resolvedAt:  NullableIndianDate,
+  cancelledAt: NullableIndianDate,
 }, { timestamps: true });
 
 const LogSchema = new mongoose.Schema({
@@ -269,7 +269,7 @@ const LogSchema = new mongoose.Schema({
   severity:  { type: String, default: 'info' },
   ip:        { type: String, default: '' },
   sessionId: { type: String, default: '' },
-  time:      { type: Date, default: Date.now },
+  time:      IndianDate,
 }, { timestamps: true });
 
 const UndoLogSchema = new mongoose.Schema({
@@ -278,7 +278,7 @@ const UndoLogSchema = new mongoose.Schema({
   label:    { type: String, required: true },
   snapshot: { type: mongoose.Schema.Types.Mixed, required: true },
   deletedBy:{ type: String, default: 'admin' },
-  expiresAt:{ type: Date, required: true },
+  expiresAt:{ type: String, required: true, set: toIndianTime },
 }, { timestamps: true });
 UndoLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
@@ -288,12 +288,12 @@ const LiveSessionSchema = new mongoose.Schema({
   subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   date:      { type: String, required: true },
   passcode:  { type: String, required: true },
-  expiresAt: { type: Date, required: true },
+  expiresAt: { type: String, required: true, set: toIndianTime },
   active:    { type: Boolean, default: true },
   markedStudents: [{
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     regNo:     { type: String },
-    time:      { type: Date, default: Date.now },
+    time:      IndianDate,
     ip:        { type: String }
   }]
 }, { timestamps: true });
@@ -325,7 +325,7 @@ const editFieldHistory = new mongoose.Schema({
     username: { type: String, required: true},
     trackId:  { type: String, required: true},
   },
-  time: { type: Date, default: Date.now },
+  time: IndianDate,
 }, { timestamps:true });
 
 // ── CALENDAR DAY Schema ───────────────────────────────
@@ -376,7 +376,7 @@ const ExamAttendanceSchema = new mongoose.Schema({
   }],
   totalPresent : { type: Number, default: 0 },
   totalAbsent  : { type: Number, default: 0 },
-  markedAt     : { type: Date, default: Date.now }
+  markedAt     : IndianDate
 }, { timestamps: true });
 ExamAttendanceSchema.index({ examId: 1, date: 1, hallNo: 1, teacherId: 1 }, { unique: true });
 
@@ -389,7 +389,7 @@ const ManageAdminSchema = new mongoose.Schema({
   active      : { type: Boolean, default: true },
   permissions : { type: [String], default: ['calendar','exam','attendance'] },
   addedBy     : { type: String, default: 'admin' },
-  lastLogin   : { type: Date, default: null },
+  lastLogin   : NullableIndianDate,
 }, { timestamps: true });
 
 module.exports = {  
@@ -398,7 +398,6 @@ module.exports = {
   Student:          mongoose.model('Student',           StudentSchema),
   User:             mongoose.model('User',              UserSchema),
   LoginHistory:     mongoose.model('LoginHistory',      LoginHistorySchema),
-  Session:          mongoose.model('Session',           SessionSchema),
   Settings:         mongoose.model('Settings',          SettingsSchema),
   Department:       mongoose.model('Department',        DepartmentSchema),
   Class:            mongoose.model('Class',             ClassSchema),
