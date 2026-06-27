@@ -1,0 +1,98 @@
+const mongoose = require('mongoose');
+const { toIndianTime } = require('../utils/dateFormatter');
+
+// Reusable date type definitions for Indian timezone formatting
+const IndianDate = { type: String, default: () => toIndianTime(new Date()) };
+const NullableIndianDate = { type: String, default: null };
+
+const LoginHistorySchema = new mongoose.Schema({
+  username:   { type: String, required: true, trim: true, lowercase: true, unique: true},
+  trackId:    { type: String,  unique: true, sparse: true },
+  role:       { type: String, enum: ['student', 'teacher', 'admin'], required: true},
+  firstLogin: NullableIndianDate,
+  lastLogin:  NullableIndianDate,
+  totalLogins: { type: Number, default: 0 },
+  history: [{
+    sessionId:  { type: String },
+    time:       IndianDate,
+    current:    { type: String, enum: ['Logged In', 'Logged Out'] },
+    ip:         { type: String },
+    userAgent:  { type: String },
+    loginTime:  IndianDate,
+    logoutTime: NullableIndianDate,
+    deviceType: { type: String, enum: ['Desktop', 'Mobile', 'Tablet', 'Unknown'] },
+    browser:    { type: String, enum: ['Chrome','Firefox','Edge','Safari','Opera','Brave','Other'] },
+    os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'] },
+    status:     { type: String, enum: ['success', 'failed'] },
+    
+    authToken:  { type: String, required: true },
+    createdAt:  IndianDate,
+    expiresAt:  { type: String, required: true},
+    active:     { type: Boolean, required: true, default: false },
+    lastActivity: IndianDate,
+  }],
+}, { timestamps: true });
+
+const NotificationSchema = new mongoose.Schema({
+  type:          { type: String, enum: ['request','error','info','attendance-alert'], default: 'request' },
+  from:          { type: String, required: true },
+  fromRole:      { type: String, default: 'Teacher' },
+  toTeacherId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  toTeacherName: { type: String, default: '' },
+  message:       { type: String, required: true },
+  priority:      { type: String, enum: ['Normal','High','Urgent'], default: 'Normal' },
+  status:        { type: String, enum: ['Pending','Solved','Cancelled'], default: 'Pending' },
+  read:          { type: Boolean, default: false },
+  grievanceId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Grievance', default: null },
+  solvedAt:      NullableIndianDate,
+  cancelledAt:   NullableIndianDate,
+  time:          IndianDate,
+}, { timestamps: true });
+
+const GrievanceSchema = new mongoose.Schema({
+  teacherId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacherName: { type: String, required: true },
+  subject:     { type: String, required: true },
+  category:    { type: String, default: 'Other' },
+  detail:      { type: String, required: true },
+  status:      { type: String, enum: ['Pending','Resolved','Cancelled'], default: 'Pending' },
+  resolvedBy:  { type: String, default: '' },
+  resolvedAt:  NullableIndianDate,
+  cancelledAt: NullableIndianDate,
+}, { timestamps: true });
+
+const LogSchema = new mongoose.Schema({
+  userName:  { type: String, required: true },
+  role:      { type: String, default: 'admin' },
+  action:    { type: String, required: true },
+  details:   { type: String, default: '' },
+  category:  { type: String, default: 'general' },
+  severity:  { type: String, default: 'info' },
+  ip:        { type: String, default: '' },
+  sessionId: { type: String, default: '' },
+  time:      IndianDate,
+}, { timestamps: true });
+
+const LiveSessionSchema = new mongoose.Schema({
+  trackId:   { type: String, required: true }, //teacherId
+  classId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+  date:      { type: String, required: true },
+  passcode:  { type: String, required: true },
+  expiresAt: { type: String, required: true},
+  active:    { type: Boolean, default: true },
+  markedStudents: [{
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    regNo:     { type: String },
+    time:      IndianDate,
+    ip:        { type: String }
+  }]
+}, { timestamps: true });
+
+module.exports = {
+  LoginHistory:     mongoose.model('LoginHistory',      LoginHistorySchema),
+  Notification:     mongoose.model('Notification',      NotificationSchema),
+  Grievance:        mongoose.model('Grievance',         GrievanceSchema),
+  Log:              mongoose.model('Log',               LogSchema),
+  LiveSession:      mongoose.model('LiveSession',       LiveSessionSchema),
+};

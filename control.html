@@ -1636,7 +1636,7 @@ function loadOverview() {
       // Collection breakdown grid
       var grid = document.getElementById('collection-grid');
       if (grid) {
-        var collIcons = { students:'👨‍🎓', teachers:'👩‍🏫', admins:'🔑', users:'👤', departments:'🏛️', classes:'🏫', subjects:'📚', assignments:'📋', attendance:'📅', logs:'🗒️', sessions:'🔐', notifications:'🔔', grievances:'📝', timetables:'📆', livesessions:'📡', sectiontimetables:'📆', datamanagements:'⚙️', undologs:'↩️', settings:'⚙️' };
+        var collIcons = { students:'👨‍🎓', teachers:'👩‍🏫', admins:'🔑', users:'👤', departments:'🏛️', classes:'🏫', subjects:'📚', assignments:'📋', attendance:'📅', classattendances:'📅', studentattendances:'📊', logs:'🗒️', sessions:'🔐', notifications:'🔔', grievances:'📝', timetables:'📆', livesessions:'📡', sectiontimetables:'📆', datamanagements:'⚙️', undologs:'↩️', settings:'⚙️' };
         if (d.collStats && d.collStats.length) {
           var total = d.collStats.reduce(function(s,c){ return s + (c.count||0); }, 0);
           grid.innerHTML = d.collStats.map(function(c) {

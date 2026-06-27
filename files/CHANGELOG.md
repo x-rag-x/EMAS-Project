@@ -1,3 +1,32 @@
+## 🔹 `v2.2.5` — 27 June 2026 *(Minor & Forced Update)*
+
+### *General Changes & Fixes*
+- `admin.html`
+    - Fixed Teacher page API bug. Teacher details display fixed.
+
+- `teacher.html`
+    - My Profile fields + Assigned Classes empty.
+    - Updated UI for new Attendance Method. Added PeriodNumber column **(bug exist)**
+    - Tried to removed localStorage method completely. **(paritially)**
+
+- `control.html`
+    - Added new Collections in Db, reflecting it in control panel
+
+- `attendance.routes.js` & other routes
+    - Updated backend for new Attendance Method. `ClassAttendance`, `StudentAttendance` method. 
+
+### *File Structure v2.0*
+Each file has huge lines of code. Introduction of file structures will make it easy to understand the code and easy for file accessing. Version v2.0 brings `model.js` file separation.
+
+#### Backend:
+- `models/`
+    - `attendance.models.js` - Reworked Attendance model, `AttendanceSchema` is now splited into `ClassAttendanceSchema` `StudentAttendanceSchema`.
+    - `adders.models.js`, `admin.models.js`, `attendance.models.js`, `departments.models.js`, `exams.models.js`, `manage.models.js`, `timetable.models.js`, `users.models.js`
+
+### `Total 19 Files changed and updated in v2.2.5`
+
+----------------------------------
+
 ## 🔹 `v2.2.4` — 26 June 2026 (Complete Update)
 
 ### General Changes & Fixes

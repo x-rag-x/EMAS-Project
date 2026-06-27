@@ -45,6 +45,7 @@ router.get('/', authMiddleware, async (req, res) => {
         isHOD: isHodVal,
         isClassAdvisor: isClassAdvisorVal,
         isTimeTableCoordinator: isTTCoordVal,
+        specials: t.specials || [],
         active: true,
         status: 'active',
         mustChangePassword: t.mustChangePassword,

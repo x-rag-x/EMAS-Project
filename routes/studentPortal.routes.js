@@ -43,35 +43,51 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
     const minRequired = academic?.value?.minAttendance || 75;
 
     // ── All attendance records for this student's class
-    const allAttendance = await M.Attendance.find({ classId: student.classId }).lean();
+    const studentTrackId = student.trackId || String(student._id);
+    const targetClassId = student.classId || student.class;
+
+    const classAttDocs = await M.ClassAttendance.find({
+      $or: [{ classId: targetClassId }, { classId: String(student.classId) }]
+    }).lean();
+
+    const allSubjects = await M.Subject.find().lean();
+    const subjectMapLookup = new Map();
+    allSubjects.forEach(sub => {
+      subjectMapLookup.set(String(sub._id), sub);
+      if (sub.subjectTrackId) subjectMapLookup.set(sub.subjectTrackId, sub);
+      if (sub.subjectCode) subjectMapLookup.set(sub.subjectCode, sub);
+    });
 
     // ── Aggregate per subject
-    const subjectMap = {}; // subjectId → { subjectName, teacherName, present, absent, dates[] }
+    const subjectMap = {}; // subjectTrackId → { subjectName, teacherName, present, absent, total, dates[] }
 
-    for (const rec of allAttendance) {
-      const sid = String(rec.subjectId);
-      if (!subjectMap[sid]) {
-        subjectMap[sid] = {
-          subjectId: sid,
-          subjectName: rec.subjectName || 'Unknown',
-          teacherName: rec.teacherName || '—',
-          present: 0,
-          absent: 0,
-          total: 0,
-          dates: [],
-        };
-      }
-      const entry = subjectMap[sid];
-      // Find this student's record in the attendance doc
-      const myRecord = rec.records.find(r =>
-        (r.studentId && String(r.studentId) === String(student._id)) ||
-        (r.regNo && (r.regNo === student.registerNo || r.regNo === student.regNo))
-      );
-      if (myRecord) {
-        entry.total++;
-        if (myRecord.status === 'present') entry.present++;
-        else entry.absent++;
-        entry.dates.push({ date: rec.date, status: myRecord.status });
+    for (const doc of classAttDocs) {
+      const dateStr = doc.date ? new Date(doc.date).toISOString().split('T')[0] : '';
+      for (const period of doc.periods || []) {
+        const sid = period.subjectTrackId;
+        const subObj = subjectMapLookup.get(sid);
+        const subjectName = subObj ? subObj.name : sid;
+
+        if (!subjectMap[sid]) {
+          subjectMap[sid] = {
+            subjectId: subObj ? String(subObj._id) : sid,
+            subjectTrackId: sid,
+            subjectName: subjectName,
+            teacherName: period.markedBy || '—',
+            present: 0,
+            absent: 0,
+            total: 0,
+            dates: [],
+          };
+        }
+        const entry = subjectMap[sid];
+        const myRecord = (period.records || []).find(r => r.studentTrackId === studentTrackId);
+        if (myRecord) {
+          entry.total++;
+          if (myRecord.status === 'P') entry.present++;
+          else entry.absent++;
+          entry.dates.push({ date: dateStr, status: myRecord.status === 'P' ? 'present' : 'absent' });
+        }
       }
     }
 

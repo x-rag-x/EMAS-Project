@@ -12,20 +12,21 @@ const { _serverStartTime, _serverLogs } = require('../utils/serverState');
 // ════════════════════════════════════════════════════════
 router.post('/backup', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
+    const [students, teachers, departments, classes, subjects, classAttendance, studentAttendance, assignments] = await Promise.all([
       M.Student.find().lean(),
       M.Teacher.find({}, '-password').lean(),
       M.Department.find().lean(),
       M.Class.find().lean(),
       M.Subject.find().lean(),
-      M.Attendance.find().lean(),
+      M.ClassAttendance.find().lean(),
+      M.StudentAttendance.find().lean(),
       M.Assignment.find().lean(),
     ]);
     const totalDocs = students.length + teachers.length + departments.length
-      + classes.length + subjects.length + attendance.length + assignments.length;
+      + classes.length + subjects.length + classAttendance.length + studentAttendance.length + assignments.length;
     const backupPayload = {
       meta: { createdAt: new Date().toISOString(), createdBy: req.user.name, totalDocs },
-      students, teachers, departments, classes, subjects, attendance, assignments
+      students, teachers, departments, classes, subjects, classAttendance, studentAttendance, assignments
     };
     const backupPassword = crypto.randomBytes(6).toString('hex').toUpperCase();
     // ─── Stubs (wire these when ready) ──────────────────
@@ -38,7 +39,9 @@ router.post('/backup', authMiddleware, adminOnly, async (req, res) => {
       ok: true, totalDocs, backupPassword, createdAt: backupPayload.meta.createdAt,
       collections: {
         students: students.length, teachers: teachers.length, departments: departments.length,
-        classes: classes.length, subjects: subjects.length, attendance: attendance.length, assignments: assignments.length
+        classes: classes.length, subjects: subjects.length,
+        classAttendance: classAttendance.length, studentAttendance: studentAttendance.length,
+        assignments: assignments.length
       }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -60,22 +63,23 @@ router.post('/export', authMiddleware, adminOnly, async (req, res) => {
     const studentCount = await M.Student.countDocuments();
     let payload;
     if (type === 'all') {
-      const [students, teachers, departments, classes, subjects, attendance, assignments] = await Promise.all([
+      const [students, teachers, departments, classes, subjects, classAttendance, studentAttendance, assignments] = await Promise.all([
         M.Student.find().lean(), M.Teacher.find({}, '-password').lean(),
         M.Department.find().lean(), M.Class.find().lean(), M.Subject.find().lean(),
-        M.Attendance.find().lean(), M.Assignment.find().lean(),
+        M.ClassAttendance.find().lean(), M.StudentAttendance.find().lean(), M.Assignment.find().lean(),
       ]);
       payload = {
         meta: {
           exportedAt: new Date().toISOString(), exportedBy: req.user.name,
           type, totalStudents: studentCount
-        }, students, teachers, departments, classes, subjects, attendance, assignments
+        }, students, teachers, departments, classes, subjects, classAttendance, studentAttendance, assignments
       };
     } else {
       const dataMap = {
         students: () => M.Student.find().lean(),
         teachers: () => M.Teacher.find({}, '-password').lean(),
-        attendance: () => M.Attendance.find().lean(),
+        attendance: () => M.ClassAttendance.find().lean(),
+        studentAttendance: () => M.StudentAttendance.find().lean(),
       };
       const data = dataMap[type] ? await dataMap[type]() : [];
       payload = {

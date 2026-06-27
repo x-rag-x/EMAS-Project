@@ -142,7 +142,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .donetag{background:var(--gLt);color:var(--gK);padding:4px 10px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;}
 .fwrap{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;padding:0 18px 12px;}
 .fg{display:flex;flex-direction:column;gap:3px;}
-.fl{font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.7px;}
+.fl{font-size:11px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.7px;}
 .fc{background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:6px 9px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;}
 .fc:focus{border-color:var(--gM);}
 .bwrap{padding:12px 18px 6px;height:160px;}
@@ -190,7 +190,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .defrow{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(239,68,68,.04);border-radius:10px;margin-bottom:5px;border:1px solid rgba(239,68,68,.09);}
 .defav{width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,.14);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#dc2626;flex-shrink:0;}
 .asel{background:var(--gLt);border-radius:14px;padding:15px;border:1.5px solid var(--gLr);margin-bottom:14px;}
-.aselrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;}
+.aselrow{display:grid;grid-template-columns:1fr 1fr 1fr 0.5fr auto;gap:10px;align-items:end;}
 .ainfobar{background:var(--gP);border-radius:11px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border:1px solid var(--br);flex-wrap:wrap;gap:8px;}
 .asumwrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
 .asbox{background:#fff;border-radius:11px;padding:10px 12px;text-align:center;border:1px solid var(--br);}
@@ -209,7 +209,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 .aba.act{background:#dc2626;border-color:#dc2626;color:#fff;}
 .rtwrap{overflow-x:auto;padding:0 18px 18px;}
 .rtbl{width:100%;border-collapse:collapse;font-size:12px;}
-.rtbl th{text-align:left;padding:8px 10px;font-size:9.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid var(--brl);background:var(--gP);}
+.rtbl th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid var(--brl);background:var(--gP);}
 .rtbl td{padding:9px 10px;border-bottom:1px solid var(--brl);color:var(--td);}
 .rtbl tr:hover td{background:var(--gP);}
 .rtbl tr:last-child td{border-bottom:none;}
@@ -413,7 +413,7 @@ body{-webkit-user-select:none;user-select:none;}
   <!-- ROW 1: Today Schedule | Calendar -->
   <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:14px;">
     <div class="card">
-      <div class="chd"><div class="ct">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:11px;color:var(--tdi);font-weight:600;"></div></div>
+      <div class="chd"><div class="ct">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:13px;color:var(--tdi);font-weight:700;"></div></div>
       <div class="cb" style="padding-top:6px;max-height:320px;overflow-y:auto;" id="todaysched"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes today.</p></div></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -456,7 +456,7 @@ body{-webkit-user-select:none;user-select:none;}
     </div>
     <div class="card">
       <div class="chd"><div class="ct">&#128308; Defaulters</div><span id="defcnt" style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#dc2626;padding:2px 8px;border-radius:10px;">0</span></div>
-      <div class="cb" style="padding-top:0;max-height:360px;overflow-y:auto;" id="defmini"><div class="est"><span class="ei">&#127881;</span><p style="font-size:12px;">No defaulters!</p></div></div>
+      <div class="cb" style="padding-top:0;max-height:360px;overflow-y:auto;" id="defmini"><div class="est"><span class="ei">&#127881;</span><p style="font-size:14px;">No defaulters!</p></div></div>
       <div style="padding:10px 18px;border-top:1px solid var(--brl);"><button class="btno bsm" style="width:100%;justify-content:center;" onclick="nav('rep-def')">View All &#8594;</button></div>
     </div>
   </div>
@@ -516,16 +516,20 @@ body{-webkit-user-select:none;user-select:none;}
       <div class="fg"><label class="fl">Class</label><select class="fc" id="attcls" onchange="attLoadSubs()"><option value="">— Select —</option></select></div>
       <div class="fg"><label class="fl">Subject</label><select class="fc" id="attsub"><option value="">— Select —</option></select></div>
       <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="attdate"></div>
+      <div class="fg" style="max-width:120px;"><label class="fl">Period</label><select class="fc" id="attperiod"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
       <button class="btnp" onclick="loadAttSheet()">Load Students</button>
     </div>
+
   </div>
   <div id="attsheet" style="display:none;">
     <div class="ainfobar">
       <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Class</div><div style="font-size:12.5px;font-weight:700;" id="ainfc">—</div></div>
       <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Subject</div><div style="font-size:12.5px;font-weight:700;" id="ainfs">—</div></div>
       <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Date</div><div style="font-size:12.5px;font-weight:700;" id="ainfd">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Period</div><div style="font-size:12.5px;font-weight:700;" id="ainfp">—</div></div>
       <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Students</div><div style="font-size:12.5px;font-weight:700;" id="ainft">—</div></div>
     </div>
+
     <div class="asumwrap">
       <div class="asbox"><div class="asval" id="stotal">0</div><div class="aslbl">Total</div></div>
       <div class="asbox"><div class="asval" id="spres" style="color:var(--gD);">0</div><div class="aslbl">Present</div></div>
@@ -728,17 +732,22 @@ body{-webkit-user-select:none;user-select:none;}
 <script>
   // ═══════════════════════════════════════════════════════════════════════════
   //  EAMS TEACHER PORTAL  –  teacher.html
-  //  All data is persisted in localStorage via the DB helper below.
+  //  Render cache only — MongoDB via the API is the single source of truth.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // ─── DATABASE HELPER ────────────────────────────────────────────────────────
+  // ─── IN-MEMORY DATA CACHE (NOT localStorage) ─────────────────────────────────
+  // MongoDB is the single source of truth. This object is purely a render cache
+  // that lives in page memory and gets repopulated from the API (see the sync
+  // functions below). It does NOT touch localStorage/sessionStorage for app
+  // data — sessionStorage is reserved strictly for eams_token / eams_user auth.
+  var _memStore = {};
   const DB = {
     get: function(collection) {
-      try { return JSON.parse(localStorage.getItem('ss3_' + collection) || '[]'); }
+      try { return _memStore['ss3_' + collection] || []; }
       catch (e) { return []; }
     },
     set: function(collection, data) {
-      localStorage.setItem('ss3_' + collection, JSON.stringify(data));
+      _memStore['ss3_' + collection] = data;
     },
     insert: function(collection, doc) {
       const rows = DB.get(collection);
@@ -869,6 +878,144 @@ body{-webkit-user-select:none;user-select:none;}
     window.location.href = 'timetable.html';
   }
 
+  // ─── LIVE PROFILE & ASSIGNMENT SYNC ──────────────────────────────────────────
+  // currentUser (set at login from sessionStorage) only ever carried _id/name/
+  // username/role — dept/empId/desig/email/specials were never fetched, and
+  // nothing in this file called /api/assignments either. That's why My Profile
+  // and "Assigned Classes" were always empty: there was no code path that could
+  // have populated them, regardless of what's actually in the Database.
+  function syncMyProfile() {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve(null);
+    return fetch('/api/profile/me', { headers: { 'Authorization': 'Bearer ' + tok } })
+      .then(function(r) { return r.json(); })
+      .then(function(p) {
+        if (!p || p.error) return null;
+        currentUser = Object.assign({}, currentUser, {
+          _id: p._id || currentUser._id,
+          name: p.name || currentUser.name,
+          username: p.username || currentUser.username,
+          empId: p.employeeNo || '',
+          dept: p.department || '',
+          desig: p.designation || '',
+          email: p.email || '',
+          isHOD: !!p.isHod,
+          HoddeptName: p.HoddeptName || '',
+          isClassAdvisor: !!p.isClassAdvisor,
+          advisorClassName: p.className || '',
+          isTimeTableCoordinator: !!p.isTimeTableCoordinator,
+          TTdeptName: p.TTdeptName || '',
+          isWarden: !!p.isWarden,
+          isExamCoordinator: !!p.isExamCoordinator,
+          isPlacementCoordinator: !!p.isPlacementCoordinator,
+          isAdmin: !!p.isAdmin,
+          adminRights: p.adminRights || ''
+        });
+        sessionStorage.setItem('eams_user', JSON.stringify(currentUser));
+
+        // Refresh the bits of chrome that were drawn with stale/blank values
+        // before this fetch resolved.
+        var deptEl = document.getElementById('tpdept');
+        if (deptEl) deptEl.textContent = currentUser.dept || 'Sri Shakthi';
+        if (currentUser.isTimeTableCoordinator) {
+          var badge = document.getElementById('sn-tt-badge');
+          if (badge) badge.style.display = 'inline-block';
+        }
+        return currentUser;
+      }).catch(function() { return null; });
+  }
+
+  function syncMyAssignments() {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve([]);
+    // No query params needed — /api/assignments filters to the logged-in
+    // teacher's own records server-side (req.user._id), same id as currentUser._id.
+    return fetch('/api/assignments', { headers: { 'Authorization': 'Bearer ' + tok } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var rows = Array.isArray(data) ? data : [];
+        DB.set('assignments', rows);
+        return rows;
+      }).catch(function() { return []; });
+  }
+
+  // ─── syncMyStudents ───────────────────────────────────────────────────────────
+  // Fetches /api/students?classId=X for every class in the teacher's assignments
+  // and stores the deduplicated result in the render cache (DB). Called after
+  // syncMyAssignments() has populated DB.get('assignments').
+  function syncMyStudents() {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve([]);
+    var myClasses = getMyClasses();
+    if (!myClasses.length) return Promise.resolve([]);
+
+    var promises = myClasses.map(function(c) {
+      return fetch('/api/students?classId=' + encodeURIComponent(c.id), {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(d) { return Array.isArray(d) ? d : []; })
+      .catch(function() { return []; });
+    });
+
+    return Promise.all(promises).then(function(results) {
+      var flat = results.reduce(function(acc, arr) { return acc.concat(arr); }, []);
+      var seen = Object.create(null);
+      var unique = flat.filter(function(s) {
+        var key = String(s._id);
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+      DB.set('students', unique);
+      return unique;
+    });
+  }
+
+  // ─── syncMyAttendance ────────────────────────────────────────────────────────
+  // Fetches the last 90 days of this teacher's attendance from /api/attendance
+  // and stores it in the render cache for the dashboard chart, defaulters mini
+  // widget, and today's schedule "already marked" check.
+  // Report pages (renderAttendanceRecord, renderDefaultersList) call
+  // fetchAttendanceForReport() independently so they can honour arbitrary filters.
+  function syncMyAttendance() {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve([]);
+    var to = todayISO();
+    var from90 = new Date();
+    from90.setDate(from90.getDate() - 90);
+    var from = from90.toISOString().split('T')[0];
+    return fetch(
+      '/api/attendance?teacherId=' + encodeURIComponent(currentUser._id)
+        + '&from=' + from + '&to=' + to,
+      { headers: { 'Authorization': 'Bearer ' + tok } }
+    )
+    .then(function(r) { return r.ok ? r.json() : []; })
+    .then(function(data) {
+      var rows = Array.isArray(data) ? data : [];
+      DB.set('attendance', rows);
+      return rows;
+    })
+    .catch(function() { return []; });
+  }
+
+  // ─── fetchAttendanceForReport ─────────────────────────────────────────────────
+  // On-demand attendance fetch used by the Attendance Record and Defaulters
+  // report pages. Passes the current UI filter values as query params so the
+  // server does the heavy filtering; only subjectId is client-side (not a param
+  // the attendance route supports).
+  function fetchAttendanceForReport(classId, subjectId, from, to) {
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) return Promise.resolve([]);
+    var url = '/api/attendance?teacherId=' + encodeURIComponent(currentUser._id);
+    if (classId) url += '&classId=' + encodeURIComponent(classId);
+    if (from && to) url += '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to);
+    return fetch(url, { headers: { 'Authorization': 'Bearer ' + tok } })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(data) { return Array.isArray(data) ? data : []; })
+      .catch(function() { return []; });
+  }
+
   function bootApp() {
     document.getElementById('app').classList.add('vis');
     document.getElementById('tpav').textContent    = currentUser.name[0];
@@ -885,6 +1032,20 @@ body{-webkit-user-select:none;user-select:none;}
     initCalendar();
     renderNotifications();
     nav('dash');
+
+    // Pull the real profile + assignment data from the Database now that the
+    // shell is visible. Re-render whichever page is currently active once it
+    // lands, so the initial dash render (drawn from empty cache) gets corrected.
+    Promise.all([syncMyProfile(), syncMyAssignments()]).then(function() {
+      populateAllFilters(); // class/subject dropdowns are built from assignments
+      // Now that assignments are loaded we can fetch students (by classId) and
+      // the teacher's recent attendance in parallel.
+      return Promise.all([syncMyStudents(), syncMyAttendance()]);
+    }).then(function() {
+      populateAllFilters(); // refresh filters with real class/subject names
+      if (document.getElementById('pg-dash').classList.contains('act'))    initDashboard();
+      if (document.getElementById('pg-profile').classList.contains('act')) initProfilePage();
+    });
   }
 
   // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -913,7 +1074,7 @@ body{-webkit-user-select:none;user-select:none;}
       'rep-def': function() { populateDefaulterFilters(); renderDefaultersList(); },
       'rep-stu': function() { populateStudentListFilters(); renderStudentList(); },
       'griev':   renderGrievances,
-      'profile': initProfilePage
+      'profile': function() { initProfilePage(); syncMyProfile().then(initProfilePage); }
     };
     if (pageActions[pageName]) pageActions[pageName]();
   }
@@ -1684,39 +1845,77 @@ body{-webkit-user-select:none;user-select:none;}
   var attLoadSubs = loadSubjectsForClass;
 
   function loadAttendanceSheet() {
-    const classId   = document.getElementById('attcls').value;
-    const subjectId = document.getElementById('attsub').value;
-    const date      = document.getElementById('attdate').value;
-
+    showToast("Loading..", 'info');
+    var classId   = document.getElementById('attcls').value;
+    var subjectId = document.getElementById('attsub').value;
+    var date      = document.getElementById('attdate').value;
+    var period    = document.getElementById('attperiod') ? document.getElementById('attperiod').value : '1';
     if (!classId || !subjectId || !date) { showToast('Select class, subject and date', 'warn'); return; }
 
-    const assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
-    if (!assignment) { showToast('Not assigned', 'warn'); return; }
+    var assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+    if (!assignment) { showToast('Not assigned to this class / subject', 'warn'); return; }
 
-    const classStudents = DB.get('students').filter(function(s) { return s.classId === classId; });
-    if (!classStudents.length) { showToast('No students in class', 'warn'); return; }
+    var tok = sessionStorage.getItem('eams_token');
+    if (!tok) { showToast('Not authenticated', 'warn'); return; }
 
-    // Load any existing attendance records for this session
-    const existingRecords = DB.get('attendance').filter(function(a) {
-      return a.classId === classId && a.subjectId === subjectId && a.date === date && a.teacherId === currentUser._id;
-    });
+    // Fetch students for the class and any existing records for this session
+    // in parallel from the DB server — no localStorage involved.
+    Promise.all([
+      fetch('/api/students?classId=' + encodeURIComponent(classId), {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      }).then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) { return Array.isArray(d) ? d : []; })
+        .catch(function() { return []; }),
 
-    attendanceStudents = classStudents.map(function(student) {
-      const existing = existingRecords.find(function(a) { return a.studentId === student._id; });
-      return Object.assign({}, student, {
-        status: existing ? existing.status : 'present',
-        existingId: existing ? existing._id : null
+      fetch('/api/attendance?teacherId=' + encodeURIComponent(currentUser._id)
+          + '&classId=' + encodeURIComponent(classId)
+          + '&date='    + encodeURIComponent(date), {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      }).then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) { return Array.isArray(d) ? d : []; })
+        .catch(function() { return []; })
+    ]).then(function(results) {
+      var classStudents  = results[0];
+      // filter to this subject client-side (route doesn't support subjectId param)
+      var sessionRecords = results[1].filter(function(a) {
+        return String(a.subjectId) === String(subjectId);
       });
+
+      if (!classStudents.length) { showToast('No students found in this class', 'warn'); return; }
+
+      // Also update local student cache so other functions (student list, reports)
+      // pick up fresh data without an extra round-trip.
+      (function mergeIntoCache() {
+        var existing = DB.get('students');
+        var seen = Object.create(null);
+        existing.forEach(function(s) { seen[String(s._id)] = true; });
+        var merged = existing.concat(classStudents.filter(function(s) { return !seen[String(s._id)]; }));
+        DB.set('students', merged);
+      })();
+
+      attendanceStudents = classStudents.map(function(student) {
+        var rec = sessionRecords.find(function(a) {
+          return String(a.studentId) === String(student._id) ||
+                 (student.trackId && a.studentTrackId === student.trackId);
+        });
+        return Object.assign({}, student, {
+          status:     rec ? rec.status : 'present',
+          existingId: rec ? rec._id    : null
+        });
+      });
+
+      document.getElementById('ainfc').textContent = assignment.className;
+      document.getElementById('ainfs').textContent = assignment.subjectName;
+      document.getElementById('ainfd').textContent = formatDateLong(date);
+      var ainfp = document.getElementById('ainfp');
+      if (ainfp) ainfp.textContent = 'Period ' + period;
+      document.getElementById('ainft').textContent = classStudents.length;
+
+      document.getElementById('attsheet').style.display = 'block';
+      renderAttendanceSheet();
+    }).catch(function() {
+      showToast('Error loading attendance sheet', 'warn');
     });
-
-    // Populate info bar
-    document.getElementById('ainfc').textContent = assignment.className;
-    document.getElementById('ainfs').textContent = assignment.subjectName;
-    document.getElementById('ainfd').textContent = formatDateLong(date);
-    document.getElementById('ainft').textContent = classStudents.length;
-
-    document.getElementById('attsheet').style.display = 'block';
-    renderAttendanceSheet();
   }
   var loadAttSheet = loadAttendanceSheet;
 
@@ -1835,95 +2034,115 @@ body{-webkit-user-select:none;user-select:none;}
   function submitAttendance() {
     if (!attendanceStudents.length) { showToast('No students loaded', 'warn'); return; }
 
-    const classId   = document.getElementById('attcls').value;
-    const subjectId = document.getElementById('attsub').value;
-    const date      = document.getElementById('attdate').value;
-    const assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+    var classId     = document.getElementById('attcls').value;
+    var subjectId   = document.getElementById('attsub').value;
+    var date        = document.getElementById('attdate').value;
+    var periodEl    = document.getElementById('attperiod');
+    var periodNumber = periodEl ? Number(periodEl.value) || 1 : 1;
+    var assignment  = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
+    var tok         = sessionStorage.getItem('eams_token');
 
-    attendanceStudents.forEach(function(student) {
-      if (student.existingId) {
-        DB.update('attendance', student.existingId, { status: student.status });
-      } else {
-        DB.insert('attendance', {
-          studentId: student._id, studentName: student.name,
-          classId: classId, className: assignment.className,
-          subjectId: subjectId, subjectName: assignment.subjectName,
-          teacherId: currentUser._id, teacherName: currentUser.name,
-          date: date, status: student.status, deptName: assignment.deptName
-        });
-      }
-    });
+    if (!tok) { showToast('Not authenticated', 'warn'); return; }
+    if (!assignment) { showToast('Assignment not found', 'warn'); return; }
 
-    // Refresh existing IDs after save
-    const freshRecords = DB.get('attendance').filter(function(a) {
-      return a.classId === classId && a.subjectId === subjectId && a.date === date && a.teacherId === currentUser._id;
-    });
-    attendanceStudents = attendanceStudents.map(function(student) {
-      const fresh = freshRecords.find(function(a) { return a.studentId === student._id; });
-      return Object.assign({}, student, { existingId: fresh ? fresh._id : student.existingId });
-    });
+    showToast('Saving attendance…');
 
-    showToast('&#9989; Attendance saved!');
-    renderAttendanceSheet();
+    // Single batch POST — server stores everything in ClassAttendance + StudentAttendance
+    var payload = {
+      classId:      classId,
+      subjectId:    subjectId,
+      date:         date,
+      periodNumber: periodNumber,
+      records: attendanceStudents.map(function(student) {
+        return {
+          studentId:     String(student._id),
+          studentTrackId: student.trackId || String(student._id),
+          status:        student.status   // 'present' or 'absent' — server normalises to P/AB
+        };
+      })
+    };
+
+    fetch('/api/attendance', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body:    JSON.stringify(payload)
+    })
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r); })
+    .then(function() {
+      return syncMyAttendance();
+    }).then(function() {
+      showToast('&#9989; Attendance saved!');
+      renderAttendanceSheet();
+    }).catch(function() {
+      showToast('Error saving attendance — please retry', 'warn');
+    });
   }
   var submitAtt = submitAttendance;
 
   // ─── REPORTS ────────────────────────────────────────────────────────────────
   function renderAttendanceRecord() {
-    const classFilter   = document.getElementById('rfc') ? document.getElementById('rfc').value : '';
-    const subjectFilter = document.getElementById('rfs') ? document.getElementById('rfs').value : '';
-    const fromDate      = document.getElementById('rff') ? document.getElementById('rff').value : '';
-    const toDate        = document.getElementById('rft') ? document.getElementById('rft').value : '';
+    var classFilter   = document.getElementById('rfc') ? document.getElementById('rfc').value : '';
+    var subjectFilter = document.getElementById('rfs') ? document.getElementById('rfs').value : '';
+    var fromDate      = document.getElementById('rff') ? document.getElementById('rff').value : '';
+    var toDate        = document.getElementById('rft') ? document.getElementById('rft').value : '';
 
-    let attendance = DB.get('attendance').filter(function(a) { return a.teacherId === currentUser._id; });
-    if (classFilter)   attendance = attendance.filter(function(a) { return a.classId   === classFilter; });
-    if (subjectFilter) attendance = attendance.filter(function(a) { return a.subjectId === subjectFilter; });
-    if (fromDate)      attendance = attendance.filter(function(a) { return a.date >= fromDate; });
-    if (toDate)        attendance = attendance.filter(function(a) { return a.date <= toDate; });
+    var tbody = document.getElementById('attrec');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">Loading…</td></tr>';
 
-    // Aggregate per student + subject
-    const grouped = {};
-    attendance.forEach(function(a) {
-      const key = a.studentId + '|' + a.subjectId;
-      if (!grouped[key]) grouped[key] = {
-        studentName: a.studentName, regNo: '',
-        className: a.className, subjectName: a.subjectName,
-        present: 0, total: 0, studentId: a.studentId
-      };
-      grouped[key].total++;
-      if (a.status === 'present') grouped[key].present++;
-    });
+    fetchAttendanceForReport(classFilter, subjectFilter, fromDate, toDate)
+      .then(function(attendance) {
+        // subjectId is not a route param — filter client-side
+        if (subjectFilter) {
+          attendance = attendance.filter(function(a) { return String(a.subjectId) === String(subjectFilter); });
+        }
 
-    // Add reg numbers
-    const allStudents = DB.get('students');
-    Object.values(grouped).forEach(function(record) {
-      const student = allStudents.find(function(s) { return s._id === record.studentId; });
-      if (student) record.regNo = student.regNo || '';
-    });
+        // Aggregate per student + subject
+        var grouped = {};
+        attendance.forEach(function(a) {
+          var key = String(a.studentId) + '|' + String(a.subjectId);
+          if (!grouped[key]) grouped[key] = {
+            studentName: a.studentName, regNo: '',
+            className: a.className,   subjectName: a.subjectName,
+            present: 0, total: 0,     studentId: a.studentId
+          };
+          grouped[key].total++;
+          if (a.status === 'present') grouped[key].present++;
+        });
 
-    const rows  = Object.values(grouped).sort(function(a, b) { return a.studentName.localeCompare(b.studentName); });
-    const tbody = document.getElementById('attrec');
+        // Enrich reg numbers from student cache (populated by syncMyStudents)
+        var allStudents = DB.get('students');
+        Object.values(grouped).forEach(function(record) {
+          if (!record.regNo) {
+            var stu = allStudents.find(function(s) { return String(s._id) === String(record.studentId); });
+            if (stu) record.regNo = stu.regNo || '';
+          }
+        });
 
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No records found.</td></tr>';
-      return;
-    }
+        var rows = Object.values(grouped).sort(function(a, b) { return a.studentName.localeCompare(b.studentName); });
 
-    tbody.innerHTML = rows.map(function(record, index) {
-      const pct      = record.total ? Math.round(record.present / record.total * 100) : 0;
-      const pctClass = pct >= 75 ? 'ph' : pct >= 50 ? 'pm' : 'pl';
-      return '<tr>'
-        + '<td>' + (index + 1) + '</td>'
-        + '<td style="font-weight:600;">' + record.studentName + '</td>'
-        + '<td style="color:var(--tmu);">' + (record.regNo || '—') + '</td>'
-        + '<td>' + record.className + '</td>'
-        + '<td>' + record.subjectName + '</td>'
-        + '<td>' + record.total + '</td>'
-        + '<td style="color:var(--gK);font-weight:600;">' + record.present + '</td>'
-        + '<td><span class="pb ' + pctClass + '">' + pct + '%</span></td>'
-        + '</tr>';
-    }).join('');
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tdi);">No records found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = rows.map(function(record, index) {
+          var pct      = record.total ? Math.round(record.present / record.total * 100) : 0;
+          var pctClass = pct >= 75 ? 'ph' : pct >= 50 ? 'pm' : 'pl';
+          return '<tr>'
+            + '<td>' + (index + 1) + '</td>'
+            + '<td style="font-weight:600;">' + record.studentName + '</td>'
+            + '<td style="color:var(--tmu);">' + (record.regNo || '—') + '</td>'
+            + '<td>' + record.className + '</td>'
+            + '<td>' + record.subjectName + '</td>'
+            + '<td>' + record.total + '</td>'
+            + '<td style="color:var(--gK);font-weight:600;">' + record.present + '</td>'
+            + '<td><span class="pb ' + pctClass + '">' + pct + '%</span></td>'
+            + '</tr>';
+        }).join('');
+      });
   }
+  // Alias — HTML filter dropdowns call renderAttRec() via onchange
+  var renderAttRec = renderAttendanceRecord;
 
   function exportAttendanceCSV() {
     const tableEl = document.getElementById('attrec');

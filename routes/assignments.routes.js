@@ -6,10 +6,10 @@ const { logAction } = require('../utils/logAction');
 
 router.get('/', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.subjectId) filter.subjectId = req.query.subjectId;   // ← added
+  if (req.query.subjectId) filter.subjectId = req.query.subjectId;
   if (req.query.teacherId) filter.teacherId = req.query.teacherId;
   else if (!req.query.subjectId && !req.query.classId && req.user.role === 'teacher')
-    filter.teacherId = req.user._id;
+    filter.teacherId = req.user.roleId || req.user._id;
   if (req.query.classId) filter.classId = req.query.classId;
   res.json(await M.Assignment.find(filter).sort({ teacherName: 1 }));
 });

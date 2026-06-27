@@ -2510,7 +2510,7 @@ to { transform: rotate(360deg) }
         },
         'teachers': function () {
           renderTeachers(); // render from cache immediately
-          syncFromAPI('users', '/users').then(function () { renderTeachers(); }).catch(function () {});
+          syncUsersWithTeacherDetails().then(function () { renderTeachers(); }).catch(function () {});
         },
         'reports': initAdminReports,
         'logs': function () {
@@ -3923,6 +3923,9 @@ to { transform: rotate(360deg) }
     var structureContext = { deptId: null, deptName: '', deptCode: '', sem: null };
     var currentClassId = null;
     var currentTeacherId = null;
+    // Real Teacher-collection _id (different from the shadow User._id above) —
+    // needed because PUT/DELETE /api/teachers/:id expect the Teacher doc's own _id.
+    var currentTeacherDocId = null;
     var _emptyStateFired = {};
 
     function resetStructureState() {
@@ -5599,6 +5602,9 @@ to { transform: rotate(360deg) }
       var teacher = DB.get('users').find(function (u) { return u._id === teacherId; });
       if (!teacher) return;
       currentTeacherId = teacherId;
+      // PUT/DELETE /api/teachers/:id need the Teacher collection's own _id, not the
+      // shadow User._id — falls back to teacherId if enrichment hasn't run yet.
+      currentTeacherDocId = teacher.teacherDocId || teacherId;
 
       document.getElementById('td-nm').textContent = teacher.name;
       document.getElementById('td-dp').textContent = (teacher.desig || '—') + ' · ' + (teacher.dept || '—') + ' · ' + (teacher.empId || '—');
@@ -5643,7 +5649,7 @@ to { transform: rotate(360deg) }
             var btn = document.getElementById('dc-confirm-btn');
             btn.disabled = true;
             btn.textContent = 'Deleting…';
-            apiDeleteTeacher(teacherId, teacher.name).then(function () {
+            apiDeleteTeacher(currentTeacherDocId, teacher.name).then(function () {
               DB.delete('users', teacherId);
               DB.get('assignments').filter(function (a) { return a.teacherId === teacherId; })
                 .forEach(function (a) { DB.delete('assignments', a._id); });
@@ -5685,7 +5691,7 @@ to { transform: rotate(360deg) }
       var updates = { name: name, empId: empId, dept: dept, desig: desig, username: username, specials: specials };
       if (password) updates.password = password;
 
-      apiUpdateTeacher(currentTeacherId, updates, name).then(function(d) {
+      apiUpdateTeacher(currentTeacherDocId || currentTeacherId, updates, name).then(function(d) {
         if (!d) return;
         addLog('Teacher Updated', '"' + name + '"');
         closeModalBg('m-tch-detail');
@@ -6222,6 +6228,43 @@ to { transform: rotate(360deg) }
         }).catch(function () { return []; });
     }
 
+    // ── TEACHER DIRECTORY ENRICHMENT ──────────────────────────────────────
+    // /api/users only returns the stripped "shadow" User collection (username,
+    // role, trackId, status, name) — it intentionally excludes dept/empId/desig/
+    // email/specials for security reasons. Those live on the Teacher collection,
+    // exposed via /api/teachers. We merge them into the 'users' cache (matched
+    // by trackId) so every screen that reads DB.get('users') for a teacher gets
+    // the full picture, without having to rewrite every call site.
+    function syncTeacherDirectory() {
+      return apiCall('GET', '/teachers').then(function (teacherList) {
+        if (!Array.isArray(teacherList)) return DB.get('users');
+        var byTrack = {};
+        teacherList.forEach(function (t) { if (t.trackId) byTrack[t.trackId] = t; });
+        var merged = DB.get('users').map(function (u) {
+          if (u.role !== 'teacher' || !u.trackId || !byTrack[u.trackId]) return u;
+          var t = byTrack[u.trackId];
+          return Object.assign({}, u, {
+            dept: t.dept, department: t.department,
+            empId: t.empId, employeeNo: t.employeeNo,
+            desig: t.desig, designation: t.designation,
+            email: t.email, specials: t.specials || [],
+            isHOD: t.isHOD, isClassAdvisor: t.isClassAdvisor,
+            isTimeTableCoordinator: t.isTimeTableCoordinator,
+            // Real Teacher-collection _id — required for PUT/DELETE /api/teachers/:id.
+            // u._id (the shadow User._id) stays untouched so existing assignment
+            // lookups (a.teacherId === teacher._id) keep working unchanged.
+            teacherDocId: t._id
+          });
+        });
+        DB.set('users', merged);
+        return merged;
+      }).catch(function () { return DB.get('users'); });
+    }
+
+    function syncUsersWithTeacherDetails() {
+      return syncFromAPI('users', '/users').then(syncTeacherDirectory);
+    }
+
     // Sync all collections
     function syncAllFromDB(cb) {
       dbToast('Fetching from Database…', 'saving');
@@ -6230,7 +6273,7 @@ to { transform: rotate(360deg) }
         syncFromAPI('classes', '/classes'),
         syncFromAPI('subjects', '/subjects'),
         syncFromAPI('students', '/students'),
-        syncFromAPI('users', '/users'),
+        syncUsersWithTeacherDetails(),
         syncFromAPI('assignments', '/assignments'),
         syncFromAPI('logs', '/logs'),
       ]).then(function (results) {
@@ -6357,7 +6400,7 @@ to { transform: rotate(360deg) }
       return apiCall('POST', '/teachers', data)
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
-          return syncFromAPI('users', '/users').then(function () {
+          return syncUsersWithTeacherDetails().then(function () {
             dbToast('Teacher added', 'success', '"' + data.name + '" (' + data.username + ') → Database\nPassword: ' + data.password);
             return d;
           });
@@ -6369,7 +6412,7 @@ to { transform: rotate(360deg) }
       return apiCall('DELETE', '/teachers/' + id)
         .then(function (d) {
           if (d && d.error) { dbToast('Error: ' + d.error, 'error'); throw new Error(d.error); }
-          return syncFromAPI('users', '/users').then(function () {
+          return syncUsersWithTeacherDetails().then(function () {
             dbToast('Teacher deleted', 'success', '"' + name + '" removed from DB — undoable 10 days');
           });
         });
@@ -6380,7 +6423,7 @@ to { transform: rotate(360deg) }
       return apiCall('PUT', '/teachers/' + id, data)
         .then(function (d) {
           if (d.error) { dbToast('Error: ' + d.error, 'error'); return null; }
-          return syncFromAPI('users', '/users').then(function () {
+          return syncUsersWithTeacherDetails().then(function () {
             dbToast('Teacher updated', 'success', '"' + name + '" → Database');
             return d;
           });
