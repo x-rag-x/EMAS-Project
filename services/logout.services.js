@@ -1,78 +1,40 @@
-
-
-async function doLogout(username) {
-  try {
+async function doLogout(query = '', type = 'info', time = '0') {
+    msgToast('Logging out..........');
+    try {
     const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
 
     if (token) {
-      await fetch('/api/auth/logout', {
+        await fetch('/api/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
-      });
+        });
     }
-  } catch (err) {}
-  localStorage.clear();
-  sessionStorage.clear();
+    } catch (err) { }
+    localStorage.clear();
+    sessionStorage.clear();
 
-  history.replaceState(null, '', 'index.html');
-  window.location.replace('index.html');
+    if (!query == '')
+    window.location.replace(`index.html?logout=${query}&type=${type}&time=${time}`);
 }
 
-// ── Activity Tracking & Session Management ──────────────
-(function() {
-  var lastPingTime = 0;
-  var PING_THROTTLE_MS = 30000; // 30 seconds
-  var CHECK_INTERVAL_MS = 15000; // 15 seconds
+(function () {
+    async function checkSessionExpiry() {
+    try {
+        const session = await apiCall('GET', '/login-history');
+        if (!session || !session.expireTime) return;
 
-  function getToken() {
-    return sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
-  }
+        const remainingTime = new Date(session.expireTime).getTime() - Date.now();
 
-  // Send a ping to the server to report activity
-  function sendPing() {
-    var now = Date.now();
-    if (now - lastPingTime < PING_THROTTLE_MS) return;
-    lastPingTime = now;
-
-    var token = getToken();
-    if (!token) return;
-
-    fetch('/api/auth/ping', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      }
-    }).catch(function() {});
-  }
-
-  // Listen for user activity events and throttle pings
-  ['mousemove', 'click', 'scroll', 'keydown', 'touchstart'].forEach(function(evt) {
-    document.addEventListener(evt, sendPing, { passive: true });
-  });
-
-  // Check session validity with the server every 15 seconds
-  function checkSession() {
-    var token = getToken();
-    if (!token) return;
-
-    fetch('/api/auth/check', {
-      method: 'GET',
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(function(res) {
-      if (res.status === 401) {
-        if (typeof dbToast === 'function') {
-          dbToast('\u26a0\ufe0f Session expired. Logging out...', 'error');
+        // Already expired
+        if (remainingTime <= 0) {
+        msgToast('⚠️ Session expired. Logging out...', 'error');
+        return setTimeout(() => { doLogout('timeout', 'error'); }, 1000);
         }
-        setTimeout(function() {
-          doLogout();
-        }, 1500);
-      }
-    })
-    .catch(function() {});
-  }
 
-  checkSession();
-  setInterval(checkSession, CHECK_INTERVAL_MS);
+        // Sleep until the session should expire
+        setTimeout(checkSessionExpiry, Math.max(remainingTime, 0));
+
+    } catch (err) { console.error(err); }
+    }
+    checkSessionExpiry();
 })();

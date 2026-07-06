@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EAMS – Manage | Sri Shakthi</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="public/css/manage.css">
   <style>
 :root{--gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;--gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;--td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;--br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);--shd:0 8px 32px rgba(0,0,0,0.08);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
-
+.app-shell { opacity: 0; transition: opacity .38s ease; }
+.app-shell.vis { opacity: 1; }
 /* ── SIDEBAR ── */
 .sb{width:220px;flex-shrink:0;background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;transition:transform .28s ease;}
 .sb.sb-hidden{transform:translateX(-100%);}
@@ -219,8 +221,28 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
 </head>
 <body>
 
+<!-- ── PAGE LOADER ── shown until first DB sync completes -->
+  <div id="page-loader" style="visibility: hidden;">
+    <div class="loader-brand">🌿 EAMS Admin</div>
+    <div class="three-body">
+      <div class="three-body__dot"></div>
+      <div class="three-body__dot"></div>
+      <div class="three-body__dot"></div>
+    </div>
+    <div class="loader-msg" id="loader-msg">Initializing EAMS…</div>
+    <div class="loader-steps">
+      <div class="loader-step active" id="lstep-0"></div>
+      <div class="loader-step" id="lstep-1"></div>
+      <div class="loader-step" id="lstep-2"></div>
+      <div class="loader-step" id="lstep-3"></div>
+      <div class="loader-step" id="lstep-4"></div>
+    </div>
+  </div>
+
 <div id="db-toast"><div id="db-toast-bar"></div></div>
 <div class="toast" id="toast"></div>
+
+<div id="app-shell">
 
 <!-- SIDEBAR TOGGLE -->
 <button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle">✖</button>
@@ -240,6 +262,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div class="sb-section">Academic</div>
     <button class="sb-item" data-page="calendar"  onclick="nav('calendar')"><span class="sbi-ic">📅</span>College Days</button>
     <button class="sb-item" data-page="exam"      onclick="nav('exam')"><span class="sbi-ic">📝</span>Exam</button>
+    <button class="sb-item" data-page="years"     onclick="nav('years')"><span class="sbi-ic">📚</span>Years</button>
     <div class="sb-section">Admin</div>
     <button class="sb-item" data-page="settings"  onclick="nav('settings')"><span class="sbi-ic">⚙️</span>Settings</button>
   </div>
@@ -252,8 +275,8 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         <div class="sb-urole">Admin</div>
       </div>
     </div>
-    <button class="sb-goto-dash" onclick="location.href='admin.html'">← Go to Dashboard</button>
-    <button class="sb-logout-btn" onclick="doLogout()">🚪 Logout</button>
+    <button class="sb-back-btn" onclick="location.href='admin.html'">← Back to Dashboard</button>
+    <button class="sb-logout-btn" onclick="doLogout('manual', 'success', '7000')">🚪 Logout</button>
   </div>
 </nav>
 
@@ -281,13 +304,13 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         <div class="page-title">📊 Overview</div>
         <div class="page-sub">Quick snapshot of the current month's schedule.</div>
       </div>
-      <button class="btn-out btn-sm" onclick="nav('calendar')">Edit Calendar →</button>
+      <button class="btn-pri" onclick="nav('calendar')">Edit Calendar →</button>
     </div>
 
     <!-- Stats row -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
       <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--gK);"></div><div><div class="ov-stat-num" id="ov-working">—</div><div class="ov-stat-label">Working Days</div></div></div>
-      <div class="ov-stat"><div class="ov-stat-dot" style="background:#dc2626;"></div><div><div class="ov-stat-num" id="ov-leave">—</div><div class="ov-stat-label">Leave / Holiday</div></div></div>
+      <div class="ov-stat"><div class="ov-stat-dot" style="background:#dc2626;"></div><div><div class="ov-stat-num" id="ov-leave">—</div><div class="ov-stat-label">Leave</div></div></div>
       <div class="ov-stat"><div class="ov-stat-dot" style="background:#b45309;"></div><div><div class="ov-stat-num" id="ov-exam">—</div><div class="ov-stat-label">Exam Days</div></div></div>
       <div class="ov-stat"><div class="ov-stat-dot" style="background:var(--tdi);"></div><div><div class="ov-stat-num" id="ov-total">—</div><div class="ov-stat-label">Total Days</div></div></div>
     </div>
@@ -305,13 +328,13 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
         </div>
         <div class="card-body-p">
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;text-align:center;">
-            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Tue</div>
-            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Thu</div>
-            <div style="font-size:10px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:10px;font-weight:700;color:#b45309;">Sat</div>
-            <div style="font-size:10px;font-weight:700;color:#dc2626;">Sun</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:12.5px;font-weight:700;color:var(--tmu);">Tue</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:12.5px;font-weight:700;color:var(--tmu);">Thu</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:12.5px;font-weight:700;color:#b45309;">Sat</div>
+            <div style="font-size:12.5px;font-weight:700;color:#dc2626;">Sun</div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;" id="ov-cal-grid">
-            <div style="grid-column:span 7;text-align:center;padding:16px;color:var(--tdi);font-size:12px;">Loading…</div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;" id="ov-cal-grid">
+            <div style="grid-column:span 7;text-align:center;padding:16px;color:var(--tdi);font-size:14px;">Loading… This may take few seconds.</div>
           </div>
         </div>
       </div>
@@ -338,15 +361,29 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div class="page-hd">
       <div>
         <div class="page-title">📅 College Days</div>
-        <div class="page-sub">Mark working days, leaves, holidays, and daily timings.</div>
+        <div class="page-sub">Mark working days, leaves and daily timings.</div>
+      </div>
+      <div class="page-actions">
+          <button class="btn-pri" onclick="generateMonthDefaults()">⚙️ Auto-Fill</button>
+          <button class="btn-out" onclick="loadCalendar()">🔄 Sync DB</button>
       </div>
     </div>
 
     <!-- Controls -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-body-p">
-        <div style="display:grid;grid-template-columns:130px 90px 170px 1fr;gap:10px;align-items:end;flex-wrap:wrap;">
-          <div class="fg">
+    <div style="padding:15px 15px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
+        <!-- Left: Month Name & Navigation -->
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="page-title" id="month-label" style="font-size:28px;">—</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-out btn-sm" onclick="prevMonth()">‹ Prev</button>
+            <button class="btn-out btn-sm" onclick="nextMonth()">Next ›</button>
+          </div>
+        </div>
+        
+        <!-- Right: Modern Filters -->
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="fg" style="min-width:140px;">
             <label class="fl">Month</label>
             <select class="fc" id="cal-month-sel" onchange="loadCalendar()">
               <option value="1">January</option><option value="2">February</option><option value="3">March</option>
@@ -355,23 +392,17 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
               <option value="10">October</option><option value="11">November</option><option value="12">December</option>
             </select>
           </div>
-          <div class="fg">
+          <div class="fg" style="min-width:110px;">
             <label class="fl">Year</label>
             <input type="number" class="fc" id="cal-year-inp" value="2025" min="2020" max="2040" onchange="loadCalendar()">
           </div>
-          <div class="fg">
+          <div class="fg" style="min-width:130px;">
             <label class="fl">Year Filter</label>
             <select class="fc" id="cal-year-filter" onchange="loadCalendar()">
               <option value="">All Years</option>
               <option value="I">Year I</option><option value="II">Year II</option>
               <option value="III">Year III</option><option value="IV">Year IV</option>
             </select>
-          </div>
-          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
-            <button class="btn-out btn-sm" onclick="prevMonth()">‹</button>
-            <button class="btn-out btn-sm" onclick="nextMonth()">›</button>
-            <button class="btn-out btn-sm" onclick="generateMonthDefaults()">⚙️ Auto-Fill</button>
-            <button class="btn-out btn-sm" onclick="loadCalendar()">🔄</button>
           </div>
         </div>
       </div>
@@ -393,20 +424,23 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
           <span style="background:#f0fdf4;border:1.5px solid #86efac;color:var(--gK);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Working</span>
           <span style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Leave</span>
           <span style="background:#fffbeb;border:1.5px solid #fcd34d;color:#b45309;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Exam</span>
-          <span style="background:#eff6ff;border:1.5px solid #93c5fd;color:#2563eb;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Holiday</span>
           <span style="background:#fdf4ff;border:1.5px solid #d8b4fe;color:#7c3aed;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Half Day</span>
         </div>
       </div>
       <div class="card-body-p">
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Tue</div>
-          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:10px;font-weight:700;color:var(--tmu);">Thu</div>
-          <div style="font-size:10px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:10px;font-weight:700;color:#b45309;">Sat</div>
-          <div style="font-size:10px;font-weight:700;color:#dc2626;">Sun</div>
+          <div style="font-size:14px;font-weight:700;color:var(--tmu);">Mon</div><div style="font-size:14px;font-weight:700;color:var(--tmu);">Tue</div>
+          <div style="font-size:14px;font-weight:700;color:var(--tmu);">Wed</div><div style="font-size:14px;font-weight:700;color:var(--tmu);">Thu</div>
+          <div style="font-size:14px;font-weight:700;color:var(--tmu);">Fri</div><div style="font-size:14px;font-weight:700;color:#b45309;">Sat</div>
+          <div style="font-size:14px;font-weight:700;color:#dc2626;">Sun</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;" id="cal-grid">
-          <div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;" id="cal-grid">
+          <div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:16px;">Loading… This may take few seconds.</div>
         </div>
+      </div>
+      <div class="page-actions" style="padding:0 16px 14px;">
+          <button class="btn-pri" onclick="saveCalendarMonth(false)">📝 Save Draft</button>
+          <button class="btn-out" onclick="saveCalendarMonth(true)">✅ Save & Finalize</button>
       </div>
     </div>
     <div style="margin-top:8px;font-size:10.5px;color:var(--tdi);text-align:center;">💡 Default: Sundays = Leave &nbsp;|&nbsp; 1st &amp; 3rd Saturdays = Leave &nbsp;|&nbsp; 2nd &amp; 4th Saturdays = Working &nbsp;|&nbsp; Click any day to edit.</div>
@@ -468,7 +502,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       <div class="card">
         <div class="card-hd">
           <div class="card-title">📋 Scheduled Exams</div>
-          <button class="btn-out btn-sm" onclick="loadExams()">🔄</button>
+          <button class="btn-out" onclick="loadExams()">🔄 Refresh</button>
         </div>
         <div class="tw">
           <table class="tbl">
@@ -566,7 +600,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       <div class="card" style="margin-top:14px;">
         <div class="card-hd">
           <div class="card-title">🏛️ Today's Hall Submissions</div>
-          <button class="btn-out btn-sm" onclick="loadHallSummary()">🔄</button>
+          <button class="btn-out" onclick="loadHallSummary()">🔄 Refresh</button>
         </div>
         <div class="tw">
           <table class="tbl">
@@ -574,6 +608,43 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
             <tbody id="hall-summary-tbody"><tr><td colspan="8" style="text-align:center;color:var(--tdi);padding:18px;">Select exam to view submissions.</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE: YEARS
+  ═══════════════════════════════════ -->
+  <div class="pg" id="pg-years">
+    <div class="page-hd">
+      <div>
+        <div class="page-title">📚 Years</div>
+        <div class="page-sub">Manage academic years and batch progress.</div>
+      </div>
+      <button class="btn-pri" onclick="openYearModal(null)">+ Add Academic Year</button>
+    </div>
+
+    <!-- Current Year -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd">
+        <div class="card-title">🎯 Current Academic Year</div>
+        <button class="btn-out" onclick="loadYears()">🔄 Refresh</button>
+      </div>
+      <div id="current-year-display" style="padding:14px 16px;">
+        <div style="text-align:center;color:var(--tdi);padding:20px;font-size:16px;">Loading… This may take few seconds.</div>
+      </div>
+    </div>
+
+    <!-- All Years -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">📋 All Academic Years</div>
+      </div>
+      <div class="tw">
+        <table class="tbl">
+          <thead><tr><th>Academic Year</th><th>Batches</th><th>Current</th><th>Created By</th><th>Created At</th><th>Actions</th></tr></thead>
+          <tbody id="years-tbody"><tr><td colspan="6" style="text-align:center;color:var(--tdi);padding:24px;">Loading…</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -596,11 +667,12 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       </div>
       <div style="font-size:11.5px;color:var(--tmu);padding:0 16px 12px;border-bottom:1px solid var(--brl);">Users below can log in to the Manage portal. Full admins always have access.</div>
       <div id="manage-admins-list" style="padding:14px 16px;">
-        <div style="text-align:center;color:var(--tdi);padding:20px;font-size:12px;">Loading…</div>
+        <div style="text-align:center;color:var(--tdi);padding:20px;font-size:16px;">Loading… This may take few seconds.</div>
       </div>
     </div>
   </div>
 </div><!-- /mc -->
+</div><!-- /app-shell -->
 
 
 <!-- ════════════════════════════════
@@ -619,7 +691,7 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--brl);margin-bottom:12px;">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--td);">Working Day?</div>
-        <div style="font-size:10.5px;color:var(--tmu);margin-top:2px;">Turn off for leaves and holidays.</div>
+        <div style="font-size:10.5px;color:var(--tmu);margin-top:2px;">Turn off for leaves</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleDmWorking()">
         <div class="toggle-track on" id="dm-toggle"><div class="toggle-thumb"></div></div>
@@ -628,13 +700,11 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
     </div>
     <div style="margin-bottom:12px;">
       <div class="fl" style="margin-bottom:7px;">Day Type</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-        <div class="dt-pill sel"    id="dt-regular"  onclick="selDayType('regular')">📗 Regular</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px;">
+        <div class="dt-pill sel"    id="dt-working"  onclick="selDayType('working')">📗 Working</div>
         <div class="dt-pill lv"     id="dt-leave"    onclick="selDayType('leave')">📕 Leave</div>
         <div class="dt-pill ex"     id="dt-exam"     onclick="selDayType('exam')">📝 Exam</div>
-        <div class="dt-pill hd"     id="dt-holiday"  onclick="selDayType('holiday')">🔵 Holiday</div>
         <div class="dt-pill hf"     id="dt-half-day" onclick="selDayType('half-day')">🟣 Half Day</div>
-        <div class="dt-pill"        id="dt-optional" onclick="selDayType('optional')">⬜ Optional</div>
       </div>
     </div>
     <div class="fgrid fg2" style="margin-bottom:12px;">
@@ -683,10 +753,13 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
           <option value="Internal1">Internal 1</option><option value="Internal2">Internal 2</option>
           <option value="Practicals">Practicals</option><option value="Semester">Semester</option></select></div>
       <div class="fg"><label class="fl">Academic Year</label><input type="text" class="fc2" id="em-acyear" placeholder="2025-26"></div>
-      <div class="fg"><label class="fl">Student Year *</label>
-        <select class="fc2" id="em-student-year"><option value="All">All Years</option>
-          <option value="I">Year I</option><option value="II">Year II</option>
-          <option value="III">Year III</option><option value="IV">Year IV</option></select></div>
+      <div class="fg"><label class="fl">Semester *</label>
+        <select class="fc2" id="em-semester"><option value="">— Select —</option>
+          <option value="I">Semester I</option><option value="II">Semester II</option>
+          <option value="III">Semester III</option><option value="IV">Semester IV</option>
+          <option value="V">Semester V</option><option value="VI">Semester VI</option>
+          <option value="VII">Semester VII</option><option value="VIII">Semester VIII</option></select></div>
+      <div class="fg"><label class="fl">Batch</label><input type="text" class="fc2" id="em-batch" placeholder="e.g. 2023-2027"></div>
       <div class="fg"><label class="fl">Department</label>
         <select class="fc2" id="em-dept"><option value="">All Departments</option></select></div>
       <div class="fg"><label class="fl">Start Date *</label><input type="date" class="fc2" id="em-start"></div>
@@ -766,10 +839,171 @@ body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-h
       <button class="btn-form-ghost" onclick="closeModal('admin-modal-bg')">Cancel</button>
       <button class="btn-form-pri" onclick="saveManageAdmin()">💾 Save</button>
     </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: ADD / EDIT ACADEMIC YEAR
+════════════════════════════════ -->
+<div class="modal-bg" id="year-modal-bg" onclick="if(event.target===this)closeModal('year-modal-bg')">
+  <div class="modal modal-lg">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="ym-title">📚 Add Academic Year</div>
+        <div class="modal-sub" id="ym-sub">Create a new academic year with batch configurations</div>
+      </div>
+      <div class="modal-close" onclick="closeModal('year-modal-bg')">✕</div>
+    </div>
+    <input type="hidden" id="ym-id">
+
+    <!-- Auto-fill bar (new years only) -->
+    <div class="ym-autofill-bar" id="ym-autofill-bar" style="display:none;">
+      <div style="font-size:11.5px;color:#5b21b6;line-height:1.5;">✨ <strong>Auto-fill available</strong> — pull last year's batches forward, advanced by one semester, plus a fresh Year I intake.</div>
+      <button type="button" class="magic-btn" onclick="autoFillFromCurrentYear()" style="white-space:nowrap;">🪄 Auto-fill</button>
+    </div>
+
+    <!-- Academic Year & Current Status -->
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="fg">
+        <label class="fl">Academic Year <span style="color:#dc2626;">*</span></label>
+        <input type="text" class="fc2" id="ym-acad-year" placeholder="e.g. 2026-2027" oninput="validateYearInput()">
+        <div class="field-check" id="ym-acad-check"><span style="color:var(--tdi);font-weight:500;">Format: YYYY-YYYY (e.g., 2026-2027)</span></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Set as Current Year</label>
+        <div class="ym-current-card" id="ym-current-card" onclick="toggleYmCurrent()">
+          <div class="toggle-track" id="ym-current-toggle"><div class="toggle-thumb"></div></div>
+          <span style="font-size:13px;font-weight:600;color:var(--td);" id="ym-current-label">No</span>
+        </div>
+        <div class="field-check" id="ym-current-warn"></div>
+      </div>
+    </div>
+
+    <!-- Batches Section -->
+    <div style="border-top:1px solid var(--brl);padding-top:14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div class="fl">Batch Configurations <span style="color:#dc2626;">*</span> <span class="batch-preview" id="ym-batch-count" style="margin-left:6px;">0 batches</span></div>
+          <div style="font-size:10px;color:var(--tmu);margin-top:2px;">Add all batches studying in this academic year</div>
+        </div>
+        <button type="button" class="btn-out btn-xs" onclick="addBatchRow()" style="white-space:nowrap;">+ Add Batch</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px;">
+        <span style="font-size:10px;color:var(--tmu);font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Quick add:</span>
+        <button type="button" class="qa-chip" onclick="quickAddBatch('I')">+ Year I</button>
+        <button type="button" class="qa-chip" onclick="quickAddBatch('II')">+ Year II</button>
+        <button type="button" class="qa-chip" onclick="quickAddBatch('III')">+ Year III</button>
+        <button type="button" class="qa-chip" onclick="quickAddBatch('IV')">+ Year IV</button>
+      </div>
+
+      <div id="ym-batch-rows" style="display:flex;flex-direction:column;gap:8px;">
+        <!-- Batch rows will be added here dynamically -->
+      </div>
+    </div>
+
+    <div class="banner-blue" style="margin-bottom:12px;font-size:11px;">
+      💡 <strong>Quick Guide:</strong> Batch name and Track ID auto-fill as you type — type the entry-year range (e.g. <strong>2026-2030</strong>) and the Track ID fills in automatically. Picking a Current Year also narrows the Semester options to the two that belong to it.
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-form-del" id="ym-delete-btn" style="display:none;" onclick="deleteYear()">🗑 Delete Year</button>
+      <button class="btn-form-ghost" onclick="closeModal('year-modal-bg')">Cancel</button>
+      <button class="btn-form-pri" id="ym-save-btn" onclick="saveYear()" disabled style="opacity:.5;cursor:not-allowed;">💾 Save Year</button>
+    </div>
   </div>
 </div>
 
+<!-- ════════════════════════════════
+     MODAL: EDIT BATCH
+════════════════════════════════ -->
+<div class="modal-bg" id="batch-modal-bg" onclick="if(event.target===this)closeModal('batch-modal-bg')">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="bm-title">Edit Batch</div>
+        <div class="modal-sub" id="bm-sub">Update current year and semester</div>
+      </div>
+      <div class="modal-close" onclick="closeModal('batch-modal-bg')">✕</div>
+    </div>
+    <input type="hidden" id="bm-year-id">
+    <input type="hidden" id="bm-batch-track-id">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span class="batch-preview" id="bm-preview">Year I • Sem I</span>
+      <button type="button" class="qa-chip" id="bm-advance-btn" onclick="advanceBatchModalSem()">⏭ Advance to Next Sem</button>
+    </div>
+    <div class="fgrid fg2" style="margin-bottom:12px;">
+      <div class="fg">
+        <label class="fl">Current Year *</label>
+        <select class="fc2" id="bm-current-year" onchange="onBmYearChange()">
+          <option value="I">Year I</option>
+          <option value="II">Year II</option>
+          <option value="III">Year III</option>
+          <option value="IV">Year IV</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Current Semester *</label>
+        <select class="fc2" id="bm-current-sem" onchange="updateBmPreview()">
+          <option value="I">Semester I</option>
+          <option value="II">Semester II</option>
+        </select>
+      </div>
+    </div>
+    <div class="banner-blue" style="margin-bottom:12px;">📊 This will update the batch progress for all students in this batch.</div>
+    <div class="form-actions">
+      <button class="btn-form-ghost" onclick="closeModal('batch-modal-bg')">Cancel</button>
+      <button class="btn-form-pri" onclick="saveBatch()">💾 Save Batch</button>
+    </div>
+  </div>
+</div>
 
+<script>
+/* ── Toast service — globals + fallback implementations ──────────────
+   toast.services.js defines these properly; this block ensures they
+   always exist even if that file fails to load (e.g. 404 in prod).  */
+var _loaderActive    = true;
+var _toastQueue      = [];
+var _dbToastTimer    = null;
+var _dbToastDuration = 4000;
+
+function showToast(msg, type) {
+  if (_loaderActive) { _toastQueue.push([msg, 'toast', type]); return; }
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className   = 'toast' + (type ? ' t-' + type : '') + ' show';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function () { t.classList.remove('show'); }, 3200);
+}
+
+function msgToast(msg, type) { showToast(msg, type); }
+
+function dbToast(msg, state, extra) {
+  if (_loaderActive) { _toastQueue.push([msg, state, extra]); return; }
+  var wrap = document.getElementById('db-toast');
+  var bar  = document.getElementById('db-toast-bar');
+  if (!wrap) { console.log('[dbToast]', state, msg); return; }
+  if (_dbToastTimer) { clearTimeout(_dbToastTimer); _dbToastTimer = null; }
+  // state classes: saving | success | error | warn
+  wrap.className = 'db-toast-' + (state || 'saving');
+  // reuse the bar element for label if no inner span exists
+  if (bar) {
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    void bar.offsetWidth; // force reflow
+    bar.style.transition = 'width ' + (state === 'saving' ? '8s' : _dbToastDuration + 'ms') + ' linear';
+    bar.style.width = '100%';
+  }
+  // show a basic label via title attribute or aria-label as fallback
+  wrap.setAttribute('title', (state ? '[' + state + '] ' : '') + msg + (extra ? ' — ' + extra : ''));
+  wrap.classList.add('show');
+  if (state !== 'saving') {
+    _dbToastTimer = setTimeout(function () { wrap.classList.remove('show'); }, _dbToastDuration);
+  }
+}
+</script>
+<script src="services/toast.services.js"></script>
 <script>
 // ── Globals ───────────────────────────────────────────────────────────
 var currentUser  = null;
@@ -777,10 +1011,8 @@ var deptsData    = [];
 var examsData    = [];
 var calendarData = {};
 var eaStudentList= [];
-var _dmDayType   = 'regular';
+var _dmDayType   = 'working';
 var _dmWorking   = true;
-var _dbToastTimer= null;
-var _dbToastDuration = 4000;
 
 // ── Boot ──────────────────────────────────────────────────────────────
 (function boot() {
@@ -788,6 +1020,63 @@ var _dbToastDuration = 4000;
   if (!stored) { location.href = 'index.html'; return; }
   try { currentUser = JSON.parse(stored); } catch(e) { location.href = 'index.html'; return; }
   if (!currentUser || currentUser.role !== 'admin') { location.href = 'index.html'; return; }
+
+  // ── Loader message sequence (3 s total) ─────────────
+  var LOADER_STEPS = [
+    { t:    0, msg: 'Initializing EAMS…' },
+    { t: 700, msg: 'Connecting to Database…' },
+    { t: 1200, msg: 'Fetching from Database…' },
+    { t: 2200, msg: 'Almost ready…' },
+  ];
+
+  var loaderMsgEl = document.getElementById('loader-msg');
+
+  function setLoaderMsg(idx, text) {
+    if (!loaderMsgEl) return;
+    loaderMsgEl.classList.add('msg-fade');
+    setTimeout(function () {
+      loaderMsgEl.textContent = text;
+      loaderMsgEl.classList.remove('msg-fade');
+      // Advance step dots (5 dots, indices 0-4)
+      for (var s = 0; s < 5; s++) {
+        var dot = document.getElementById('lstep-' + s);
+        if (!dot) continue;
+        dot.className = 'loader-step' + (s < idx ? ' done' : s === idx ? ' active' : '');
+      }
+    }, 130);
+  }
+
+  LOADER_STEPS.forEach(function (step, i) {
+    if (i === 0) return; // first already set in HTML
+    setTimeout(function () { setLoaderMsg(i, step.msg); }, step.t);
+  });
+
+  // ── Gate: both 3 s timer AND real sync must finish ──────
+  var timerDone = false;
+  var fetchDone = false;
+  var fetchCb   = null; // store the nav callback until gate opens
+
+  function tryReveal() {
+    if (!timerDone || !fetchDone) return;
+    // Flush any toasts that fired during loading
+    _loaderActive = false;
+    var loader = document.getElementById('page-loader');
+    if (loader) {
+      loader.classList.add('loader-fade');
+      setTimeout(function () {
+        loader.style.display = 'none';
+        // Fire queued toasts after loader is visually gone
+        _toastQueue.forEach(function (a) { dbToast(a[0], a[1], a[2]); });
+        _toastQueue = [];
+      }, 360);
+    }
+    document.getElementById('app-shell').classList.add('vis');
+    if (fetchCb) fetchCb();
+  }
+
+  // 3-second minimum display
+  setTimeout(function () { timerDone = true; tryReveal(); }, 3000);
+
   var nm = currentUser.name || 'Admin', av = nm[0].toUpperCase();
   ['sb-av','topbar-av'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=av; });
   ['sb-name','topbar-name'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=nm; });
@@ -799,6 +1088,10 @@ var _dbToastDuration = 4000;
   if(yInp) yInp.value = now.getFullYear();
   loadDepts();
   loadOverview();
+  loadYears();
+
+  fetchDone = true;
+  tryReveal();
 })();
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -809,30 +1102,14 @@ function apiCall(method, path, body) {
     headers: {'Content-Type':'application/json','Authorization': tok ? 'Bearer '+tok : ''},
     body: body ? JSON.stringify(body) : undefined
   }).then(function(r) {
-    if (r.status === 401) { location.href = 'index.html'; throw new Error('Auth'); }
+    if (r.status === 401) { doLogout('error', 'error'); throw new Error('Auth'); }
+    
+    var ct = r.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      throw new Error('Non-JSON response (' + r.status + ') from ' + path);
+    }
     return r.json();
   });
-}
-
-function showToast(msg, type) {
-  var t = document.getElementById('toast'); t.textContent = msg;
-  t.style.borderLeftColor = type==='warn'?'#ef4444':type==='info'?'#3b82f6':'var(--gM)';
-  t.classList.add('show'); clearTimeout(t._t);
-  t._t = setTimeout(function(){ t.classList.remove('show'); }, 3200);
-}
-
-function dbToast(msg, state, extra) {
-  var el = document.getElementById('db-toast'); clearTimeout(_dbToastTimer);
-  el.className = 'show ' + (state||'saving');
-  var ic = state==='success'?'✓ ':state==='error'?'❌ ':'';
-  var sp = state==='saving'?'<div class="db-spin"></div>':'';
-  var bar= state!=='saving'?'<div id="db-toast-bar"></div>':'';
-  el.innerHTML = bar+'<span id="dbt-x" style="position:absolute;top:4px;right:8px;cursor:pointer;font-size:10px;">✕</span>'
-    +sp+'<div><div style="font-size:12.5px;font-weight:700;">'+ic+msg+'</div>'+(extra?'<div style="font-size:11px;opacity:.75;margin-top:2px;">'+extra+'</div>':'')+'</div>';
-  var x = document.getElementById('dbt-x'); if(x) x.onclick=function(){ el.classList.remove('show'); clearTimeout(_dbToastTimer); };
-  var barEl = document.getElementById('db-toast-bar');
-  if(barEl && state!=='saving'){barEl.style.transition='none';barEl.style.transform='scaleX(1)';barEl.getBoundingClientRect();barEl.style.transition='transform '+_dbToastDuration+'ms linear';barEl.style.transform='scaleX(0)';}
-  if(state!=='saving') _dbToastTimer=setTimeout(function(){ el.classList.remove('show'); },_dbToastDuration);
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -841,45 +1118,6 @@ function fmtDate(s){ if(!s)return'—'; var d=new Date(s+'T00:00:00'); return d.
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function pad2(n){ return String(n).padStart(2,'0'); }
 
-async function doLogout() {
-  try {
-    const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
-
-    if (token) {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    }
-  } catch (err) {}
-  localStorage.clear();
-  sessionStorage.clear();
-
-  history.replaceState(null, '', 'index.html');
-  window.location.replace('index.html');
-}
-
-// ── Session Auto-Logout after 45 minutes
-(function() {
-  function checkSessionExpiry() {
-    var loginTime = sessionStorage.getItem('eams_login_time');
-    if (loginTime) {
-      var elapsed = Date.now() - parseInt(loginTime, 10);
-      if (elapsed > 45 * 60 * 1000) {
-        if (typeof showToast === 'function') {
-          showToast('⚠️ Session expired. Logging out...');
-        } else if (typeof dbToast === 'function') {
-          dbToast('⚠️ Session expired. Logging out...', 'error');
-        }
-        setTimeout(function() {
-          doLogout();
-        }, 1500);
-      }
-    }
-  }
-  checkSessionExpiry();
-  setInterval(checkSessionExpiry, 15000);
-})();
 function toggleSidebar(){
   var sb=document.querySelector('.sb'), btn=document.getElementById('sbtoggle');
   sb.classList.toggle('sb-hidden');
@@ -888,6 +1126,47 @@ function toggleSidebar(){
   mc.style.marginLeft=hidden?'0':'220px'; mc.style.maxWidth=hidden?'100vw':'calc(100vw - 220px)';
   btn.classList.toggle('closed',hidden); btn.textContent=hidden?'☰':'✖';
 }
+
+async function doLogout(query = '', type = 'info', time = '0') {
+  msgToast('Logging out..........');
+  try {
+  const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
+
+  if (token) {
+      await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+      });
+  }
+  } catch (err) { }
+  localStorage.clear();
+  sessionStorage.clear();
+
+  if (!query == '')
+  window.location.replace(`index.html?logout=${query}&type=${type}&time=${time}`);
+}
+
+(function () {
+  async function checkSessionExpiry() {
+  try {
+      const session = await apiCall('GET', '/login-history');
+      if (!session || !session.expireTime) return;
+
+      const remainingTime = new Date(session.expireTime).getTime() - Date.now();
+
+      // Already expired
+      if (remainingTime <= 0) {
+      msgToast('⚠️ Session expired. Logging out...', 'error');
+      return setTimeout(() => { doLogout('timeout', 'error'); }, 1000);
+      }
+
+      // Sleep until the session should expire
+      setTimeout(checkSessionExpiry, Math.max(remainingTime, 0));
+
+  } catch (err) { console.error(err); }
+  }
+  checkSessionExpiry();
+})();
 
 // ── Navigation ────────────────────────────────────────────────────────
 function nav(page) {
@@ -898,6 +1177,7 @@ function nav(page) {
   if(page==='overview')  loadOverview();
   if(page==='calendar')  loadCalendar();
   if(page==='exam')      { loadExams(); populateExamSel(); populateDeptCheckboxes(); }
+  if(page==='years')     loadYears();
   if(page==='settings')  loadManageAdmins();
 }
 
@@ -914,15 +1194,17 @@ function loadOverview() {
       var eff=getEffType(d,dow,day,m,y);
       if(eff.type==='exam')stats.exam++; else if(!eff.working)stats.leave++; else stats.working++;
     }
-    document.getElementById('ov-working').textContent=stats.working;
-    document.getElementById('ov-leave').textContent=stats.leave;
-    document.getElementById('ov-exam').textContent=stats.exam;
-    document.getElementById('ov-total').textContent=stats.total;
-  }).catch(function(){ renderCalGrid({},m,y,'ov-cal-grid',true); });
+    document.getElementById('ov-working').textContent = stats.working;
+    document.getElementById('ov-leave').textContent   = stats.leave;
+    document.getElementById('ov-exam').textContent    = stats.exam;
+    document.getElementById('ov-total').textContent   = stats.total;
+
+  }).catch(function(){ renderCalGrid({} , m, y, 'ov-cal-grid', true); });
+
   apiCall('GET','/exams?status=upcoming&status=ongoing').then(function(data){
     renderUpcomingExams(Array.isArray(data)?data:[]);
   }).catch(function(){});
-  // Also load ongoing exams
+
   apiCall('GET','/exams/active').then(function(data){
     renderUpcomingExams(Array.isArray(data)?data:[]);
   }).catch(function(){});
@@ -954,10 +1236,10 @@ function getSatOrdinal(day, month, year) {
   return count;
 }
 function getEffType(doc, dow, day, month, year) {
-  if(doc) return { type: doc.dayType||'regular', working: doc.isWorkingDay, timing: doc.timing||{start:'08:30',end:'16:30'} };
+  if(doc) return { type: doc.dayType||'working', working: doc.isWorkingDay, timing: doc.timing||{start:'08:30',end:'16:30'} };
   if(dow===0) return { type:'leave', working:false, timing:{start:'08:30',end:'16:30'} };
-  if(dow===6){ var sn=getSatOrdinal(day,month,year); var w=sn%2===0; return { type:w?'regular':'leave', working:w, timing:{start:'08:30',end:'16:30'} }; }
-  return { type:'regular', working:true, timing:{start:'08:30',end:'16:30'} };
+  if(dow===6){ var sn=getSatOrdinal(day,month,year); var w=sn%2===0; return { type:w?'working':'leave', working:w, timing:{start:'08:30',end:'16:30'} }; }
+  return { type:'working', working:true, timing:{start:'08:30',end:'16:30'} };
 }
 
 function renderCalGrid(map, month, year, gridId, readonly) {
@@ -1004,10 +1286,15 @@ function nextMonth(){
   loadCalendar();
 }
 function loadCalendar(){
-  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value),yf=document.getElementById('cal-year-filter').value;
+  var m=parseInt(document.getElementById('cal-month-sel').value)
+  var y=parseInt(document.getElementById('cal-year-inp').value)
+  var yf=document.getElementById('cal-year-filter').value;
+  
   var mn=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month-label').textContent=mn[m]+' '+y;
-  document.getElementById('cal-grid').innerHTML='<div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>';
+  document.getElementById('month-label').textContent=mn[m]+' '+y;
+
+  document.getElementById('cal-grid').innerHTML='<div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:16px;">Loading… This may take few seconds.</div>';
   apiCall('GET','/calendar?month='+m+'&year='+y).then(function(days){
     var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ map[d.date]=d; });
     calendarData=map;
@@ -1043,6 +1330,39 @@ function generateMonthDefaults(){
   }).catch(function(){dbToast('Server error','error');});
 }
 
+function saveCalendarMonth(finalize){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  var lastDay=new Date(y,m,0).getDate();
+  var savePromises=[];
+  
+  dbToast(finalize?'Finalizing month…':'Saving drafts…','saving');
+  
+  for(var day=1;day<=lastDay;day++){
+    var ds=y+'-'+pad2(m)+'-'+pad2(day);
+    var doc=calendarData[ds];
+    if(!doc)continue;
+    
+    var details=doc.details||[];
+    if(details.length===0)continue;
+    savePromises.push(apiCall('POST','/calendar',{date:ds,details:details,isFinalized:!!finalize}));
+  }
+  if(savePromises.length===0){ dbToast('No days to save','warn'); return;}
+  Promise.all(savePromises).then(function(){
+    dbToast(finalize?'Month finalized':'Drafts saved','success',savePromises.length+' days updated');
+    if(finalize) refreshDates();
+    loadCalendar();
+    
+  }).catch(function(){ dbToast('Error saving some days','error'); });
+}
+
+function refreshDates(){
+  dbToast('Refreshing calendar dates…','saving');
+  apiCall('POST','/calendar/refresh-dates',{}).then(function(r){
+    if(r.error){dbToast('Refresh failed: '+r.error,'error');return;}
+    dbToast('Dates refreshed','success');
+  }).catch(function(){dbToast('Refresh server error','error');});
+}
+
 // ── DAY MODAL ─────────────────────────────────────────────────────────
 function openDayModal(dateStr){
   var doc=calendarData[dateStr], d=new Date(dateStr+'T00:00:00');
@@ -1053,7 +1373,7 @@ function openDayModal(dateStr){
   document.getElementById('dm-date').value=dateStr;
   _dmWorking=doc?doc.isWorkingDay:(d.getDay()!==0);
   updateDmToggle(_dmWorking);
-  var dt=doc?(doc.dayType||'regular'):(d.getDay()===0?'leave':'regular');
+  var dt=doc?(doc.dayType||'working'):(d.getDay()===0?'leave':'working');
   selDayType(dt,true);
   document.getElementById('dm-start').value=(doc&&doc.timing&&doc.timing.start)||'08:30';
   document.getElementById('dm-end').value=(doc&&doc.timing&&doc.timing.end)||'16:30';
@@ -1068,7 +1388,7 @@ function updateDmToggle(val){ var t=document.getElementById('dm-toggle'); t.clas
 function toggleDmWorking(){ _dmWorking=!_dmWorking; updateDmToggle(_dmWorking); }
 function selDayType(type,silent){
   _dmDayType=type;
-  ['regular','leave','exam','holiday','half-day','optional'].forEach(function(t){ var el=document.getElementById('dt-'+t); if(el) el.classList.remove('sel'); });
+  ['working','leave','exam','half-day'].forEach(function(t){ var el=document.getElementById('dt-'+t); if(el) el.classList.remove('sel'); });
   var el=document.getElementById('dt-'+type); if(el) el.classList.add('sel');
   var warn=document.getElementById('dm-exam-warn'); if(warn) warn.style.display=(type==='exam')?'':'none';
 }
@@ -1076,11 +1396,14 @@ function toggleAllYrs(cb){
   document.getElementById('dm-yr-all').classList.toggle('checked',cb.checked);
   if(cb.checked) document.querySelectorAll('.dm-yr-cb').forEach(function(c){ c.checked=false; c.closest('label').classList.remove('checked'); });
 }
-function saveDayModal(){
-  var dateStr=document.getElementById('dm-date').value;
-  var ayrs=[]; if(!document.getElementById('dm-year-all').checked){ document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ if(cb.checked) ayrs.push(cb.value); }); }
+function saveDayModal(finalize){
+  var dateStr=document.getElementById('dm-date').value,notes=document.getElementById('dm-notes').value.trim();
+  var timing={start:document.getElementById('dm-start').value,end:document.getElementById('dm-end').value};
+  var yrs=[]; if(!document.getElementById('dm-year-all').checked){ document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ if(cb.checked) yrs.push(cb.value); }); }
+  if(yrs.length===0) yrs=['I','II','III','IV'];
+  var details=yrs.map(function(y){return {year:y,dayType:_dmDayType,comments:notes,timing:timing};});
   dbToast('Saving…','saving');
-  apiCall('POST','/calendar',{date:dateStr,isWorkingDay:_dmWorking,dayType:_dmDayType,notes:document.getElementById('dm-notes').value.trim(),timing:{start:document.getElementById('dm-start').value,end:document.getElementById('dm-end').value},affectedYears:ayrs,isOverride:true})
+  apiCall('POST','/calendar',{date:dateStr,details:details,isFinalized:!!finalize})
     .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Day saved','success'); closeModal('day-modal-bg'); loadCalendar(); })
     .catch(function(){dbToast('Server error','error');});
 }
@@ -1095,7 +1418,10 @@ function examSubTab(tab){
   if(tab==='attendance'){ populateExamSel(); populateDeptCheckboxes(); }
 }
 function loadDepts(){
-  apiCall('GET','/depts').then(function(d){ deptsData=Array.isArray(d)?d:[]; populateDeptSelectsAll(); }).catch(function(){});
+  apiCall('GET','/depts').then(function(d){ 
+    deptsData=Array.isArray(d)?d:[]; 
+    populateDeptSelectsAll(); 
+  }).catch(function(){ dbToast('Failed to load depts','error');});
 }
 function populateDeptSelectsAll(){
   var sel=document.getElementById('em-dept'); if(!sel) return;
@@ -1103,8 +1429,10 @@ function populateDeptSelectsAll(){
   deptsData.forEach(function(dp){ sel.innerHTML+='<option value="'+dp._id+'">'+dp.name+'</option>'; });
 }
 function loadExams(){
-  var type=document.getElementById('ef-type').value, yr=document.getElementById('ef-year').value;
-  var status=document.getElementById('ef-status').value, acyr=document.getElementById('ef-acyear').value.trim();
+  var type=document.getElementById('ef-type').value, 
+  yr=document.getElementById('ef-year').value;
+  var status=document.getElementById('ef-status').value, 
+  acyr=document.getElementById('ef-acyear').value.trim();
   var q='/exams?'; if(type) q+='examType='+encodeURIComponent(type)+'&'; if(yr) q+='studentYear='+encodeURIComponent(yr)+'&';
   if(status) q+='status='+encodeURIComponent(status)+'&'; if(acyr) q+='academicYear='+encodeURIComponent(acyr)+'&';
   document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:20px;">Loading…</td></tr>';
@@ -1134,17 +1462,30 @@ function openExamModal(examId){
   document.getElementById('em-t-end').value='16:00'; document.getElementById('em-status').value='upcoming';
   document.getElementById('em-start').value=''; document.getElementById('em-end').value='';
   if(examId){ var ex=examsData.find(function(e){return e._id===examId;}); if(ex){ document.getElementById('em-title').value=ex.title||''; document.getElementById('em-type').value=ex.examType||''; document.getElementById('em-acyear').value=ex.academicYear||''; document.getElementById('em-student-year').value=ex.studentYear||'All'; document.getElementById('em-dept').value=ex.deptId||''; document.getElementById('em-start').value=ex.startDate||''; document.getElementById('em-end').value=ex.endDate||''; document.getElementById('em-t-start').value=(ex.timing&&ex.timing.start)||'09:00'; document.getElementById('em-t-end').value=(ex.timing&&ex.timing.end)||'16:00'; document.getElementById('em-status').value=ex.status||'upcoming'; document.getElementById('em-notes').value=ex.notes||''; } }
+  else { var curYr=yearsData.find(function(y){return y.isCurrent;}); if(curYr) document.getElementById('em-acyear').value=curYr.academicYear; }
   openModal('exam-modal-bg');
+
+  dbToast('Loaded Successfully', 'success');
 }
-function saveExam(){
+function saveExam(finalize){
   var id=document.getElementById('em-id').value, title=document.getElementById('em-title').value.trim();
-  var type=document.getElementById('em-type').value, start=document.getElementById('em-start').value, end=document.getElementById('em-end').value;
+  var type=document.getElementById('em-type').value, semester=document.getElementById('em-semester').value;
+  var start=document.getElementById('em-start').value, end=document.getElementById('em-end').value;
   if(!title){showToast('Title is required','warn');return;} if(!type){showToast('Exam type required','warn');return;}
+  if(!semester){showToast('Semester is required','warn');return;}
   if(!start||!end){showToast('Start and end dates required','warn');return;} if(start>end){showToast('Start must be before end','warn');return;}
-  var deptEl=document.getElementById('em-dept'), deptId=deptEl.value||null, deptName=deptId?deptEl.options[deptEl.selectedIndex].text:'';
   dbToast('Saving…','saving');
-  apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{title,examType:type,academicYear:document.getElementById('em-acyear').value.trim(),studentYear:document.getElementById('em-student-year').value,deptId,deptName,startDate:start,endDate:end,timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},status:document.getElementById('em-status').value,notes:document.getElementById('em-notes').value.trim()})
-    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Exam saved','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(){dbToast('Server error','error');});
+  var deptEl=document.getElementById('em-dept'), deptId=deptEl.value||null, deptName=deptId?deptEl.options[deptEl.selectedIndex].text:'';
+  var Dates=[], cur=new Date(start+'T00:00:00'), endD=new Date(end+'T00:00:00');
+  while(cur<=endD){ Dates.push(cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate())); cur.setDate(cur.getDate()+1); }
+  
+  apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{title,examType:type,semester,academicYear:document.getElementById('em-acyear').value.trim(),batch:document.getElementById('em-batch').value.trim(),deptId,deptName,Dates,timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},status:document.getElementById('em-status').value,notes:document.getElementById('em-notes').value.trim(),isFinalized:!!finalize})
+    .then(function(r){ 
+      if(r.error){ dbToast('Error: '+r.error,'error');return; } 
+      dbToast('Exam saved','success'); closeModal('exam-modal-bg'); 
+      loadExams(); 
+      loadCalendar(); 
+    }).catch(function(){ dbToast('Server error','error'); });
 }
 function deleteExam(){
   if(!confirm('Delete this exam? Calendar exam entries will also be removed.')) return;
@@ -1305,6 +1646,547 @@ function deleteManageAdmin(){
 document.querySelectorAll('#am-perms-wrap .dept-cb-wrap').forEach(function(lbl){
   var cb=lbl.querySelector('input'); if(cb) cb.addEventListener('change',function(){ lbl.classList.toggle('checked',cb.checked); });
 });
+
+// ── YEARS MANAGEMENT ──────────────────────────────────────────────────
+var yearsData = [];
+var _ymCurrent = false;
+
+// ── Year / Semester helpers ─────────────────────────────────────────
+var ROMAN_ORDER = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+var YEAR_SEM_MAP = { I: ['I', 'II'], II: ['III', 'IV'], III: ['V', 'VI'], IV: ['VII', 'VIII'] };
+var SEM_TO_YEAR = {};
+Object.keys(YEAR_SEM_MAP).forEach(function(yr) { YEAR_SEM_MAP[yr].forEach(function(s) { SEM_TO_YEAR[s] = yr; }); });
+var YEAR_LEVEL_OFFSET = { I: 0, II: 1, III: 2, IV: 3 };
+var YEAR_LEVEL_DEFAULT_SEM = { I: 'I', II: 'III', III: 'V', IV: 'VII' };
+
+function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+
+function nextSemester(sem) {
+  var idx = ROMAN_ORDER.indexOf(sem);
+  if (idx === -1 || idx === ROMAN_ORDER.length - 1) return null;
+  return ROMAN_ORDER[idx + 1];
+}
+
+function suggestNextAcademicYear() {
+  var maxStart = 0;
+  yearsData.forEach(function(y) {
+    var m = (y.academicYear || '').match(/^(\d{4})-(\d{4})$/);
+    if (m) { var s = parseInt(m[1], 10); if (s > maxStart) maxStart = s; }
+  });
+  var base = maxStart || new Date().getFullYear();
+  var nextStart = maxStart ? maxStart + 1 : base;
+  return nextStart + '-' + (nextStart + 1);
+}
+
+function computeBatchForLevel(acadYearStr, level) {
+  var m = (acadYearStr || '').match(/^(\d{4})-(\d{4})$/);
+  if (!m) return null;
+  var acadStart = parseInt(m[1], 10);
+  var offset = YEAR_LEVEL_OFFSET[level] || 0;
+  var batchStart = acadStart - offset;
+  var batchEnd = batchStart + 4;
+  return {
+    batch: batchStart + '-' + batchEnd,
+    trackId: 'TR-BATCH-' + String(batchStart).slice(-2) + String(batchEnd).slice(-2),
+    year: level,
+    sem: YEAR_LEVEL_DEFAULT_SEM[level]
+  };
+}
+
+function populateSemOptions(selectEl, yearLevel, presetSem) {
+  var opts = YEAR_SEM_MAP[yearLevel] || ROMAN_ORDER;
+  var html = '';
+  if (!yearLevel) html += '<option value="">— Select Year first —</option>';
+  opts.forEach(function(s) {
+    html += '<option value="' + s + '"' + (presetSem === s ? ' selected' : '') + '>Semester ' + s + '</option>';
+  });
+  if (presetSem && opts.indexOf(presetSem) === -1) {
+    html += '<option value="' + presetSem + '" selected>Semester ' + presetSem + '</option>';
+  }
+  selectEl.innerHTML = html;
+  if (!presetSem && yearLevel) selectEl.value = opts[0];
+}
+
+// ── Load / Render ────────────────────────────────────────────────────
+function loadYears() {
+  apiCall('GET', '/year').then(function(data) {
+    yearsData = Array.isArray(data) ? data : [];
+    renderCurrentYear();
+    renderYearsTable();
+  }).catch(function() {
+    var cont = document.getElementById('current-year-display');
+    if (cont) cont.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:12px;">Failed to load</div>';
+  });
+}
+
+function renderCurrentYear() {
+  var cont = document.getElementById('current-year-display');
+  if (!cont) return;
+  var currentYear = yearsData.find(function(y) { return y.isCurrent; });
+  if (!currentYear) {
+    cont.innerHTML = '<div style="text-align:center;color:var(--tdi);padding:24px 20px;font-size:12px;">No current academic year set.<br><button class="btn-pri btn-sm" style="margin-top:10px;" onclick="openYearModal(null)">+ Add Academic Year</button></div>';
+    return;
+  }
+  var html = '<div style="background:var(--gLt);border:2px solid var(--gM);border-radius:12px;padding:16px;">';
+  html += '<div style="font-size:20px;font-weight:800;color:var(--gD);margin-bottom:12px;">📚 ' + currentYear.academicYear + '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">';
+  currentYear.batches.forEach(function(b) {
+    var idx = ROMAN_ORDER.indexOf(b.currentSem);
+    var pct = idx >= 0 ? Math.round(((idx + 1) / ROMAN_ORDER.length) * 100) : 0;
+    html += '<div class="yr-batch-card">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    html += '<div style="font-size:13px;font-weight:700;color:var(--td);">' + b.batch + '</div>';
+    html += '<span class="yr-badge yr-badge-' + b.currentYear + '">Year ' + b.currentYear + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--tmu);">Semester ' + b.currentSem + ' of VIII</div>';
+    html += '<div class="yr-progress-track"><div class="yr-progress-fill" style="width:' + pct + '%;"></div></div>';
+    html += '<button class="btn-out btn-xs" style="margin-top:10px;" onclick="openBatchModal(\'' + currentYear._id + '\',\'' + b.batchTrackId + '\',\'' + b.batch + '\',\'' + b.currentYear + '\',\'' + b.currentSem + '\')">✏️ Edit</button>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+  cont.innerHTML = html;
+}
+
+function renderYearsTable() {
+  var tbody = document.getElementById('years-tbody');
+  var currentYear = yearsData.find(function(y) { return y.isCurrent; });
+
+  if (!tbody) return;
+  if (!yearsData.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--tdi);padding:24px;">No academic years. Click <strong>+ Add Academic Year</strong>.</td></tr>';
+    return;
+  }
+
+  var sorted = yearsData.slice().sort(function(a, b) {
+    var ac = a.isCurrent ? 1 : 0, bc = b.isCurrent ? 1 : 0;
+    if (ac !== bc) return bc - ac;
+    return (b.academicYear || '').localeCompare(a.academicYear || '');
+  });
+
+  var html = '';
+  sorted.forEach(function(y) {
+    var batchPills = y.batches.map(function(b) {
+      return '<span class="yr-batch-pill">' + b.batch + '<span class="yr-badge yr-badge-' + b.currentYear + '" style="padding:1px 6px;">' + b.currentYear + '·' + b.currentSem + '</span></span>';
+    }).join('');
+    var currentBadge = y.isCurrent ? '<span class="bge bgg">🎯 Current</span>' : '<span class="bge bggy">—</span>';
+    var createdAt = y.createdAt ? fmtDate(y.createdAt.split('T')[0]) : '—';
+    html += '<tr class="' + (y.isCurrent ? 'yr-row-current' : '') + '"><td class="b">' + y.academicYear + '</td><td>' + batchPills + '</td><td>' + currentBadge + '</td><td>' + (y.createdBy || '—') + '</td><td>' + createdAt + '</td>';
+    html += '<td style="white-space:nowrap;">';
+    html += '<button class="btn-out btn-xs" onclick="openYearModal(\'' + y._id + '\')" style="margin-right:4px;">✏️</button>';
+    if (!y.isCurrent) html += '<button class="btn-danger btn-xs" onclick="setYearAsCurrent(\'' + y._id + '\')">Set Current</button>';
+    html += '</td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+// ── Add / Edit Academic Year modal ──────────────────────────────────
+function openYearModal(yearId) {
+  document.getElementById('ym-title').textContent = yearId ? '📚 Edit Academic Year' : '📚 Add Academic Year';
+  document.getElementById('ym-sub').textContent = yearId ? 'Update year and batch configurations' : 'Create a new academic year with batch configurations';
+  document.getElementById('ym-id').value = yearId || '';
+  document.getElementById('ym-delete-btn').style.display = yearId ? '' : 'none';
+  document.getElementById('ym-acad-year').value = '';
+  _ymCurrent = false;
+  updateYmToggle(false);
+
+  // Clear batch rows
+  document.getElementById('ym-batch-rows').innerHTML = '';
+
+  var autofillBar = document.getElementById('ym-autofill-bar');
+  var currentYearRecord = yearsData.find(function(y) { return y.isCurrent; });
+
+  if (yearId) {
+    autofillBar.style.display = 'none';
+    var year = yearsData.find(function(y) { return y._id === yearId; });
+    if (year) {
+      document.getElementById('ym-acad-year').value = year.academicYear || '';
+      _ymCurrent = year.isCurrent || false;
+      updateYmToggle(_ymCurrent);
+
+      // Add batch rows for each batch
+      year.batches.forEach(function(b) {
+        addBatchRow(b.batchTrackId, b.batch, b.currentYear, b.currentSem);
+      });
+    }
+  } else {
+    // New year — auto-suggest the next academic year string
+    document.getElementById('ym-acad-year').value = suggestNextAcademicYear();
+    autofillBar.style.display = currentYearRecord ? 'flex' : 'none';
+    // Add one empty batch row for new year
+    addBatchRow();
+  }
+
+  validateYearForm();
+  openModal('year-modal-bg');
+}
+
+function autoFillFromCurrentYear() {
+  var currentYearRecord = yearsData.find(function(y) { return y.isCurrent; });
+  if (!currentYearRecord) { showToast('No current academic year to copy from', 'warn'); return; }
+
+  var acadYear = document.getElementById('ym-acad-year').value.trim();
+  if (!/^\d{4}-\d{4}$/.test(acadYear)) {
+    showToast('Enter a valid Academic Year first (YYYY-YYYY)', 'warn');
+    return;
+  }
+
+  document.getElementById('ym-batch-rows').innerHTML = '';
+
+  var carried = 0, graduated = 0;
+  currentYearRecord.batches.forEach(function(b) {
+    var nextSem = nextSemester(b.currentSem);
+    if (!nextSem) { graduated++; return; }
+    var nextYearLevel = SEM_TO_YEAR[nextSem] || b.currentYear;
+    addBatchRow(b.batchTrackId, b.batch, nextYearLevel, nextSem);
+    carried++;
+  });
+
+  // Add a fresh Year I intake batch for the new academic year, if not already present
+  var freshman = computeBatchForLevel(acadYear, 'I');
+  if (freshman) {
+    var existingIds = [];
+    document.querySelectorAll('.batch-trackid').forEach(function(el) { existingIds.push(el.value); });
+    if (existingIds.indexOf(freshman.trackId) === -1) {
+      addBatchRow(freshman.trackId, freshman.batch, freshman.year, freshman.sem);
+    }
+  }
+
+  validateYearForm();
+  var msg = 'Auto-filled ' + carried + ' batch' + (carried === 1 ? '' : 'es') + ', advanced one semester, plus a new Year I intake.';
+  if (graduated) msg += ' ' + graduated + ' batch' + (graduated === 1 ? '' : 'es') + ' graduated out.';
+  showToast(msg, 'success');
+}
+
+function quickAddBatch(level) {
+  var acadYear = document.getElementById('ym-acad-year').value.trim();
+  if (!/^\d{4}-\d{4}$/.test(acadYear)) {
+    showToast('Enter a valid Academic Year first (YYYY-YYYY)', 'warn');
+    return;
+  }
+  var info = computeBatchForLevel(acadYear, level);
+  if (!info) return;
+  addBatchRow(info.trackId, info.batch, info.year, info.sem);
+  showToast('Added Year ' + level + ' batch (' + info.batch + ')', 'success');
+}
+
+function addBatchRow(trackId, batch, year, sem) {
+  var container = document.getElementById('ym-batch-rows');
+  var rowId = 'batch-row-' + Date.now() + Math.floor(Math.random() * 1000);
+
+  var html = '<div class="batch-row" id="' + rowId + '" style="background:var(--gP);border:1.5px solid var(--br);border-radius:10px;padding:12px;position:relative;">';
+  html += '<button type="button" onclick="removeBatchRow(\'' + rowId + '\')" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#dc2626;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">✕</button>';
+
+  html += '<div style="padding-right:30px;margin-bottom:9px;"><span class="batch-preview">Incomplete</span></div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+  html += '<div class="fg"><label class="fl">Batch Track ID <span style="color:#dc2626;">*</span></label>';
+  html += '<input type="text" class="fc2 batch-trackid" placeholder="TR-BATCH-2630" value="' + (trackId || '') + '" oninput="validateYearForm();updateBatchPreview(this)"></div>';
+  html += '<div class="fg"><label class="fl">Batch <span style="color:#dc2626;">*</span></label>';
+  html += '<input type="text" class="fc2 batch-name" placeholder="2026-2030" value="' + (batch || '') + '" oninput="validateYearForm();autoBatchTrackId(this);updateBatchPreview(this)"></div>';
+  html += '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  html += '<div class="fg"><label class="fl">Current Year <span style="color:#dc2626;">*</span></label>';
+  html += '<select class="fc2 batch-year" onchange="onBatchYearChange(this)">';
+  html += '<option value="">— Select —</option>';
+  ['I', 'II', 'III', 'IV'].forEach(function(y) {
+    html += '<option value="' + y + '"' + (y === year ? ' selected' : '') + '>Year ' + y + '</option>';
+  });
+  html += '</select></div>';
+
+  html += '<div class="fg"><label class="fl">Current Semester <span style="color:#dc2626;">*</span></label>';
+  html += '<select class="fc2 batch-sem"></select></div>';
+  html += '</div></div>';
+
+  container.insertAdjacentHTML('beforeend', html);
+
+  var row = document.getElementById(rowId);
+  populateSemOptions(row.querySelector('.batch-sem'), year, sem);
+  row.querySelector('.batch-sem').setAttribute('onchange', 'validateYearForm();updateBatchPreview(this)');
+  updateBatchPreview(row);
+  validateYearForm();
+}
+
+function onBatchYearChange(selectEl) {
+  var row = selectEl.closest('.batch-row');
+  populateSemOptions(row.querySelector('.batch-sem'), selectEl.value, null);
+  updateBatchPreview(row);
+  validateYearForm();
+}
+
+function updateBatchPreview(rowOrEl) {
+  var row = (rowOrEl.classList && rowOrEl.classList.contains('batch-row')) ? rowOrEl : rowOrEl.closest('.batch-row');
+  if (!row) return;
+  var prev = row.querySelector('.batch-preview');
+  if (!prev) return;
+  var year = row.querySelector('.batch-year').value;
+  var sem = row.querySelector('.batch-sem').value;
+  var batch = row.querySelector('.batch-name').value.trim();
+  prev.textContent = (year && sem) ? (batch ? batch + ' — ' : '') + 'Year ' + year + ' • Sem ' + sem : 'Incomplete';
+}
+
+function removeBatchRow(rowId) {
+  var row = document.getElementById(rowId);
+  if (row) {
+    row.remove();
+    validateYearForm();
+  }
+}
+
+function autoBatchTrackId(input) {
+  var batchValue = input.value.trim();
+  if (batchValue.match(/^\d{4}-\d{4}$/)) {
+    var parts = batchValue.split('-');
+    var trackId = 'TR-BATCH-' + parts[0].slice(-2) + parts[1].slice(-2);
+    var row = input.closest('.batch-row');
+    if (row) {
+      var trackIdInput = row.querySelector('.batch-trackid');
+      if (trackIdInput && !trackIdInput.value) {
+        trackIdInput.value = trackId;
+      }
+    }
+  }
+}
+
+function validateYearInput() {
+  validateYearForm();
+}
+
+function validateYearForm() {
+  var acadYear = document.getElementById('ym-acad-year').value.trim();
+  var saveBtn = document.getElementById('ym-save-btn');
+  var checkEl = document.getElementById('ym-acad-check');
+  var countEl = document.getElementById('ym-batch-count');
+
+  var validFormat = !!acadYear && /^\d{4}-\d{4}$/.test(acadYear);
+  if (validFormat) {
+    var parts = acadYear.split('-');
+    if (parseInt(parts[1], 10) !== parseInt(parts[0], 10) + 1) validFormat = false;
+  }
+
+  checkEl.className = 'field-check';
+  if (!acadYear) {
+    checkEl.innerHTML = '<span style="color:var(--tdi);font-weight:500;">Format: YYYY-YYYY (e.g., 2026-2027)</span>';
+  } else if (!validFormat) {
+    checkEl.classList.add('bad');
+    checkEl.innerHTML = '⚠️ Use format YYYY-YYYY with consecutive years';
+  } else {
+    checkEl.classList.add('ok');
+    checkEl.innerHTML = '✓ Looks good';
+  }
+
+  var batchRows = document.querySelectorAll('.batch-row');
+  if (countEl) countEl.textContent = batchRows.length + (batchRows.length === 1 ? ' batch' : ' batches');
+
+  if (!validFormat || batchRows.length === 0) {
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '.5';
+    saveBtn.style.cursor = 'not-allowed';
+    return;
+  }
+
+  var allValid = true;
+  var trackIds = [];
+  batchRows.forEach(function(row) {
+    var trackId = row.querySelector('.batch-trackid').value.trim();
+    var batch = row.querySelector('.batch-name').value.trim();
+    var year = row.querySelector('.batch-year').value;
+    var sem = row.querySelector('.batch-sem').value;
+
+    if (!trackId || !batch || !year || !sem) allValid = false;
+    if (trackId) trackIds.push(trackId.toLowerCase());
+  });
+
+  var uniqueIds = trackIds.filter(function(id, i) { return trackIds.indexOf(id) === i; });
+  if (uniqueIds.length !== trackIds.length) {
+    allValid = false;
+    if (countEl) countEl.textContent += ' — duplicate Track ID';
+  }
+
+  if (allValid) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+  } else {
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '.5';
+    saveBtn.style.cursor = 'not-allowed';
+  }
+}
+
+function toggleYmCurrent() {
+  _ymCurrent = !_ymCurrent;
+  updateYmToggle(_ymCurrent);
+}
+
+function updateYmToggle(val) {
+  var t = document.getElementById('ym-current-toggle');
+  t.classList.toggle('on', val);
+  document.getElementById('ym-current-label').textContent = val ? 'Yes' : 'No';
+  document.getElementById('ym-current-card').classList.toggle('on', val);
+
+  var warn = document.getElementById('ym-current-warn');
+  var existingCurrent = yearsData.find(function(y) { return y.isCurrent; });
+  var editingId = document.getElementById('ym-id').value;
+  if (warn) {
+    if (val && existingCurrent && existingCurrent._id !== editingId) {
+      warn.className = 'field-check bad';
+      warn.innerHTML = '⚠️ Replaces "' + existingCurrent.academicYear + '" as the active year';
+    } else {
+      warn.className = 'field-check';
+      warn.innerHTML = '';
+    }
+  }
+}
+
+function saveYear() {
+  var id = document.getElementById('ym-id').value;
+  var acadYear = document.getElementById('ym-acad-year').value.trim();
+  
+  if (!acadYear) { showToast('Academic year required', 'warn'); return; }
+  
+  // Collect batches from dynamic rows
+  var batches = [];
+  var batchRows = document.querySelectorAll('.batch-row');
+  
+  if (batchRows.length === 0) {
+    showToast('At least one batch required', 'warn');
+    return;
+  }
+  
+  var hasError = false;
+  var seenTrackIds = [];
+  batchRows.forEach(function(row, index) {
+    var trackId = row.querySelector('.batch-trackid').value.trim();
+    var batch = row.querySelector('.batch-name').value.trim();
+    var year = row.querySelector('.batch-year').value;
+    var sem = row.querySelector('.batch-sem').value;
+    
+    if (!trackId || !batch || !year || !sem) {
+      showToast('Please fill all fields for batch ' + (index + 1), 'warn');
+      hasError = true;
+      return;
+    }
+    if (seenTrackIds.indexOf(trackId.toLowerCase()) !== -1) {
+      showToast('Duplicate Track ID: ' + trackId, 'warn');
+      hasError = true;
+      return;
+    }
+    seenTrackIds.push(trackId.toLowerCase());
+    
+    batches.push({
+      batchTrackId: trackId,
+      batch: batch,
+      currentYear: year,
+      currentSem: sem
+    });
+  });
+  
+  if (hasError) return;
+  
+  dbToast('Saving…', 'saving');
+  var payload = { academicYear: acadYear, batches: batches, isCurrent: _ymCurrent };
+  apiCall(id ? 'PUT' : 'POST', id ? '/year/' + id : '/year', payload)
+    .then(function(r) {
+      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
+      dbToast('Year saved', 'success');
+      closeModal('year-modal-bg');
+      loadYears();
+    }).catch(function() { dbToast('Server error', 'error'); });
+}
+
+function deleteYear() {
+  if (!confirm('Delete this academic year?')) return;
+  var id = document.getElementById('ym-id').value;
+  dbToast('Deleting…', 'saving');
+  apiCall('DELETE', '/year/' + id)
+    .then(function(r) {
+      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
+      dbToast('Year deleted', 'success');
+      closeModal('year-modal-bg');
+      loadYears();
+    }).catch(function() { dbToast('Server error', 'error'); });
+}
+
+function setYearAsCurrent(yearId) {
+  if (!confirm('Set this as the current academic year?')) return;
+  dbToast('Updating…', 'saving');
+  apiCall('PUT', '/year/' + yearId, { isCurrent: true })
+    .then(function(r) {
+      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
+      dbToast('Current year updated', 'success');
+      loadYears();
+    }).catch(function() { dbToast('Server error', 'error'); });
+}
+
+// ── Edit Batch modal ─────────────────────────────────────────────────
+function openBatchModal(yearId, batchTrackId, batch, currentYear, currentSem) {
+  document.getElementById('bm-title').textContent = 'Edit Batch: ' + batch;
+  document.getElementById('bm-sub').textContent = 'Update current year and semester for ' + batch;
+  document.getElementById('bm-year-id').value = yearId;
+  document.getElementById('bm-batch-track-id').value = batchTrackId;
+  document.getElementById('bm-current-year').value = currentYear;
+  populateSemOptions(document.getElementById('bm-current-sem'), currentYear, currentSem);
+  updateBmPreview();
+  openModal('batch-modal-bg');
+}
+
+function onBmYearChange() {
+  var yr = document.getElementById('bm-current-year').value;
+  populateSemOptions(document.getElementById('bm-current-sem'), yr, null);
+  updateBmPreview();
+}
+
+function updateBmPreview() {
+  var yr = document.getElementById('bm-current-year').value;
+  var sem = document.getElementById('bm-current-sem').value;
+  document.getElementById('bm-preview').textContent = 'Year ' + yr + ' • Sem ' + sem;
+  var advBtn = document.getElementById('bm-advance-btn');
+  if (yr === 'IV' && sem === 'VIII') {
+    advBtn.disabled = true;
+    advBtn.style.opacity = '.5';
+    advBtn.style.cursor = 'not-allowed';
+    advBtn.textContent = '🏁 Final Semester';
+  } else {
+    advBtn.disabled = false;
+    advBtn.style.opacity = '1';
+    advBtn.style.cursor = 'pointer';
+    advBtn.textContent = '⏭ Advance to Next Sem';
+  }
+}
+
+function advanceBatchModalSem() {
+  var sem = document.getElementById('bm-current-sem').value;
+  var next = nextSemester(sem);
+  if (!next) { showToast('Already at the final semester', 'warn'); return; }
+  var nextYearLevel = SEM_TO_YEAR[next];
+  document.getElementById('bm-current-year').value = nextYearLevel;
+  populateSemOptions(document.getElementById('bm-current-sem'), nextYearLevel, next);
+  updateBmPreview();
+}
+
+function saveBatch() {
+  var yearId = document.getElementById('bm-year-id').value;
+  var batchTrackId = document.getElementById('bm-batch-track-id').value;
+  var currentYear = document.getElementById('bm-current-year').value;
+  var currentSem = document.getElementById('bm-current-sem').value;
+  var year = yearsData.find(function(y) { return y._id === yearId; });
+  if (!year) { showToast('Year not found', 'warn'); return; }
+  var updatedBatches = year.batches.map(function(b) {
+    if (b.batchTrackId === batchTrackId) {
+      return { batchTrackId: b.batchTrackId, batch: b.batch, currentYear: currentYear, currentSem: currentSem };
+    }
+    return b;
+  });
+  dbToast('Saving…', 'saving');
+  apiCall('PUT', '/year/' + yearId, { batches: updatedBatches })
+    .then(function(r) {
+      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
+      dbToast('Batch updated', 'success');
+      closeModal('batch-modal-bg');
+      loadYears();
+    }).catch(function() { dbToast('Server error', 'error'); });
+}
 </script>
 </body>
 </html>

@@ -249,9 +249,26 @@ router.get('/check', authMiddleware, async (req, res) => {
       active: true,
       expiresAt: histObj.expiresAt
     });
-  } catch (error) {
+  } catch (err) {
     return res.status(500).json({ error: 'Server error' });
   }
+});
+
+router.get('/login-history', authMiddleware, async (req, res) => {
+  try {
+    const trackId = req.user.trackId ;
+
+    const loginHistory = await M.LoginHistory.findOne({ trackId });
+    if (!loginHistory) return res.status(404).json({ error: 'Login history not found' });
+    
+    const histObj = loginHistory.history.find(h => h.sessionId === req.user.sessionId);
+    if (!histObj) return res.status(401).json({ error: 'Session not found' });
+
+    res.json({
+      loginTime: histObj.createdAt,
+      expireTime: histObj.expiresAt
+    })
+  } catch (err) {return res.status(500).json({error: 'Server error'})}
 });
 
 module.exports = router;

@@ -26,6 +26,7 @@ const timetableRoutes = require('./timetable.routes');
 const undoRoutes = require('./undo.routes');
 const userRoutes = require('./users.routes');
 const logRoutes = require('./logs.routes');
+const yearRoutes = require('./year.routes');
 
 // Mount routes
 router.use('/assignments',      assignmentRoutes);
@@ -52,5 +53,6 @@ router.use('/timetable',        timetableRoutes);
 router.use('/undo',             undoRoutes);
 router.use('/users',            userRoutes);
 router.use('/logs',             logRoutes);
+router.use('/year',             yearRoutes);
 
 module.exports = router;

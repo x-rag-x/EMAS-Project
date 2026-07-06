@@ -370,7 +370,7 @@ body{-webkit-user-select:none;user-select:none;}
     <button class="si" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
   </div>
   <div class="sb-bot">
-    <button class="sb-logout-btn" onclick="doLogout()" title="Logout">
+    <button class="sb-logout-btn" onclick="doLogout('manual', 'success', '7000')" title="Logout">
       <div class="logout-sign">
         <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
       </div>
@@ -416,15 +416,12 @@ body{-webkit-user-select:none;user-select:none;}
       <div class="chd"><div class="ct">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:13px;color:var(--tdi);font-weight:700;"></div></div>
       <div class="cb" style="padding-top:6px;max-height:320px;overflow-y:auto;" id="todaysched"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes today.</p></div></div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div class="card" style="flex:1;">
-        <div class="chd" style="padding-bottom:6px;"><div class="ct">&#128197; Calendar</div></div>
-        <div class="calw">
-          <div class="calh"><button class="caln" onclick="calNav(-1)">&#8249;</button><div class="calm" id="calmth"></div><button class="caln" onclick="calNav(1)">&#8250;</button></div>
-          <div class="calg" id="calgrid"></div>
-        </div>
+    <div class="card" style="aspect-ratio:1;align-self:start;display:flex;flex-direction:column;">
+      <div class="chd" style="padding-bottom:6px;flex-shrink:0;margin-bottom:20px;"><div class="ct">&#128197; Calendar</div></div>
+      <div class="calw" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="calh" style="flex-shrink:0;"><button class="caln" onclick="calNav(-1)">&#8249;</button><div class="calm" id="calmth"></div><button class="caln" onclick="calNav(1)">&#8250;</button></div>
+        <div class="calg" id="calgrid" style="flex:1;grid-auto-rows:1fr;"></div>
       </div>
-      <div id="ucwrap"><div class="uccard"><div class="uclbl">&#8987; Upcoming Class</div><div class="uctime">—</div><div class="ucsub">—</div></div></div>
     </div>
   </div>
   <!-- ROW 2: Attendance Overview | Defaulters -->
@@ -484,7 +481,7 @@ body{-webkit-user-select:none;user-select:none;}
 
   <!-- Week View -->
   <div id="sched-week-view">
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;" id="schedbyday"></div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;" id="schedbyday"></div>
   </div>
 
   <!-- Day View -->
@@ -517,7 +514,7 @@ body{-webkit-user-select:none;user-select:none;}
       <div class="fg"><label class="fl">Subject</label><select class="fc" id="attsub"><option value="">— Select —</option></select></div>
       <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="attdate"></div>
       <div class="fg" style="max-width:120px;"><label class="fl">Period</label><select class="fc" id="attperiod"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
-      <button class="btnp" onclick="loadAttSheet()">Load Students</button>
+      <button class="btnp" onclick="loadAttendanceSheet()">Load Students</button>
     </div>
 
   </div>
@@ -647,10 +644,6 @@ body{-webkit-user-select:none;user-select:none;}
           <div class="field-group"><div class="field-label">Employee ID</div><div class="field-val" id="pdremp">—</div></div>
           <div class="field-group"><div class="field-label">Username</div><div class="field-val" id="pdrusr">—</div></div>
           <div class="field-group"><div class="field-label">Email</div><div class="field-val" id="pdremail">—</div></div>
-          <div class="field-group"><div class="field-label">Phone</div><div class="field-val" id="pdrphone">—</div></div>
-          <div class="field-group"><div class="field-label">Qualifications</div><div class="field-val" id="pdrqual">—</div></div>
-          <div class="field-group"><div class="field-label">Experience</div><div class="field-val" id="pdrexp">—</div></div>
-          <div class="field-group"><div class="field-label">Date of Joining</div><div class="field-val" id="pdrdoj">—</div></div>
         </div>
       </div>
     </div>
@@ -706,7 +699,7 @@ body{-webkit-user-select:none;user-select:none;}
         <div><label class="flbl">Subject</label><select class="finp" id="schedsub"><option value="">— Select —</option></select></div>
       </div>
       <div class="fr fr3">
-        <div><label class="flbl">Day</label><select class="finp" id="schedday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option></select></div>
+        <div><label class="flbl">Day</label><select class="finp" id="schedday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></div>
         <div><label class="flbl">Start</label><input type="time" class="finp" id="schedst" value="08:00"></div>
         <div><label class="flbl">End</label><input type="time" class="finp" id="schedet" value="09:00"></div>
       </div>
@@ -718,7 +711,7 @@ body{-webkit-user-select:none;user-select:none;}
 <!-- MODAL: Grievance -->
 <div class="mbg" id="mgriev">
   <div class="modal msm">
-    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">☰;</button></div>
+    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">✖</button></div>
     <div class="mbody">
       <div style="margin-bottom:14px;"><label class="flbl">Title / Subject</label><input type="text" class="finp" id="gsubj" placeholder="Brief title of the issue"></div>
       <div style="margin-bottom:14px;"><label class="flbl">Category</label><select class="finp" id="gcat"><option>Timetable Issue</option><option>Attendance Correction</option><option>Facilities / Infrastructure</option><option>Student Behaviour</option><option>Administrative</option><option>Other</option></select></div>
@@ -729,6 +722,16 @@ body{-webkit-user-select:none;user-select:none;}
 </div>
 
 <div class="toast" id="toast"></div>
+
+
+<div id="db-toast"></div>
+
+<div id="msg-toast">
+  <div id="msg-toast-bar"></div>
+  <div id="msg-toast-text"></div>
+  <button id="msg-toast-close" onclick="hideMsgToast()">✕</button>
+</div>
+
 <script>
   // ═══════════════════════════════════════════════════════════════════════════
   //  EAMS TEACHER PORTAL  –  teacher.html

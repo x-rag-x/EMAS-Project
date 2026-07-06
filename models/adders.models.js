@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const DepartmentSchema = new mongoose.Schema({
+  trackId: { type: String, trim: true },
   name:            { type: String, required: true, unique: true, trim: true },
   code:            { type: String, required: true, unique: true, trim: true, uppercase: true },
   number:          { type: String, default: '', trim: true },         // 3-digit register code e.g. "104"
@@ -13,7 +14,7 @@ const DepartmentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const ClassSchema = new mongoose.Schema({
-  classTrackId: { type: String, trim: true },
+  trackId: { type: String, trim: true },
   name:     { type: String, required: true, trim: true },
   deptId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
   deptName: { type: String, required: true },
@@ -26,7 +27,7 @@ const ClassSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const SubjectSchema = new mongoose.Schema({
-  subjectTrackId: { type: String, trim: true },
+  trackId: { type: String, trim: true },
   subjectCode:  { type: String, required: true, trim: true, unique: true, sparse: true },
   name:     { type: String, required: true, trim: true },
   code:     { type: String, required: true, trim: true },
@@ -38,6 +39,7 @@ const SubjectSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const AssignmentSchema = new mongoose.Schema({
+  trackId: { type: String, trim: true },
   subjectId:   { type: String, required: true },
   subjectName: { type: String },
   classId:     { type: String, required: true },

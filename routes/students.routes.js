@@ -98,7 +98,7 @@ router.get('/exam-search', authMiddleware, async (req, res) => {
 
 router.post('/', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, section, email, username, password, isRep } = req.body;
+    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, section, email, username, password, isRep, batchTrackId } = req.body;
     
     // Check if student exists
     const exists = await M.Student.findOne({ registerNo: regNo });
@@ -122,6 +122,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
       department: deptName || '',
       deptId,
       admissionYear: academicYear || '',
+      batchTrackId: batchTrackId || '',
       email: email || '',
       username: generatedUsername,
       password: hash,
@@ -131,12 +132,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
     });
 
     // Create shadow user in M.User
-    await M.User.create({
-      username: generatedUsername,
-      role: 'student',
-      trackId: generatedTrackId,
-      status: 'active',
-    });
+    await M.User.create({ username: generatedUsername, role: 'student', trackId: generatedTrackId, status: 'active' });
 
     await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Added', `${stu.fullName} (${stu.registerNo})`, 'data', 'info', req.ip);
     res.status(201).json({ ...stu.toObject(), name: stu.fullName, regNo: stu.registerNo });
@@ -145,7 +141,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 
 router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, section, email, username, password, isRep, active, status } = req.body;
+    const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, section, email, username, password, isRep, active, status, batchTrackId } = req.body;
     
     const stu = await M.Student.findById(req.params.id);
     if (!stu) return res.status(404).json({ error: 'Student not found' });
@@ -162,6 +158,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
     if (deptName !== undefined) stu.department = deptName;
     if (deptId !== undefined) stu.deptId = deptId;
     if (academicYear !== undefined) stu.admissionYear = academicYear;
+    if (batchTrackId !== undefined) stu.batchTrackId = batchTrackId;
     if (email !== undefined) stu.email = email;
     if (username) stu.username = username.toLowerCase().trim();
     if (isRep !== undefined) stu.isRep = isRep;

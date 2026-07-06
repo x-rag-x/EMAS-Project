@@ -79,13 +79,13 @@ async function syncStudentAttendanceCounters(studentTrackId, targetClassId) {
       { studentTrackId },
       {
         $set: {
-          batch: student.batch || student.admissionYear || '2025-2029',
-          departmentCode: student.deptCode || student.department || 'GEN',
+          batch: student.batch,
+          departmentCode: student.deptCode || student.department,
           classId: String(classId),
           records
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   } catch (err) {
     console.error('Error syncing student attendance counter:', err);

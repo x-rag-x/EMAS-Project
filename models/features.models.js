@@ -1,35 +1,31 @@
 const mongoose = require('mongoose');
 const { toIndianTime } = require('../utils/dateFormatter');
 
-// Reusable date type definitions for Indian timezone formatting
-const IndianDate = { type: String, default: () => toIndianTime(new Date()) };
-const NullableIndianDate = { type: String, default: null };
-
 const LoginHistorySchema = new mongoose.Schema({
   username:   { type: String, required: true, trim: true, lowercase: true, unique: true},
   trackId:    { type: String,  unique: true, sparse: true },
   role:       { type: String, enum: ['student', 'teacher', 'admin'], required: true},
-  firstLogin: NullableIndianDate,
-  lastLogin:  NullableIndianDate,
+  firstLogin: { type: Date },
+  lastLogin:  { type: Date },
   totalLogins: { type: Number, default: 0 },
   history: [{
     sessionId:  { type: String },
-    time:       IndianDate,
+    time:       { type: Date },
     current:    { type: String, enum: ['Logged In', 'Logged Out'] },
     ip:         { type: String },
     userAgent:  { type: String },
-    loginTime:  IndianDate,
-    logoutTime: NullableIndianDate,
+    loginTime:  { type: Date },
+    logoutTime: { type: Date },
     deviceType: { type: String, enum: ['Desktop', 'Mobile', 'Tablet', 'Unknown'] },
     browser:    { type: String, enum: ['Chrome','Firefox','Edge','Safari','Opera','Brave','Other'] },
     os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'] },
     status:     { type: String, enum: ['success', 'failed'] },
     
     authToken:  { type: String, required: true },
-    createdAt:  IndianDate,
-    expiresAt:  { type: String, required: true},
+    createdAt:  { type: Date },
+    expiresAt:  { type: Date, required: true},
     active:     { type: Boolean, required: true, default: false },
-    lastActivity: IndianDate,
+    lastActivity: { type: Date },
   }],
 }, { timestamps: true });
 
@@ -44,9 +40,9 @@ const NotificationSchema = new mongoose.Schema({
   status:        { type: String, enum: ['Pending','Solved','Cancelled'], default: 'Pending' },
   read:          { type: Boolean, default: false },
   grievanceId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Grievance', default: null },
-  solvedAt:      NullableIndianDate,
-  cancelledAt:   NullableIndianDate,
-  time:          IndianDate,
+  solvedAt:      { type: Date },
+  cancelledAt:   { type: Date },
+  time:          { type: Date },
 }, { timestamps: true });
 
 const GrievanceSchema = new mongoose.Schema({
@@ -57,8 +53,8 @@ const GrievanceSchema = new mongoose.Schema({
   detail:      { type: String, required: true },
   status:      { type: String, enum: ['Pending','Resolved','Cancelled'], default: 'Pending' },
   resolvedBy:  { type: String, default: '' },
-  resolvedAt:  NullableIndianDate,
-  cancelledAt: NullableIndianDate,
+  resolvedAt:  { type: Date },
+  cancelledAt: { type: Date },
 }, { timestamps: true });
 
 const LogSchema = new mongoose.Schema({
@@ -70,7 +66,7 @@ const LogSchema = new mongoose.Schema({
   severity:  { type: String, default: 'info' },
   ip:        { type: String, default: '' },
   sessionId: { type: String, default: '' },
-  time:      IndianDate,
+  time:      { type: Date },
 }, { timestamps: true });
 
 const LiveSessionSchema = new mongoose.Schema({
@@ -84,7 +80,7 @@ const LiveSessionSchema = new mongoose.Schema({
   markedStudents: [{
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     regNo:     { type: String },
-    time:      IndianDate,
+    time:      { type: Date },
     ip:        { type: String }
   }]
 }, { timestamps: true });

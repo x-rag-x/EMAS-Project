@@ -1,3 +1,25 @@
+## 🔹 `v2.2.7` — 06 July 2026 *(Minor & Forced Update)*
+
+### *General Changes & Fixes*
+- `admin.html`
+    - Improved Add Teacher modal. Added Page option( UI only ) [PENDING!]
+    - Added Acadamic Year & Semester selection automatically from manage page and API.
+    - Fixed some assignments backend bugs.
+
+- `manage.html` (Major Changes!)
+    - Added Page loaders.
+    - Introduction to new `Years` Menu. acadamic & semester years are managed from here.
+    - Reworked manage UI completely. A fresh rework for better user experience.
+    - Saving dates in DB with draft and finalize logic. [PENDING!]
+
+- `doLogout()` function updated in all files.
+
+Added & Improved to above changes and bugs in backed routes, middlewares and models.
+
+### `Total 21 Files changed and updated in v2.2.7`
+
+----------------------------------
+
 ## 🔹 `v2.2.5` — 27 June 2026 *(Minor & Forced Update)*
 
 ### *General Changes & Fixes*

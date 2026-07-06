@@ -36,7 +36,7 @@ const TeacherSchema = new mongoose.Schema({
   }],
   isAdmin:            { type: Boolean, default: false },
   adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModule', 
-    'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'all' },
+    'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'none' },
   mustChangePassword:   { type: Boolean, default: false },
 }, { timestamps: true });
 
@@ -54,6 +54,7 @@ const StudentSchema = new mongoose.Schema({
   department:   { type: String, default: '' },
   deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
   admissionYear: { type: String, default: '' },   // like ADM-2025
+  batchTrackId:  { type: String, default: '', trim: true },  // like TR-BATCH-2630
   manageId:      { type: mongoose.Schema.Types.ObjectId, ref: 'DataManagement' },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },

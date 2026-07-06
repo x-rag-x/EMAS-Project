@@ -46,6 +46,7 @@ router.get('/', authMiddleware, async (req, res) => {
         isClassAdvisor: isClassAdvisorVal,
         isTimeTableCoordinator: isTTCoordVal,
         specials: t.specials || [],
+        adminRights: t.adminRights || [],
         active: true,
         status: 'active',
         mustChangePassword: t.mustChangePassword,
@@ -57,7 +58,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
 router.post('/', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { fullName, firstName, lastName, employeeNo, department, designation, username, password, email, specials } = req.body;
+    const { fullName, firstName, lastName, employeeNo, department, designation, username, password, email, specials, adminRights } = req.body;
 
     if (!fullName || !username || !password) {
       return res.status(400).json({
@@ -72,7 +73,9 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
     const teacher = await M.Teacher.create({
       fullName, firstName: firstName, lastName: lastName, employeeNo: employeeNo,
       department: department, designation: designation, email: email, username: username.toLowerCase().trim(), password: hash,
-      trackId: req.body.trackId || generatedTrackId, specials: specials || [], isAdmin: false, mustChangePassword: true
+      trackId: req.body.trackId || generatedTrackId, specials: specials || [],
+      adminRights: (Array.isArray(adminRights) && adminRights.length) ? adminRights : ['none'],
+      isAdmin: false, mustChangePassword: true
     });
     await M.User.create({ username: username.toLowerCase().trim(), role: 'teacher', trackId: teacher.trackId, status: 'active' });
 
@@ -86,7 +89,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 
 router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { password, name, empId, dept, desig, email, username, specials, active, status } = req.body;
+    const { password, name, empId, dept, desig, email, username, specials, adminRights, active, status } = req.body;
     const teacher = await M.Teacher.findById(req.params.id);
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
 
@@ -105,6 +108,10 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
 
     if (specials !== undefined) {
       teacher.specials = specials;
+    }
+
+    if (adminRights !== undefined) {
+      teacher.adminRights = (Array.isArray(adminRights) && adminRights.length) ? adminRights : ['none'];
     }
 
     await teacher.save();

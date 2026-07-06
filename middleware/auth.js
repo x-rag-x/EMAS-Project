@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const cfg = require('../config');
 const M = require('../models');
 
-// ── Helper: resolve role-specific Mongoose model ──────
 function getRoleModel(role) {
   switch (role) {
     case 'admin':   return M.Admin;
@@ -22,18 +21,18 @@ async function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, cfg.JWT_SECRET);
-    const loginHistory = await M.LoginHistory.findOne({trackId: decoded.trackId});
 
-    if (!loginHistory) {return res.status(401).json({error: 'Session not found'});}
+    const model = getRoleModel(decoded.role);
+    const user = await model.findOne({ trackId: decoded.trackId });
+    if (!user) {return res.status(401).json({ error: 'User not found' });}
+
+    const loginHistory = await M.LoginHistory.findOne({trackId: decoded.trackId});
+    if (!loginHistory) { return res.status(401).json({error: 'User not found'});}
 
     const session = loginHistory.history.find(h => h.sessionId === decoded.sessionId);
-
     if (!session) {return res.status(401).json({error: 'Session not found'});}
-
-    if (!session.active) {return res.status(401).json({error: 'Session inactive'});}
-
+    if (!session.active) {return res.status(401).json({error: 'Session expired'});}
     if (session.current === 'Logged Out') {return res.status(401).json({error: 'Logged out'});}
-
     if (session.expiresAt < new Date()) {return res.status(401).json({error: 'Session expired'});}
 
     req.user = decoded;

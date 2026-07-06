@@ -300,6 +300,18 @@
       -moz-user-select: none;
       user-select: none;
     }
+
+    /* ── MESSAGE TOAST ───────────────────────────────────────────── */
+    #msg-toast {position: fixed;bottom: 22px;right: 22px;z-index: 10000;background: #1a2e1a;color: #fff;border-radius: 14px;padding: 14px 16px;display: flex;
+      align-items: flex-start;gap: 12px;max-width: 380px;min-width: 240px;font-size: 12.5px;font-weight: 500;font-family: 'Poppins', sans-serif;box-shadow: 0 8px 30px rgba(0,0,0,.25);
+      transform: translateY(120px);opacity: 0;transition: all .35s cubic-bezier(.34,1.56,.64,1);overflow: hidden;}
+    #msg-toast.show {transform: translateY(0);opacity: 1;}
+    #msg-toast.success {background: #166534;}
+    #msg-toast.error {background: #991b1b;}
+    #msg-toast.info {background: #1e3a5f;}
+    #msg-toast-text {flex: 1;line-height: 1.55;white-space: pre-wrap;word-break: break-word;}
+    #msg-toast-close {background: transparent;border: none;color: #fff;cursor: pointer;font-size: 15px;font-weight: 700;opacity: .75;transition: .2s;padding: 0;flex-shrink: 0;}
+    #msg-toast-close:hover {opacity: 1;transform: scale(1.1);}
   </style>
 </head>
 <body>
@@ -343,7 +355,52 @@
     <button class="lbn" id="lbn" onclick="doSignIn()"><span id="lbn-txt">Sign In</span></button>
   </div>
 
+  <div id="msg-toast">
+    <div id="msg-toast-bar"></div>
+    <div id="msg-toast-text"></div>
+    <button id="msg-toast-close" onclick="hideMsgToast()">✕</button>
+  </div>
+
+  <script src="/public/js/components/logout.js"></script>
   <script>
+    
+    document.addEventListener('DOMContentLoaded', function () {
+
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get('type') || 'info';
+    const time = parseInt(params.get('time') || '0', 10);
+
+    switch (params.get('logout')) {
+      case 'timeout':
+        msgToast('⚠️ Session expired. Please Sign in again.', type);
+        break;
+      case 'manual':
+        msgToast('Logged out successfull', type);
+      case 'error':
+        msgToast('Logged out due an unexpected error', type);
+    }
+
+    if (time > 0) { setTimeout(hideMsgToast, time); }
+
+    history.replaceState({}, '', 'index.html');
+    });
+
+    function msgToast(message, type = "info") {
+      const toast = document.getElementById("msg-toast");
+      const text = document.getElementById("msg-toast-text");
+
+      if (!toast || !text) return;
+      text.textContent = message;
+
+      toast.className = "";
+      toast.id = "msg-toast";
+      toast.classList.add(type);
+      toast.classList.add("show");
+    }
+    
+    function hideMsgToast() {
+      document.getElementById("msg-toast")?.classList.remove("show");
+    }
     // ─── MAINTENANCE PRE-CHECK ON PAGE LOAD ─────────────────────────────────────
     // Fetches maintenance state; hides blocked role tabs and shows notice.
     // If the currently selected role is blocked, switches to Admin tab.
