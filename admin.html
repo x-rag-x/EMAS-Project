@@ -6494,14 +6494,28 @@ to { transform: rotate(360deg) }
       var tok = sessionStorage.getItem('eams_token');
       if (!tok) return Promise.resolve([]);
       return fetch('/api' + apiPath, { headers: { 'Authorization': 'Bearer ' + tok } })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          // Expired / invalid session — force re-login
+          if (r.status === 401) {
+            console.warn('[EAMS] syncFromAPI got 401 on ' + apiPath + ' — redirecting to login');
+            sessionStorage.removeItem('eams_token');
+            sessionStorage.removeItem('eams_user');
+            window.location.href = 'index.html';
+            return [];
+          }
+          return r.json();
+        })
         .then(function (data) {
           if (Array.isArray(data)) {
             DB.set(collection, data);
             return data;
           }
+          console.warn('[EAMS] syncFromAPI unexpected response for ' + apiPath + ':', data);
           return [];
-        }).catch(function () { return []; });
+        }).catch(function (err) {
+          console.error('[EAMS] syncFromAPI fetch error for ' + apiPath + ':', err);
+          return [];
+        });
     }
 
     function syncTeacherDirectory() {

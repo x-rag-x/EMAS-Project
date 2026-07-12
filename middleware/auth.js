@@ -56,7 +56,11 @@ async function authMiddleware(req, res, next) {
     req.session = session;
 
     session.lastActivity = new Date();
-    await loginHistory.save();
+    // Fire-and-forget: lastActivity update is best-effort.
+    // A ValidationError on a legacy history record must NOT fail auth for the caller.
+    loginHistory.save().catch(function (saveErr) {
+      console.error('[EAMS Auth] loginHistory.save() failed (non-fatal):', saveErr.message);
+    });
 
     next();
 
