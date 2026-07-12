@@ -23,10 +23,10 @@ const LoginHistorySchema = new mongoose.Schema({
     os:         { type: String, enum: ['Windows','Linux','MacOS','Android','iOS','Other'] },
     status:     { type: String, enum: ['success', 'failed'] },
     
-    authToken:  { type: String, required: true }, // SHA-256 hash of the JWT — raw token is never persisted
+    authToken:  { type: String }, // SHA-256 hash of the JWT — raw token is never persisted
     createdAt:  { type: Date },
-    expiresAt:  { type: Date, required: true},
-    active:     { type: Boolean, required: true, default: false },
+    expiresAt:  { type: Date },
+    active:     { type: Boolean, default: false },
     lastActivity: { type: Date },
   }],
 }, { timestamps: true });

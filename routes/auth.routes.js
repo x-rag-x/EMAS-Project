@@ -193,6 +193,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     });
     
   } catch (err) {
+    console.error('[EAMS Login Exception]:', err);
     res.status(500).json({ error: 'Login failed, try again' });
   }
 });
