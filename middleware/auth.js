@@ -61,7 +61,11 @@ async function authMiddleware(req, res, next) {
     next();
 
   } catch (err) {
-    console.error('[EAMS Auth Error]:', err);
+    if (err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError') {
+      console.error(`[EAMS Auth Error]: ${err.name}: ${err.message}`);
+    } else {
+      console.error('[EAMS Auth Error]:', err);
+    }
     return res.status(401).json({error: 'Invalid token'});
   }
 }
