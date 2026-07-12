@@ -6,9 +6,12 @@ const bcrypt = require('bcryptjs');
 const M = require('../models');
 
 
+const { migrateDateFields } = require('../utils/dbMigrator');
+
 mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
   .then(async() => {
     console.log(`   3/5: MongoDB connected → ${cfg.DB_NAME}`);
+    await migrateDateFields();
     console.log(`> Checking Admin User...`);
     await seedAdmin();
     await seedSettings();

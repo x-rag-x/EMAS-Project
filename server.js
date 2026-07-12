@@ -17,6 +17,7 @@ require('./utils/serverState');
 const { startSessionMonitor } = require('./utils/sessionMonitor');
 
 const app = express();
+app.set('trust proxy', 1);
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
