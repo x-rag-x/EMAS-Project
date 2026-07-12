@@ -7,6 +7,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 require('dotenv').config();
 
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -19,7 +20,10 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
-app.use(cors({ origin: process.env.NODE_ENV === 'production' ? true : cfg.CORS_ORIGIN, credentials: true }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
+app.use(cors({origin: cfg.CORS_ORIGIN,credentials: true}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 

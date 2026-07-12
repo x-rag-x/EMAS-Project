@@ -3,14 +3,15 @@ const router = express.Router();
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.subjectId) filter.subjectId = req.query.subjectId;
-  if (req.query.teacherId) filter.teacherId = req.query.teacherId;
+  if (req.query.subjectId) filter.subjectId = sanitizeToString(req.query.subjectId);
+  if (req.query.teacherId) filter.teacherId = sanitizeToString(req.query.teacherId);
   else if (!req.query.subjectId && !req.query.classId && req.user.role === 'teacher')
     filter.teacherId = req.user.roleId || req.user._id;
-  if (req.query.classId) filter.classId = req.query.classId;
+  if (req.query.classId) filter.classId = sanitizeToString(req.query.classId);
   res.json(await M.Assignment.find(filter).sort({ teacherName: 1 }));
 });
 

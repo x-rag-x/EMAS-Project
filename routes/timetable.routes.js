@@ -3,10 +3,11 @@ const router = express.Router();
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.teacherId) filter.teacherId = req.query.teacherId;
+  if (req.query.teacherId) filter.teacherId = sanitizeToString(req.query.teacherId);
   else if (req.user.role === 'teacher') filter.teacherId = req.user._id;
   res.json(await M.Timetable.find(filter).sort({ day: 1, start: 1 }));
 });

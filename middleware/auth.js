@@ -17,13 +17,17 @@ async function authMiddleware(req, res, next) {
 
   if (!header) {return res.status(401).json({error: 'No token'});}
 
-  const token = header.replace('Bearer ', '');
+  const parts = header.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return res.status(401).json({ error: 'Invalid Authorization header format' });
+  }
+  const token = parts[1];
 
   try {
     const decoded = jwt.verify(token, cfg.JWT_SECRET);
 
     const model = getRoleModel(decoded.role);
-    const user = await model.findOne({ trackId: decoded.trackId });
+    const user = await model.findOne({ trackId: decoded.trackId }).select('+mustChangePassword');
     if (!user) {return res.status(401).json({ error: 'User not found' });}
 
     const loginHistory = await M.LoginHistory.findOne({trackId: decoded.trackId});
@@ -35,7 +39,20 @@ async function authMiddleware(req, res, next) {
     if (session.current === 'Logged Out') {return res.status(401).json({error: 'Logged out'});}
     if (session.expiresAt < new Date()) {return res.status(401).json({error: 'Session expired'});}
 
-    req.user = decoded;
+    const userObj = user.toObject();
+    const specials = Array.isArray(userObj.specials) ? userObj.specials : [];
+    req.user = {
+      ...userObj,
+      role:      decoded.role,
+      sessionId: decoded.sessionId,
+      isTimeTableCoordinator: specials.some(s => s.option === 'isTimeTableCoordinator'),
+      TTdeptName: (specials.find(s => s.option === 'isTimeTableCoordinator') || {}).value || '',
+      isHod:               specials.some(s => s.option === 'isHod'),
+      isClassAdvisor:      specials.some(s => s.option === 'isClassAdvisor'),
+      isWarden:            specials.some(s => s.option === 'isWarden'),
+      isExamCoordinator:   specials.some(s => s.option === 'isExamCoordinator'),
+      isPlacementCoordinator: specials.some(s => s.option === 'isPlacementCoordinator'),
+    };
     req.session = session;
 
     session.lastActivity = new Date();
@@ -43,7 +60,10 @@ async function authMiddleware(req, res, next) {
 
     next();
 
-  } catch (err) {return res.status(401).json({error: 'Invalid token'});}
+  } catch (err) {
+    console.error('[EAMS Auth Error]:', err);
+    return res.status(401).json({error: 'Invalid token'});
+  }
 }
 
 function adminOnly(req, res, next) {

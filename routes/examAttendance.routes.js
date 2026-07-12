@@ -3,14 +3,15 @@ const router = express.Router();
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const filter = {};
-    if (req.query.examTrackId) filter.examTrackId = req.query.examTrackId;
-    if (req.query.date) filter.date = new Date(req.query.date + 'T00:00:00');
-    if (req.query.teacherTrackId) filter.teacherTrackId = req.query.teacherTrackId;
-    if (req.query.hallNo) filter.hallNo = req.query.hallNo;
+    if (req.query.examTrackId)    filter.examTrackId    = sanitizeToString(req.query.examTrackId);
+    if (req.query.date)           filter.date           = new Date(sanitizeToString(req.query.date) + 'T00:00:00');
+    if (req.query.teacherTrackId) filter.teacherTrackId = sanitizeToString(req.query.teacherTrackId);
+    if (req.query.hallNo)         filter.hallNo         = sanitizeToString(req.query.hallNo);
     const records = await M.ExamAttendance.find(filter).sort({ markedAt: -1 });
     res.json(records);
   } catch (err) { res.status(500).json({ error: err.message }); }

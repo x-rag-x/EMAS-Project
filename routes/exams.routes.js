@@ -5,17 +5,18 @@ const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
 const { refreshExamStatuses } = require('../utils/examUtils');
 const { dateToDow } = require('../utils/dateUtils');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
     await refreshExamStatuses();
     const filter = {};
-    if (req.query.examType) filter.examType = req.query.examType;
-    if (req.query.semester) filter.semester = req.query.semester;
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.academicYear) filter.academicYear = req.query.academicYear;
-    if (req.query.deptId) filter.deptId = req.query.deptId;
-    if (req.query.batch) filter.batch = req.query.batch;
+    if (req.query.examType)    filter.examType    = sanitizeToString(req.query.examType);
+    if (req.query.semester)    filter.semester    = sanitizeToString(req.query.semester);
+    if (req.query.status)      filter.status      = sanitizeToString(req.query.status);
+    if (req.query.academicYear) filter.academicYear = sanitizeToString(req.query.academicYear);
+    if (req.query.deptId)      filter.deptId      = sanitizeToString(req.query.deptId);
+    if (req.query.batch)       filter.batch       = sanitizeToString(req.query.batch);
     const exams = await M.Exam.find(filter).sort({ createdAt: -1 });
     res.json(exams);
   } catch (err) { res.status(500).json({ error: err.message }); }

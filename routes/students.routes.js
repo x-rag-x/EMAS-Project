@@ -2,40 +2,44 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const M = require('../models');
 const cfg = require('../config');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
+const escapeRegex = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /api/students -> Fetch students
 router.get('/', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.deptId) filter.deptId = req.query.deptId;
-  if (req.query.classId) filter.classId = req.query.classId;
-  if (req.query.section) filter.section = req.query.section;
-  
-  const list = await M.Student.find(filter).sort({ fullName: 1 }).lean();
-  const trackIds = list.map(s => s.trackId);
-  const shadowUsers = await M.User.find({ trackId: { $in: trackIds } }).lean();
-  const shadowMap = new Map(shadowUsers.map(u => [u.trackId, u]));
-  
-  const mapped = list.map(s => {
-    const shadow = shadowMap.get(s.trackId);
-    return {
-      ...s,
-      name: s.fullName,
-      regNo: s.registerNo,
-      deptName: s.department,
-      academicYear: s.admissionYear,
-      className: s.class,
-      active: shadow ? shadow.status === 'active' : true,
-      status: shadow ? shadow.status : 'active'
-    };
-  });
-  res.json(mapped);
+  try {
+    const filter = {};
+    if (req.query.deptId)  filter.deptId  = sanitizeToString(req.query.deptId);
+    if (req.query.classId) filter.classId = sanitizeToString(req.query.classId);
+    if (req.query.section) filter.section = sanitizeToString(req.query.section);
+
+    const list = await M.Student.find(filter).sort({ fullName: 1 }).select('-password').lean();
+    const trackIds = list.map(s => s.trackId);
+    const shadowUsers = await M.User.find({ trackId: { $in: trackIds } }).lean();
+    const shadowMap = new Map(shadowUsers.map(u => [u.trackId, u]));
+
+    const mapped = list.map(s => {
+      const shadow = shadowMap.get(s.trackId);
+      return {
+        ...s,
+        name: s.fullName,
+        regNo: s.registerNo,
+        deptName: s.department,
+        academicYear: s.admissionYear,
+        className: s.class,
+        active: shadow ? shadow.status === 'active' : true,
+        status: shadow ? shadow.status : 'active'
+      };
+    });
+    res.json(mapped);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/count', authMiddleware, async (req, res) => {
@@ -52,8 +56,8 @@ router.get('/exam-search', authMiddleware, async (req, res) => {
 
     const filter = {
       $or: [
-        { fullName: new RegExp(q, 'i') },
-        { registerNo: new RegExp(q, 'i') }
+        { fullName: new RegExp(escapeRegex(q), 'i') },
+        { registerNo: new RegExp(escapeRegex(q), 'i') }
       ]
     };
 
@@ -61,7 +65,7 @@ router.get('/exam-search', authMiddleware, async (req, res) => {
     if (depts) {
       const deptList = depts.split(',').map(d => d.trim()).filter(Boolean);
       if (deptList.length > 0) {
-        filter.department = { $in: deptList.map(d => new RegExp(d, 'i')) };
+        filter.department = { $in: deptList.map(d => new RegExp(escapeRegex(d), 'i')) };
       }
     }
 
@@ -207,25 +211,65 @@ router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
 router.post('/bulk-upload', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(worksheet);
+
+    // Parse the uploaded buffer with ExcelJS (replaces the removed xlsx package)
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) return res.status(400).json({ error: 'Spreadsheet contains no sheets' });
+
+    // Build a header-name → column-index map from row 1
+    const headerRow = worksheet.getRow(1);
+    const headers = {}; // colIndex (1-based) -> header string
+    headerRow.eachCell({ includeEmpty: false }, (cell, colNum) => {
+      headers[colNum] = String(cell.value ?? '').trim();
+    });
+
+    // Convert data rows (2 onwards) to plain objects keyed by header name
+    const rows = [];
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNum) => {
+      if (rowNum === 1) return; // skip header
+      const obj = {};
+      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        const header = headers[colNum];
+        if (header) obj[header] = cell.value ?? '';
+      });
+      rows.push(obj);
+    });
     const VALID_COURSE_TYPES = ['UG', 'PG', 'M.E', 'M.TECH', 'B.E', 'B.TECH'];
     let added = 0, skipped = 0, errors = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const cv = (keys) => { for (const k of keys) { const found = Object.keys(row).find(r => r.toLowerCase().replace(/\s/g, '').includes(k.toLowerCase())); if (found) return String(row[found]).trim(); } return ''; };
-      const name = cv(['fullname', 'name', 'studentname']), regNo = cv(['registerno', 'regno', 'rollno']), acadYear = cv(['academicyear', 'ay']) || '2025-26', courseType = cv(['coursetype', 'course']).toUpperCase() || 'UG', branch = cv(['branch']), deptName = cv(['department', 'dept']), className = cv(['class', 'classname']), section = cv(['section', 'sec']) || 'A', email = cv(['email', 'mail']), username = cv(['username', 'user']), password = cv(['password', 'pass']) || 'Student@123';
+      const cv = (keys) => { 
+        for (const k of keys) { 
+          const found = Object.keys(row).find(r => r.toLowerCase().replace(/\s/g, '').includes(k.toLowerCase())); 
+          if (found) return String(row[found]).trim(); 
+        } return ''; 
+      };
+
+      const name = cv(['fullname', 'name', 'studentname']), regNo = cv(['registerno', 'regno', 'rollno']), 
+      acadYear = cv(['academicyear', 'ay']), courseType = cv(['coursetype', 'course']).toUpperCase(), 
+      branch = cv(['branch']), deptName = cv(['department', 'dept']), className = cv(['class', 'classname']), 
+      section = cv(['section', 'sec']), email = cv(['email', 'mail']), username = cv(['username', 'user']), 
+      password = cv(['password', 'pass']);
+      
       const rowErrors = [];
       if (!name) rowErrors.push('FullName missing');
       if (!regNo) rowErrors.push('RegisterNo missing');
       if (!deptName) rowErrors.push('Department missing');
+      if (!acadYear) rowErrors.push('AcademicYear missing');
+      if (!courseType) rowErrors.push('CourseType missing');
+      if (!branch) rowErrors.push('Branch missing');
+      if (!className) rowErrors.push('Class missing');
+      if (!section) rowErrors.push('Section missing');
+      if (!email) rowErrors.push('Email missing');
+      if (!username) rowErrors.push('Username missing');
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) rowErrors.push('Invalid email');
       if (VALID_COURSE_TYPES.indexOf(courseType) === -1) rowErrors.push(`CourseType "${courseType}" unknown`);
       if (await M.Student.findOne({ registerNo: regNo })) rowErrors.push(`RegisterNo ${regNo} already exists`);
       if (username && await M.User.findOne({ username: username.toLowerCase() })) rowErrors.push(`Username "${username}" taken`);
       if (rowErrors.length) { skipped++; errors.push({ row: i + 2, name: name || '(blank)', issues: rowErrors }); continue; }
-      const dept = await M.Department.findOne({ $or: [{ name: new RegExp(deptName, 'i') }, { code: new RegExp(deptName, 'i') }] });
+      const dept = await M.Department.findOne({ $or: [{ name: new RegExp(escapeRegex(deptName), 'i') }, { code: new RegExp(escapeRegex(deptName), 'i') }] });
       const cls = await M.Class.findOne({ name: className }).lean();
       
       const generatedTrackId = 'TRSTU_' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -234,34 +278,17 @@ router.post('/bulk-upload', authMiddleware, adminOnly, upload.single('file'), as
       const generatedUsername = username || regNo.toLowerCase();
 
       await M.Student.create({
-        fullName: name,
-        registerNo: regNo,
-        class: className || cls?.name || '',
-        classId: cls?._id,
-        section,
-        courseType,
-        branch,
-        department: dept?.name || deptName,
-        deptId: dept?._id,
-        admissionYear: acadYear,
-        email,
-        username: generatedUsername,
-        password: hash,
-        trackId: generatedTrackId,
-        isRep: false,
+        fullName: name, registerNo: regNo, class: className || cls?.name || '', classId: cls?._id, section,
+        courseType, branch, department: dept?.name || deptName, deptId: dept?._id, admissionYear: acadYear,
+        email, username: generatedUsername, password: hash, trackId: generatedTrackId, isRep: false,
         mustChangePassword: true
       });
 
-      await M.User.create({
-        username: generatedUsername,
-        role: 'student',
-        trackId: generatedTrackId,
-        status: 'active',
-      });
-
+      await M.User.create({username: generatedUsername,role: 'student',trackId: generatedTrackId,status: 'active',});
       added++;
     }
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Bulk Student Upload', `${added} added, ${skipped} skipped`, 'data', 'info', req.ip);
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 
+      'Bulk Student Upload', `${added} added, ${skipped} skipped`, 'data', 'info', req.ip);
     res.json({ added, skipped, total: rows.length, errors: errors.slice(0, 20), message: `Import complete: ${added} added, ${skipped} skipped` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -9,7 +9,7 @@ const AdminSchema = new mongoose.Schema({
   department:   { type: String, default: '', trim: true },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:     { type: String, required: true },
+  password:     { type: String, required: true, select: false },
   trackId:      { type: String, trim: true, required:true },
   isAdmin:      { type: Boolean, default: true },
   adminRights:  { type: mongoose.Schema.Types.Mixed, default: 'all' },
@@ -26,7 +26,7 @@ const TeacherSchema = new mongoose.Schema({
   designation:  { type: String, default: '', trim: true },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:     { type: String, required: true },
+  password:     { type: String, required: true, select: false },
   trackId:      { type: String, trim: true, required:true },
   specials:[{
     option:     { type: String, enum: ['isHod', 'HodDeptTrackId', 'isClassAdvisor', 'ClassAdvisorTrackId', 
@@ -58,7 +58,7 @@ const StudentSchema = new mongoose.Schema({
   manageId:      { type: mongoose.Schema.Types.ObjectId, ref: 'DataManagement' },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:     { type: String, required: true },
+  password:     { type: String, required: true, select: false },
   trackId:      { type: String, trim: true, required:true },
   isRep:        { type: Boolean, default: false },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false

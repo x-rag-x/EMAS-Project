@@ -3,10 +3,11 @@ const router = express.Router();
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
   const filter = {};
-  if (req.query.deptId) filter.deptId = req.query.deptId;
+  if (req.query.deptId) filter.deptId = sanitizeToString(req.query.deptId);
   res.json(await M.Class.find(filter).sort({ name: 1 }));
 });
 

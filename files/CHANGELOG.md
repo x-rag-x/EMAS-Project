@@ -1,3 +1,53 @@
+## 🔹 `v2.2.8` — 12 July 2026 *(Security & Enhancement Update)*
+
+### *General Changes & Fixes*
+
+- `routes/auth.routes.js` & `middleware/auth.js`
+    - Added express-rate-limit middleware to `/login` endpoint (10 attempts per IP per 15 minutes).
+    - Implemented automatic account lockout after 3 failed attempts (15-minute timeout).
+    - Fixed `authMiddleware` to use freshly-queried user document instead of stale JWT payload for real-time permission checks.
+    - Improved Bearer token validation with proper scheme checking.
+    - Added current-password verification to password change endpoint.
+    - Enhanced error handling with generic "Invalid credentials" message (prevents username enumeration).
+    - Added `mustChangePassword` field to login response for forced password change flow.
+
+- `models/users.models.js` & `models/features.models.js`
+    - Added `select: false` to password fields on Admin/Teacher/Student schemas.
+    - Enhanced LoginHistory schema for lockout attempt tracking and timestamps.
+    - Token hashes (SHA-256) stored instead of plain JWT strings.
+
+- `config/index.js`
+    - Removed hardcoded default password fallbacks. Now requires explicit environment variable configuration.
+
+- `routes/students.routes.js`, `routes/users.routes.js`, `routes/profile.routes.js`
+    - Fixed password hash exposure in `GET /api/students` endpoint.
+    - Added NoSQL injection prevention with query parameter sanitization.
+    - Fixed `new RegExp()` crashes with input escaping and try/catch protection (6 locations).
+    - Corrected broken `'Manage User'` authorization checks (3 locations).
+    - Fixed `isTimeTableCoordinator` permission detection.
+
+- `server.js`
+    - Hardened CORS configuration: changed from `origin: true` to explicit allow-list in production.
+    - Improved error handling across all async route handlers.
+
+- Session & Security Enhancements
+    - Implemented single-session enforcement (all previous sessions killed on new login).
+    - Added security headers support (helmet-compatible structure).
+    - Improved logout endpoint with proper HTTP status codes.
+    - Fixed raw JWT token exposure in API responses.
+
+### *Dependencies*
+- Added `express-rate-limit` package for login protection.
+- Added `nodemon` to devDependencies (fixes `npm run dev` on fresh clones).
+- Reviewed `xlsx` package: HIGH-severity CVEs noted (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9).
+
+### Started
+- Tried to improve real time page loading in admin.html. Next update includes final look of Page Loading.
+
+### `Total 24 Files changed and updated in v2.2.8`
+
+----------------------------------
+
 ## 🔹 `v2.2.7` — 06 July 2026 *(Minor & Forced Update)*
 
 ### *General Changes & Fixes*

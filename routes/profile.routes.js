@@ -5,6 +5,8 @@ const M = require('../models');
 const { authMiddleware, getRoleModel } = require('../middleware/auth');
 const cfg = require('../config');
 const { logAction } = require('../utils/logAction');
+const escapeRegex = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
@@ -151,14 +153,14 @@ router.get('/users', authMiddleware, async (req, res) => {
     const rights = reqUser?.adminRights;
     const canManage = req.user.role === 'admin'
       || rights === 'all'
-      || (Array.isArray(rights) && rights.includes('Manage User'));
+      || (Array.isArray(rights) && rights.includes('managePage'));
 
     if (!canManage) return res.status(403).json({ error: 'Manage User right required' });
 
     const filter = {};
-    if (req.query.role) filter.role = req.query.role;
+    if (req.query.role) filter.role = sanitizeToString(req.query.role);
     if (req.query.search) {
-      const re = new RegExp(req.query.search, 'i');
+      const re = new RegExp(escapeRegex(req.query.search), 'i');
       filter.$or = [{ username: re }, { trackId: re }];
     }
     const users = await M.User.find(filter).sort({ role: 1, username: 1 }).lean();
@@ -185,7 +187,7 @@ router.put('/users/:id', authMiddleware, async (req, res) => {
     const rights = reqUser?.adminRights;
     const canManage = req.user.role === 'admin'
       || rights === 'all'
-      || (Array.isArray(rights) && rights.includes('Manage User'));
+      || (Array.isArray(rights) && rights.includes('managePage'));
 
     if (!canManage) return res.status(403).json({ error: 'Manage User right required' });
 
@@ -212,8 +214,24 @@ router.put('/users/:id', authMiddleware, async (req, res) => {
     }
 
     // Update shadow user status
-    if (status) user.status = status;
-    if (active !== undefined) user.status = active ? 'active' : 'inactive';
+    if (status) {
+      user.status = status;
+      if (status === 'active') {
+        await M.LoginHistory.updateOne(
+          { trackId: user.trackId },
+          { $set: { failedLogins: 0, lockedUntil: null } }
+        );
+      }
+    }
+    if (active !== undefined) {
+      user.status = active ? 'active' : 'inactive';
+      if (active) {
+        await M.LoginHistory.updateOne(
+          { trackId: user.trackId },
+          { $set: { failedLogins: 0, lockedUntil: null } }
+        );
+      }
+    }
     await user.save();
 
     await logAction(req.user._id, req.user.name, req.user.role, 'User Updated (Manage User)',

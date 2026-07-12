@@ -22,7 +22,7 @@ router.get('/trackid/:trackId', authMiddleware, async (req, res) => {
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const activeUsers = await M.User.find({ role: 'teacher', status: 'active' }, 'trackId').lean();
+    const activeUsers = await M.User.find({ role: 'teacher', status: 'active' }, 'trackId').select('-password').lean();
     const activeTrackIds = activeUsers.map(u => u.trackId);
     
     const teachers = await M.Teacher.find({ trackId: { $in: activeTrackIds } }, '-password').sort({ fullName: 1 });
@@ -133,7 +133,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
 
 router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const teacher = await M.Teacher.findById(req.params.id);
+    const teacher = await M.Teacher.findById(req.params.id).select('-password');
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
     
     await M.UndoLog.create({

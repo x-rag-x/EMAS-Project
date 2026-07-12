@@ -43,7 +43,7 @@ async function syncStudentAttendanceCounters(studentTrackId, targetClassId) {
       studentQuery.push({ _id: studentTrackId });
     }
     studentQuery.push({ trackId: studentTrackId });
-    const student = await M.Student.findOne({ $or: studentQuery }).lean();
+    const student = await M.Student.findOne({ $or: studentQuery }).select('-password').lean();
     if (!student) return;
 
     const classId = targetClassId || student.classId || student.class;
@@ -160,7 +160,7 @@ router.get('/', authMiddleware, async (req, res) => {
           // If teacherId filter passed, check if matches teacher trackId or user id
           let targetTrackId = null;
           if (mongoose.isValidObjectId(req.query.teacherId)) {
-            const tDoc = await M.Teacher.findById(req.query.teacherId).lean();
+            const tDoc = await M.Teacher.findById(req.query.teacherId).select('-password').lean();
             if (tDoc) targetTrackId = tDoc.trackId;
           }
           if (!targetTrackId) {
@@ -257,7 +257,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const markedBy = req.user.username || req.user.fullName || req.user.name || 'Teacher';
 
     // Prepare student records array
-    const allStudents = await M.Student.find().lean();
+    const allStudents = await M.Student.find().select('-password').lean();
     const studentLookup = new Map();
     allStudents.forEach(s => {
       studentLookup.set(String(s._id), s);

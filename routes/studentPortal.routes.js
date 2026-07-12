@@ -13,9 +13,9 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // ── Student profile — look up by username or trackId
-    let student = await M.Student.findOne({ username: req.user.username }).lean();
+    let student = await M.Student.findOne({ username: req.user.username }).select('-password').lean();
     if (!student && req.user.trackId) {
-      student = await M.Student.findOne({ trackId: req.user.trackId }).lean();
+      student = await M.Student.findOne({ trackId: req.user.trackId }).select('-password').lean();
     }
     if (!student) {
       // No Student profile record at all — return user info with empty attendance so portal loads

@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const cfg = require('../config');
 const M = require('../models');
+const rateLimit = require('express-rate-limit');
 const { authMiddleware, getRoleModel } = require('../middleware/auth');
 const { logAction, parseUserAgent } = require('../utils/logAction');
 
@@ -15,7 +16,16 @@ function getClientDetails(req) {
   return { ip, userAgent, deviceType, browser, os };
 }
 
-router.post('/login', async (req, res) => {
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per 15 minutes
+  message: { error: 'Too many login attempts from this IP, please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password, role } = req.body;
     if (!username || !password || !role)
@@ -31,13 +41,45 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    if (shadowUser.status !== 'active') {
-      await logAction(shadowUser.trackId || shadowUser._id, shadowUser.username, role, 'Login Failed', `User is ` + shadowUser.status, 'security', 'warning', req.ip);
-      return res.status(401).json({ error: 'Your Account is ' + shadowUser.status });
+    // Fetch or create login history for this user to track lockouts/failed attempts
+    let loginHistory = await M.LoginHistory.findOne({ trackId: shadowUser.trackId });
+    if (!loginHistory) {
+      loginHistory = await M.LoginHistory.create({
+        username: shadowUser.username,
+        trackId: shadowUser.trackId,
+        role: role,
+        totalLogins: 0,
+        history: []
+      });
     }
 
-    // Look up in role-specific schema to get the password
-    const userDoc = await model.findOne({ username: username.toLowerCase().trim() });
+    // Fetch security settings for maxLoginAttempts
+    const secSettings = await M.Settings.findOne({ key: 'security' });
+    const security = secSettings?.value || {};
+    const maxAttempts = security.maxLoginAttempts || 3;
+
+    // Check account lockout status
+    if (shadowUser.status === 'locked') {
+      if (loginHistory.lockedUntil && loginHistory.lockedUntil > new Date()) {
+        const remainingTimeMs = loginHistory.lockedUntil - new Date();
+        const remainingTimeMins = Math.ceil(remainingTimeMs / 60000);
+        return res.status(401).json({ error: `Account locked. Try again in ${remainingTimeMins} minute(s).` });
+      } else {
+        // Lock expired
+        shadowUser.status = 'active';
+        await shadowUser.save();
+        loginHistory.failedLogins = 0;
+        loginHistory.lockedUntil = null;
+        await loginHistory.save();
+      }
+    }
+
+    if (shadowUser.status !== 'active') {
+      await logAction(shadowUser.trackId || shadowUser._id, shadowUser.username, role, 'Login Failed', `User is ` + shadowUser.status, 'security', 'warning', req.ip);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const userDoc = await model.findOne({ username: username.toLowerCase().trim() }).select('+password');
     if (!userDoc) {
       await logAction(shadowUser.trackId || shadowUser._id, shadowUser.username, role, 'Login Failed', `User document not found in role model`, 'security', 'warning', req.ip);
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -45,6 +87,16 @@ router.post('/login', async (req, res) => {
 
     const match = await bcrypt.compare(password, userDoc.password);
     if (!match) {
+      loginHistory.failedLogins = (loginHistory.failedLogins || 0) + 1;
+      if (loginHistory.failedLogins >= maxAttempts) {
+        shadowUser.status = 'locked';
+        await shadowUser.save();
+        loginHistory.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
+        await loginHistory.save();
+        await logAction(shadowUser.trackId || shadowUser._id, shadowUser.username, role, 'Login Failed (Locked)', `Wrong password, account locked`, 'security', 'warning', req.ip);
+        return res.status(401).json({ error: `Account locked due to too many failed attempts. Try again in 15 minute(s).` });
+      }
+      await loginHistory.save();
       await logAction(shadowUser.trackId || shadowUser._id, shadowUser.username, role, 'Login Failed', `Wrong password`, 'security', 'warning', req.ip);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -93,43 +145,30 @@ router.post('/login', async (req, res) => {
       cfg.JWT_SECRET,
       { expiresIn: cfg.JWT_EXPIRES_IN || '24h' }
     );
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     let historyObj = {
       sessionId: sessionId, time: new Date(), current: 'Logged In', ip: clientDetails.ip, userAgent: clientDetails.userAgent,
       loginTime: new Date(), logoutTime: null,
       deviceType: clientDetails.deviceType, browser: clientDetails.browser, os: clientDetails.os,
-      status: 'success', authToken: token, createdAt: new Date(), active: true, expiresAt: expiresAt, lastActivity: new Date()
+      status: 'success', authToken: tokenHash, createdAt: new Date(), active: true, expiresAt: expiresAt, lastActivity: new Date()
     };
 
-    const loginHistory = await M.LoginHistory.findOne({ trackId: userDoc.trackId });
+    // Terminate all other active sessions first
+    await M.LoginHistory.updateOne(
+      { trackId: loginHistory.trackId },
+      { $set: { "history.$[h].active": false, "history.$[h].current": "Logged Out", "history.$[h].logoutTime": new Date() } },
+      { arrayFilters: [{ "h.active": true }] }
+    );
 
-    if (loginHistory) {
-      // Terminate all other active sessions first
-      await M.LoginHistory.updateOne(
-        { trackId: userDoc.trackId },
-        { $set: { "history.$[h].active": false, "history.$[h].current": "Logged Out", "history.$[h].logoutTime": new Date() } },
-        { arrayFilters: [{ "h.active": true }] }
-      );
-      
-      // Update variables
-      loginHistory.totalLogins += 1;
-      loginHistory.lastLogin = new Date();
-      if (!loginHistory.firstLogin) {
-        loginHistory.firstLogin = new Date();
-      }
-      loginHistory.history.push(historyObj);
-      await loginHistory.save();
-    } else {
-      await M.LoginHistory.create({
-        username: userDoc.username,
-        trackId: userDoc.trackId,
-        role,
-        firstLogin: new Date(),
-        lastLogin: new Date(),
-        totalLogins: 1,
-        history: [historyObj]
-      });
-    }
+    // Update login history with new session
+    loginHistory.totalLogins += 1;
+    loginHistory.lastLogin = new Date();
+    if (!loginHistory.firstLogin) loginHistory.firstLogin = new Date();
+    loginHistory.failedLogins = 0;
+    loginHistory.lockedUntil = null;
+    loginHistory.history.push(historyObj);
+    await loginHistory.save();
 
     await M.User.updateOne({ trackId: userDoc.trackId }, { $set: { status: 'active', online: true } });
     await M.Log.create({
@@ -142,17 +181,19 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       sessionId,
+      mustChangePassword: !!userDoc.mustChangePassword,
       user: {
         _id: shadowUser._id,
         name: userDoc.fullName || userDoc.name || '',
         username: userDoc.username,
         role,
-        active: true
+        active: true,
+        mustChangePassword: !!userDoc.mustChangePassword,
       }
     });
     
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Login failed, try again' });
   }
 });
 
@@ -181,7 +222,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
     await M.User.updateOne({ trackId: trackId }, { $set: { online: false } });
 
     res.json({ message: 'Logged out' });
-  } catch (e) { res.json({ error: e.message }); }
+  } catch (err) { res.status(500).json({ error: 'Logout failed'}); }
 });
 
 router.post('/ping', authMiddleware, async (req, res) => {
@@ -211,7 +252,7 @@ router.post('/change-password', authMiddleware, async (req, res) => {
 
     await logAction(user.trackId || req.user._id, user.fullName || user.name, user.role, 'Password Changed', 'User changed their password', 'security', 'info', req.ip);
     res.json({ message: 'Password updated successfully' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Password updation failed.' }); }
 });
 
 router.get('/verify-session', authMiddleware, async (req, res) => {

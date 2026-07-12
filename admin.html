@@ -81,6 +81,8 @@ body { font-family: 'Poppins', sans-serif; background: var(--gP); color: var(--t
 #page-loader .loader-step { width:6px; height:6px; border-radius:50%; background:var(--gLr); transition:background .3s ease,transform .3s ease; }
 #page-loader .loader-step.done { background:var(--gD); transform:scale(1.2); }
 #page-loader .loader-step.active { background:var(--gB); transform:scale(1.35); box-shadow:0 0 0 3px rgba(76,175,80,.2); }
+#page-loader .loader-eta { font-size:11.5px; color:var(--tdi); font-weight:600; letter-spacing:.3px; margin-top:-12px; transition:opacity .3s ease; }
+#page-loader .loader-eta .eta-time { color:var(--gK); font-weight:700; font-size:12.5px; }
 .three-body { --uib-size:70px; --uib-speed:.8s; --uib-color:#15c42d; position:relative; display:inline-block; height:var(--uib-size);
    width:var(--uib-size); animation:spin78236 calc(var(--uib-speed)*2.5) infinite linear; }
 .three-body__dot { position:absolute; height:100%; width:30%; }
@@ -614,6 +616,7 @@ to { transform: rotate(360deg) }
       <div class="three-body__dot"></div>
     </div>
     <div class="loader-msg" id="loader-msg">Initializing EAMS…</div>
+    <div class="loader-eta" id="loader-eta"></div>
     <div class="loader-steps">
       <div class="loader-step active" id="lstep-0"></div>
       <div class="loader-step" id="lstep-1"></div>
@@ -1765,7 +1768,7 @@ to { transform: rotate(360deg) }
 
         <div class="fg"><label class="fl">Password <span class = "auto-txt">(default)</span></label>
           <div class="pw-wrap">
-            <input type="password" class="fc2" id="stu-password" value="student123">
+            <input type="password" class="fc2" id="stu-password">
             <button type="button" class="pw-eye" onclick="togglePwField('stu-password',this)" tabindex="-1">👁</button>
           </div>
         </div>
@@ -2541,6 +2544,7 @@ to { transform: rotate(360deg) }
       ];
 
       var loaderMsgEl = document.getElementById('loader-msg');
+      var loaderEtaEl = document.getElementById('loader-eta');
 
       function setLoaderMsg(idx, text) {
         if (!loaderMsgEl) return;
@@ -2562,21 +2566,98 @@ to { transform: rotate(360deg) }
         setTimeout(function () { setLoaderMsg(i, step.msg); }, step.t);
       });
 
+      // ── Per-task adaptive ETA (parallel-aware, historically calibrated) ──
+      // Since all sync tasks run in parallel via Promise.all, the real ETA
+      // equals the slowest still-pending task, NOT linear progress.
+      // We store each task’s duration individually in localStorage for
+      // accurate future predictions.
+      var TASK_NAMES = ['depts','classes','subjects','students','users','assignments','logs','yearConfig'];
+      var TASK_LABELS = { depts:'Departments', classes:'Classes', subjects:'Subjects',
+        students:'Students', users:'Users & Teachers', assignments:'Assignments',
+        logs:'Activity Logs', yearConfig:'Year Config' };
+      var DEFAULT_TASK_MS = 3000; // 3s default when no history exists
+
+      // Read per-task historical durations
+      var _taskHistory = {};
+      try { _taskHistory = JSON.parse(localStorage.getItem('eams_task_times') || '{}'); } catch(e) {}
+
+      function taskAvg(name) {
+        var arr = _taskHistory[name];
+        if (!arr || !arr.length) return DEFAULT_TASK_MS;
+        return Math.round(arr.reduce(function(a,b){return a+b;},0) / arr.length);
+      }
+
+      // Initial ETA = max of all per-task averages (parallel → slowest wins)
+      var _etaMs = Math.max.apply(null, TASK_NAMES.map(taskAvg));
+      var _pendingTasks = TASK_NAMES.slice(); // copy — shrinks as tasks complete
+      var _syncStartTime = Date.now();
+
+      function formatEta(ms) {
+        var sec = Math.max(1, Math.round(ms / 1000));
+        if (sec >= 60) return Math.floor(sec/60) + 'm ' + (sec%60) + 's';
+        return sec + 's';
+      }
+
+      function updateEtaDisplay() {
+        if (!loaderEtaEl) return;
+        if (_pendingTasks.length === 0) {
+          loaderEtaEl.innerHTML = '✔ All data loaded';
+          return;
+        }
+        // Build label showing what’s still loading
+        var waitingFor = _pendingTasks.slice(0, 3).map(function(n){ return TASK_LABELS[n] || n; }).join(', ');
+        if (_pendingTasks.length > 3) waitingFor += ' +' + (_pendingTasks.length - 3);
+        if (_etaMs <= 0) {
+          loaderEtaEl.innerHTML = 'Waiting for ' + waitingFor + '…';
+        } else {
+          loaderEtaEl.innerHTML = 'ETA: <span class="eta-time">' + formatEta(_etaMs)
+            + '</span> — loading ' + waitingFor;
+        }
+      }
+
+      // Show initial ETA immediately
+      updateEtaDisplay();
+
+      // Called by syncAllFromDB as each named task completes
+      function onSyncProgress(taskName, pending, elapsedMs) {
+        _pendingTasks = pending;
+        if (pending.length === 0) {
+          _etaMs = 0;
+          updateEtaDisplay();
+          return;
+        }
+        // ETA = max of each pending task’s predicted remaining time
+        var maxRemaining = 0;
+        pending.forEach(function(name) {
+          var predicted = taskAvg(name);
+          var remaining = Math.max(0, predicted - elapsedMs);
+          if (remaining > maxRemaining) maxRemaining = remaining;
+        });
+        _etaMs = maxRemaining;
+        updateEtaDisplay();
+      }
+
+      // Smooth 1s tick-down between progress events
+      var _etaTick = setInterval(function() {
+        if (_etaMs <= 0 || _pendingTasks.length === 0) return;
+        _etaMs = Math.max(0, _etaMs - 1000);
+        updateEtaDisplay();
+      }, 1000);
+
       // ── Gate: both 3 s timer AND real sync must finish ──────
       var timerDone = false;
       var fetchDone = false;
-      var fetchCb   = null; // store the nav callback until gate opens
+      var fetchCb   = null;
 
       function tryReveal() {
         if (!timerDone || !fetchDone) return;
-        // Flush any toasts that fired during loading
+        clearInterval(_etaTick);
         _loaderActive = false;
         var loader = document.getElementById('page-loader');
         if (loader) {
           loader.classList.add('loader-fade');
           setTimeout(function () {
             loader.style.display = 'none';
-            // Fire queued toasts after loader is visually gone
             _toastQueue.forEach(function (a) { dbToast(a[0], a[1], a[2]); });
             _toastQueue = [];
           }, 360);
@@ -2588,7 +2669,7 @@ to { transform: rotate(360deg) }
       // 3-second minimum display
       setTimeout(function () { timerDone = true; tryReveal(); }, 3000);
 
-      // Real DB sync
+      // Real DB sync (pass named-progress callback)
       syncAllFromDB(function () {
         fetchCb = function () {
           renderDepartments();
@@ -2599,30 +2680,7 @@ to { transform: rotate(360deg) }
         };
         fetchDone = true;
         tryReveal();
-      });
-
-      // ── Safety net: never let the loader hang forever ──────
-      // If timerDone/fetchDone never both flip true (e.g. a hung
-      // fetch, or an error thrown somewhere in the sync chain that
-      // isn't caught), force the gate open after 12s so the admin
-      // isn't stuck staring at the loader with no way out.
-      setTimeout(function () {
-        if (timerDone && fetchDone) return; // already revealed normally
-        console.warn('[EAMS] Loader safety net triggered — forcing reveal after timeout.');
-        timerDone = true;
-        fetchDone = true;
-        if (!fetchCb) {
-          fetchCb = function () {
-            renderDepartments();
-            renderDepartmentSelector();
-            renderClassSubjectView();
-            nav('dash');
-            populateAdminDropdowns();
-          };
-        }
-        tryReveal();
-        dbToast('Some data may not have loaded — check your connection', 'error');
-      }, 12000);
+      }, onSyncProgress);
     }
 
     // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -5284,7 +5342,7 @@ to { transform: rotate(360deg) }
       var section   = getFieldValue('stu-section');
       var email     = document.getElementById('stu-email')   ? document.getElementById('stu-email').value.trim() : '';
       var username  = getFieldValue('stu-username') || email.split('@')[0];
-      var password  = document.getElementById('stu-password') ? document.getElementById('stu-password').value : 'student123';
+      var password  = document.getElementById('stu-password') ? document.getElementById('stu-password').value : '';
       var dept = DB.get('depts').find(function(d){ return d._id === deptId; });
       var cls  = DB.get('classes').find(function(c){ return c._id === classId; });
 
@@ -5711,7 +5769,7 @@ to { transform: rotate(360deg) }
     function resetStudentForm() {
       clearInputs(['stu-name','stu-firstName','stu-lastName','stu-courseType','stu-branch','stu-trackId','stu-section','stu-email','stu-username']);
       var rnEl = document.getElementById('stu-regNo');    if (rnEl) rnEl.value = '7140';
-      var pwEl = document.getElementById('stu-password'); if (pwEl) pwEl.value = 'student123';
+      var pwEl = document.getElementById('stu-password'); if (pwEl) pwEl.value = '';
       var dpEl = document.getElementById('stu-dept');     if (dpEl) dpEl.value = '';
       var clEl = document.getElementById('stu-class');    if (clEl) clEl.innerHTML = '<option value="">— Select —</option>';
       hideStuEmailPopup();
@@ -6490,19 +6548,52 @@ to { transform: rotate(360deg) }
       }).catch(function () { return YEAR_CONFIG; });
     }
 
-    // Sync all collections
-    function syncAllFromDB(cb) {
+    // Sync all collections — per-task progress tracking for accurate ETA
+    function syncAllFromDB(cb, onProgress) {
       dbToast('Fetching from Database…', 'saving');
-      Promise.all([
-        syncFromAPI('depts', '/depts'),
-        syncFromAPI('classes', '/classes'),
-        syncFromAPI('subjects', '/subjects'),
-        syncFromAPI('students', '/students'),
-        syncUsersWithTeacherDetails(),
-        syncFromAPI('assignments', '/assignments'),
-        syncFromAPI('logs', '/logs'),
-        syncYearConfig(),
-      ]).then(function (results) {
+      var syncStart = Date.now();
+      var taskDefs = [
+        { name: 'depts',       p: syncFromAPI('depts', '/depts') },
+        { name: 'classes',     p: syncFromAPI('classes', '/classes') },
+        { name: 'subjects',    p: syncFromAPI('subjects', '/subjects') },
+        { name: 'students',    p: syncFromAPI('students', '/students') },
+        { name: 'users',       p: syncUsersWithTeacherDetails() },
+        { name: 'assignments', p: syncFromAPI('assignments', '/assignments') },
+        { name: 'logs',        p: syncFromAPI('logs', '/logs') },
+        { name: 'yearConfig',  p: syncYearConfig() },
+      ];
+      var pending = taskDefs.map(function(t){ return t.name; });
+      var taskTimes = {}; // { name: durationMs }
+
+      // Wrap each promise to track its individual duration and report progress
+      var tracked = taskDefs.map(function(task) {
+        return task.p.then(function(result) {
+          taskTimes[task.name] = Date.now() - syncStart;
+          pending = pending.filter(function(n){ return n !== task.name; });
+          if (onProgress) onProgress(task.name, pending.slice(), Date.now() - syncStart);
+          return result;
+        }).catch(function(err) {
+          taskTimes[task.name] = Date.now() - syncStart;
+          pending = pending.filter(function(n){ return n !== task.name; });
+          if (onProgress) onProgress(task.name, pending.slice(), Date.now() - syncStart);
+          throw err;
+        });
+      });
+
+      function storeTaskHistory() {
+        try {
+          var history = JSON.parse(localStorage.getItem('eams_task_times') || '{}');
+          Object.keys(taskTimes).forEach(function(name) {
+            if (!history[name]) history[name] = [];
+            history[name].push(taskTimes[name]);
+            if (history[name].length > 10) history[name] = history[name].slice(-10);
+          });
+          localStorage.setItem('eams_task_times', JSON.stringify(history));
+        } catch(e) {}
+      }
+
+      Promise.all(tracked).then(function (results) {
+        storeTaskHistory();
         var names = ['depts', 'classes', 'subjects', 'students', 'users', 'assignments', 'logs'];
         dbToast('Synced from Database', 'success', results.slice(0, names.length).map(function (r, i) {
           return (Array.isArray(r) ? r.length : 0) + ' ' + names[i];
@@ -6510,6 +6601,7 @@ to { transform: rotate(360deg) }
         updateStatCards();
         if (cb) cb();
       }).catch(function (err) {
+        storeTaskHistory();
         console.error('[EAMS] syncAllFromDB failed:', err);
         dbToast('Sync failed', 'error');
         if (cb) cb();

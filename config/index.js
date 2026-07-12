@@ -15,11 +15,11 @@ module.exports = {
   NODE_ENV:  process.env.NODE_ENV  || 'development',
 
   // ── Passwords ────────────────────────────────────────
-  STUDENT_PASSWORD:    process.env.studentPassword    || 'student123',
-  TEACHER_PASSWORD:    process.env.teacherPassword    || 'teacher123',
-  ADMIN_PASSWORD:      process.env.adminPassword      || 'admin123',
-  DELETE_DATA_PASSWORD: process.env.deleteDataPassword || 'EMAS-DEL-6969',
-  EXPORT_DATA_PASSWORD: process.env.exportDataPassword || 'EMAS-EXPORT-7898',
+  STUDENT_PASSWORD:     process.env.studentPassword,
+  TEACHER_PASSWORD:     process.env.teacherPassword,
+  ADMIN_PASSWORD:       process.env.adminPassword,
+  DELETE_DATA_PASSWORD: process.env.deleteDataPassword,
+  EXPORT_DATA_PASSWORD: process.env.exportDataPassword,
 
   // ── Auth ─────────────────────────────────────────────
   JWT_SECRET:        process.env.JWT_SECRET,

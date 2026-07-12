@@ -69,7 +69,7 @@ const ManageAdminSchema = new mongoose.Schema({
   addedBy    : { type: String, required: true },
   createdAt  : { type: Date, default: Date.now },
   status     : { type: String, enum: ['active','inactive'], default: 'active' },
-}, { timestamps: true });
+});
 
 // ── YEAR Schema ───────────────────────────────────────
 const YearSchema = new mongoose.Schema({
