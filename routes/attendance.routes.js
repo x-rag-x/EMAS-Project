@@ -126,8 +126,26 @@ router.get('/', authMiddleware, async (req, res) => {
 
     const classAttDocs = await M.ClassAttendance.find(filter).sort({ date: -1 }).limit(100).lean();
 
-    // Collect lookups for names
-    const allStudents = await M.Student.find().select('_id trackId fullName registerNo classId').lean();
+    // Collect unique student trackIds from the actual attendance records
+    const studentTrackIds = new Set();
+    for (const doc of classAttDocs) {
+      for (const period of doc.periods || []) {
+        for (const rec of period.records || []) {
+          if (rec.studentTrackId) studentTrackIds.add(rec.studentTrackId);
+        }
+      }
+    }
+
+    // Fetch only the students referenced in these records
+    const allStudents = studentTrackIds.size > 0
+      ? await M.Student.find({
+          $or: [
+            { trackId: { $in: Array.from(studentTrackIds) } },
+            { _id: { $in: Array.from(studentTrackIds).filter(id => mongoose.isValidObjectId(id)) } }
+          ]
+        }).select('_id trackId fullName registerNo classId').lean()
+      : [];
+    
     const studentMap = new Map();
     allStudents.forEach(s => {
       studentMap.set(String(s._id), s);
@@ -256,8 +274,16 @@ router.post('/', authMiddleware, async (req, res) => {
     const teacherTrackId = req.user.trackId || String(req.user._id);
     const markedBy = req.user.username || req.user.fullName || req.user.name || 'Teacher';
 
-    // Prepare student records array
-    const allStudents = await M.Student.find().select('-password').lean();
+    const referencedInputs = [...new Set(rawRecords.map(rec => rec.studentTrackId || rec.studentId).filter(Boolean))];
+    const referencedObjectIds = referencedInputs.filter(id => mongoose.isValidObjectId(id));
+    const allStudents = referencedInputs.length
+      ? await M.Student.find({
+          $or: [
+            { trackId: { $in: referencedInputs } },
+            ...(referencedObjectIds.length ? [{ _id: { $in: referencedObjectIds } }] : [])
+          ]
+        }).select('-password').lean()
+      : [];
     const studentLookup = new Map();
     allStudents.forEach(s => {
       studentLookup.set(String(s._id), s);
