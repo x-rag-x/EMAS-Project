@@ -68,8 +68,10 @@ const LogSchema = new mongoose.Schema({
   severity:  { type: String, default: 'info' },
   ip:        { type: String, default: '' },
   sessionId: { type: String, default: '' },
-  time:      { type: Date },
+  time:      { type: Date, default: Date.now }, // defense-in-depth: schema-level default in case a write path forgets to set it explicitly
 }, { timestamps: true });
+
+LogSchema.index({ createdAt: -1 });
 
 const LiveSessionSchema = new mongoose.Schema({
   trackId:   { type: String, required: true }, //teacherId

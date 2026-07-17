@@ -733,17 +733,7 @@ body{-webkit-user-select:none;user-select:none;}
 </div>
 
 <script>
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  EAMS TEACHER PORTAL  –  teacher.html
-  //  Render cache only — MongoDB via the API is the single source of truth.
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // ─── IN-MEMORY DATA CACHE (NOT localStorage) ─────────────────────────────────
-  // MongoDB is the single source of truth. This object is purely a render cache
-  // that lives in page memory and gets repopulated from the API (see the sync
-  // functions below). It does NOT touch localStorage/sessionStorage for app
-  // data — sessionStorage is reserved strictly for eams_token / eams_user auth.
-  var _memStore = {};
+var _memStore = {};
   const DB = {
     get: function(collection) {
       try { return _memStore['ss3_' + collection] || []; }

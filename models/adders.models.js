@@ -13,6 +13,13 @@ const DepartmentSchema = new mongoose.Schema({
   branch:       { type: String, enum: ['M.E','M.TECH','B.E','B.TECH'], default: 'B.E' },
 }, { timestamps: true });
 
+DepartmentSchema.pre('save', function (next) {
+  if (!this.threeLetterCode && this.code) {
+    this.threeLetterCode = this.code.toUpperCase();
+  }
+  next();
+});
+
 const ClassSchema = new mongoose.Schema({
   trackId: { type: String, trim: true },
   name:     { type: String, required: true, trim: true },
@@ -26,6 +33,9 @@ const ClassSchema = new mongoose.Schema({
   hallNo:   { type: String, required: true },
 }, { timestamps: true });
 
+ClassSchema.index({ deptId: 1 });
+ClassSchema.index({ deptId: 1, batch: 1 });
+
 const SubjectSchema = new mongoose.Schema({
   trackId: { type: String, trim: true },
   subjectCode:  { type: String, required: true, trim: true, unique: true, sparse: true },
@@ -37,6 +47,8 @@ const SubjectSchema = new mongoose.Schema({
   deptName: { type: String, default: '' },
   deptCode: { type: String, default: '' },
 }, { timestamps: true });
+
+SubjectSchema.index({ deptId: 1 });
 
 const AssignmentSchema = new mongoose.Schema({
   trackId: { type: String, trim: true },
@@ -50,6 +62,10 @@ const AssignmentSchema = new mongoose.Schema({
   deptName:    { type: String },
   deptCode:    { type: String }
 }, { timestamps: true });
+
+AssignmentSchema.index({ subjectId: 1 });
+AssignmentSchema.index({ classId: 1 });
+AssignmentSchema.index({ teacherId: 1 });
 
 module.exports = {
   Department:       mongoose.model('Department',        DepartmentSchema),

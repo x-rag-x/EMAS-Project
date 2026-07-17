@@ -10,7 +10,8 @@ async function logAction(userId, userName, role, action, details, category, seve
       category: category || 'general',
       severity: severity || 'info',
       ip: ip || '',
-      sessionId: sessionId || ''
+      sessionId: sessionId || '',
+      time: new Date()
     });
   } catch (err) {
     console.error('Failed to log action:', err.message);

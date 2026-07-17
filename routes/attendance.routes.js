@@ -95,6 +95,11 @@ async function syncStudentAttendanceCounters(studentTrackId, targetClassId) {
 // GET /api/attendance — Query attendance records, returning flattened session rows for UI compatibility
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    // Require at least one filter to prevent unconstrained fetch
+    if (!req.query.from && !req.query.to && !req.query.date && !req.query.classId && !req.query.teacherId) {
+      return res.json([]);
+    }
+
     const filter = {};
     if (req.query.classId) {
       filter.$or = [{ classId: req.query.classId }];

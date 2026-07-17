@@ -5,6 +5,7 @@ const M = require('../models');
 const cfg = require('../config');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/trackid/:trackId', authMiddleware, async (req, res) => {
   try {
@@ -25,7 +26,19 @@ router.get('/', authMiddleware, async (req, res) => {
     const activeUsers = await M.User.find({ role: 'teacher', status: 'active' }, 'trackId').select('-password').lean();
     const activeTrackIds = activeUsers.map(u => u.trackId);
     
-    const teachers = await M.Teacher.find({ trackId: { $in: activeTrackIds } }, '-password').sort({ fullName: 1 });
+    const teacherFilter = { trackId: { $in: activeTrackIds } };
+    if (req.query.dept) {
+      const deptQuery = sanitizeToString(req.query.dept);
+      teacherFilter.$or = [
+        { deptCode: deptQuery },
+        { department: deptQuery }
+      ];
+    }
+    if (req.query.deptId) {
+      teacherFilter.deptId = sanitizeToString(req.query.deptId);
+    }
+    
+    const teachers = await M.Teacher.find(teacherFilter, '-password').sort({ fullName: 1 });
     const mapped = teachers.map(t => {
       const isHodVal = t.specials?.some(s => s.option === 'isHod');
       const isClassAdvisorVal = t.specials?.some(s => s.option === 'isClassAdvisor');
@@ -37,6 +50,8 @@ router.get('/', authMiddleware, async (req, res) => {
         employeeNo: t.employeeNo,
         dept: t.department,
         department: t.department,
+        deptId: t.deptId,
+        deptCode: t.deptCode,
         desig: t.designation,
         designation: t.designation,
         email: t.email,
@@ -58,7 +73,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
 router.post('/', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { fullName, firstName, lastName, employeeNo, department, designation, username, password, email, specials, adminRights } = req.body;
+    const { fullName, firstName, lastName, employeeNo, department, deptId, deptCode, designation, username, password, email, specials, adminRights } = req.body;
 
     if (!fullName || !username || !password) {
       return res.status(400).json({
@@ -72,7 +87,8 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 
     const teacher = await M.Teacher.create({
       fullName, firstName: firstName, lastName: lastName, employeeNo: employeeNo,
-      department: department, designation: designation, email: email, username: username.toLowerCase().trim(), password: hash,
+      department: department, deptId: deptId || null, deptCode: deptCode || '',
+      designation: designation, email: email, username: username.toLowerCase().trim(), password: hash,
       trackId: req.body.trackId || generatedTrackId, specials: specials || [],
       adminRights: (Array.isArray(adminRights) && adminRights.length) ? adminRights : ['none'],
       isAdmin: false, mustChangePassword: true
@@ -81,7 +97,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 
     const { password: _, ...teacherData } = teacher.toObject();
     await logAction( req.user.trackId || req.user._id, req.user.name, req.user.role, 'Teacher Added', `${fullName} (${username}) — initial password set`, 'data', 'info', req.ip );
-    res.status(201).json({ ...teacherData, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, desig: teacher.designation, _plainPassword: password });
+    res.status(201).json({ ...teacherData, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, deptId: teacher.deptId, deptCode: teacher.deptCode, desig: teacher.designation, _plainPassword: password });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -89,7 +105,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 
 router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { password, name, empId, dept, desig, email, username, specials, adminRights, active, status } = req.body;
+    const { password, name, empId, dept, deptId, deptCode, desig, email, username, specials, adminRights, active, status } = req.body;
     const teacher = await M.Teacher.findById(req.params.id);
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
 
@@ -98,6 +114,8 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
     if (name) teacher.fullName = name;
     if (empId !== undefined) teacher.employeeNo = empId;
     if (dept !== undefined) teacher.department = dept;
+    if (deptId !== undefined) teacher.deptId = deptId || null;
+    if (deptCode !== undefined) teacher.deptCode = deptCode || '';
     if (desig !== undefined) teacher.designation = desig;
     if (email !== undefined) teacher.email = email;
     if (username) teacher.username = username.toLowerCase().trim();
@@ -127,7 +145,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
 
     const { password: _, ...safeTeacher } = teacher.toObject();
     await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Teacher Updated', teacher.fullName, 'data', 'info', req.ip);
-    res.json({ ...safeTeacher, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, desig: teacher.designation });
+    res.json({ ...safeTeacher, name: teacher.fullName, empId: teacher.employeeNo, dept: teacher.department, deptId: teacher.deptId, deptCode: teacher.deptCode, desig: teacher.designation });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 

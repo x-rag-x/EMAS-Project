@@ -12,21 +12,51 @@ const escapeRegex = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// GET /api/students -> Fetch students
+// GET /api/students -> Fetch students (paginated, sortable)
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const filter = {};
-    if (req.query.deptId)  filter.deptId  = sanitizeToString(req.query.deptId);
-    if (req.query.classId) filter.classId = sanitizeToString(req.query.classId);
-    if (req.query.section) filter.section = sanitizeToString(req.query.section);
+    if (req.query.deptId)       filter.deptId       = sanitizeToString(req.query.deptId);
+    if (req.query.classId)      filter.classId      = sanitizeToString(req.query.classId);
+    if (req.query.section)      filter.section      = sanitizeToString(req.query.section);
+    if (req.query.academicYear) {
+      var yr = String(req.query.academicYear).replace(/-(\d{4})$/, function(_, y) { return '-' + y.slice(-2); });
+      filter.admissionYear = sanitizeToString(yr);
+    }
+    if (req.query.batch)        filter.batchTrackId = sanitizeToString(req.query.batch);
+    if (req.query.courseType)   filter.courseType   = sanitizeToString(req.query.courseType);
 
-    const list = await M.Student.find(filter).sort({ fullName: 1 }).select('-password').lean();
-    const trackIds = list.map(s => s.trackId);
-    const shadowUsers = await M.User.find({ trackId: { $in: trackIds } }).lean();
-    const shadowMap = new Map(shadowUsers.map(u => [u.trackId, u]));
+    // Lightweight roster mode — only name + regNo, no shadow user join
+    if (req.query.roster === '1') {
+      const roster = await M.Student.find(filter).sort({ fullName: 1 })
+        .select('fullName registerNo').lean();
+      return res.json(roster.map(function (s) {
+        return { name: s.fullName, regNo: s.registerNo };
+      }));
+    }
 
-    const mapped = list.map(s => {
-      const shadow = shadowMap.get(s.trackId);
+    // Parse pagination & sorting
+    var page    = Math.max(1, parseInt(req.query.page, 10) || 1);
+    var limit   = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 60));
+    var sortBy  = req.query.sortBy === 'regNo' ? 'registerNo' : 'fullName';
+    var sortDir = req.query.sortDir === 'desc' ? -1 : 1;
+
+    var total = await M.Student.countDocuments(filter);
+    var list  = await M.Student.find(filter)
+      .sort({ [sortBy]: sortDir })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select('-password')
+      .lean();
+
+    var trackIds = list.map(function (s) { return s.trackId; });
+    var shadowUsers = trackIds.length
+      ? await M.User.find({ trackId: { $in: trackIds } }).lean()
+      : [];
+    var shadowMap = new Map(shadowUsers.map(function (u) { return [u.trackId, u]; }));
+
+    var students = list.map(function (s) {
+      var shadow = shadowMap.get(s.trackId);
       return {
         ...s,
         name: s.fullName,
@@ -38,7 +68,8 @@ router.get('/', authMiddleware, async (req, res) => {
         status: shadow ? shadow.status : 'active'
       };
     });
-    res.json(mapped);
+
+    res.json({ data: students, total: total, page: page, hasMore: page * limit < total });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

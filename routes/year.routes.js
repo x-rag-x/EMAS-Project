@@ -28,14 +28,6 @@ router.get('/batches', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/year/batches - Get list of available batches from current year
-router.get('/batch/:stdTrackId', authMiddleware, async (req, res) => {
-  try {
-    const currentYear = await M.Year.findOne({ isCurrent: true });
-    res.json(currentYear ? currentYear.batches.map(b => b.batch) : []);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // GET /api/year/batch/:batchTrackId - Get currentYear and currentSem for a batchTrackId
 router.get('/batch/:batchTrackId', authMiddleware, async (req, res) => {
   try {

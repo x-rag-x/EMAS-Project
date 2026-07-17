@@ -4,11 +4,17 @@ const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
 
-// GET /api/logs -> fetch all database logs
+// GET /api/logs -> fetch database logs with cursor-based pagination
 router.get('/', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const logs = await M.Log.find().sort({ time: -1 }).limit(200);
-    res.json(logs);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const filter = {};
+    if (req.query.before) {
+      filter.createdAt = { $lt: new Date(req.query.before) };
+    }
+    const logs = await M.Log.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    const total = await M.Log.countDocuments({});
+    res.json({ logs, total, hasMore: logs.length === limit });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -26,7 +32,8 @@ router.post('/', authMiddleware, async (req, res) => {
       category: category || 'general',
       severity: 'info',
       ip: req.ip,
-      sessionId: req.headers['x-session-id'] || ''
+      sessionId: req.headers['x-session-id'] || '',
+      time: new Date()
     });
     res.json({ ok: true });
   } catch (err) {

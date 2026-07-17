@@ -23,6 +23,8 @@ const TeacherSchema = new mongoose.Schema({
   lastName:     { type: String, default: '', trim: true },
   employeeNo:   { type: String, default: '', trim: true },
   department:   { type: String, default: '', trim: true },
+  deptId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null },
+  deptCode:     { type: String, default: '', trim: true, uppercase: true },
   designation:  { type: String, default: '', trim: true },
   email:        { type: String, default: '', lowercase: true, trim: true },
   username:     { type: String, required: true, unique: true, trim: true, lowercase: true },
@@ -39,6 +41,8 @@ const TeacherSchema = new mongoose.Schema({
     'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'none' },
   mustChangePassword:   { type: Boolean, default: false },
 }, { timestamps: true });
+
+TeacherSchema.index({ deptId: 1 });
 
 // ── STUDENT User Schema ────────────────────────────────
 const StudentSchema = new mongoose.Schema({
@@ -63,6 +67,13 @@ const StudentSchema = new mongoose.Schema({
   isRep:        { type: Boolean, default: false },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
 }, { timestamps: true });
+
+StudentSchema.index({ deptId: 1 });
+StudentSchema.index({ deptId: 1, classId: 1 });
+StudentSchema.index({ deptId: 1, batchTrackId: 1 });
+StudentSchema.index({ classId: 1, section: 1 });
+StudentSchema.index({ fullName: 1 });
+StudentSchema.index({ registerNo: 1 });
 
 // ── UserSchema ─────────────────────────────────
 const UserSchema = new mongoose.Schema({

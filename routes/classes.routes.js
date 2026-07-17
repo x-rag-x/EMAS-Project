@@ -6,9 +6,24 @@ const { logAction } = require('../utils/logAction');
 const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.deptId) filter.deptId = sanitizeToString(req.query.deptId);
-  res.json(await M.Class.find(filter).sort({ name: 1 }));
+  try {
+    const filter = {};
+    if (req.query.deptId) filter.deptId = sanitizeToString(req.query.deptId);
+    if (req.query.batch) filter.batch = sanitizeToString(req.query.batch);
+    const classes = await M.Class.find(filter).sort({ name: 1 }).lean();
+    // Attach studentCount per class via aggregate to avoid client-side full scan
+    const classIds = classes.map(function (c) { return c._id; });
+    const counts = classIds.length
+      ? await M.Student.aggregate([
+          { $match: { classId: { $in: classIds } } },
+          { $group: { _id: '$classId', count: { $sum: 1 } } }
+        ])
+      : [];
+    const countMap = {};
+    counts.forEach(function (c) { countMap[String(c._id)] = c.count; });
+    classes.forEach(function (cls) { cls.studentCount = countMap[String(cls._id)] || 0; });
+    res.json(classes);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/', authMiddleware, adminOnly, async (req, res) => {

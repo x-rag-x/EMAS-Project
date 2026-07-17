@@ -1,3 +1,22 @@
+## 🔹 `v2.2.9` — 18 July 2026 *(Performance Improvement Update)*
+
+### *V1 Changes of Performance Improvement*
+
+-	Frontend restructure (split files)	Out of scope — target monolithic admin.html as it exists on GitHub
+-	"Show List" gating fields (Students page)	Year + Batch + Dept required. Course Type is an optional refine, not required to enable the button
+-	Teacher ↔ Department relationship	Add a real deptId ObjectId ref to TeacherSchema (replacing reliance on the free-text department string)
+-	Fetch timeout ("time-cut")	8 seconds, applied to every fetch everywhere
+-	Log.time never-populated bug + year.routes.js dead route	Fix both, as part of this pass
+-	Dropdown filter changes (Students page)	Never auto-refetch — only an explicit Show List click re-queries. Load More continues the same query
+-	Class-card student counts (Classes & Subjects page)	Keep them, but computed via server-side aggregation, not the current client-side full-array scan
+-	Teacher→Dept migration	Proceed directly against the live DB, no pre-check report first
+-	Students-page search box	Independent of Show List — auto-filters live (exact mechanism below, flagged as an assumption in §7)
+-	Students-page column sort	New requirement (Windows-Explorer style): clicking Name / Register No. column headers sorts the list
+
+### `Total 19 Files changed and updated in v2.2.9`
+
+----------------------------------
+
 ## 🔹 `v2.2.8` — 12 July 2026 *(Security & Enhancement Update)*
 
 ### *General Changes & Fixes*
