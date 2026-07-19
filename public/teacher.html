@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Teacher | Sri Shakthi</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/teacher.css">
+</head>
+<body>
+
+<!-- APP -->
+<div id="app">
+<div class="sb-overlay" id="sb-overlay-t" onclick="toggleSidebar()"></div>
+<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">✖</button>
+<nav class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-brand">Sri Shakthi EAMS<small>Teacher Portal</small></div>
+  </div>
+  <div class="navs">
+    <button class="sb-item act" id="sn-dash" onclick="nav('dash')"><span class="ic">&#128202;</span>Dashboard</button>
+    <button class="sb-item" id="sn-sched" onclick="nav('sched')"><span class="ic">&#128197;</span>My Schedule</button>
+    <button class="sb-item" id="sn-att" onclick="nav('att')"><span class="ic">&#9989;</span>Take Attendance</button>
+    <button class="sb-item" style="cursor:default;color:var(--td);font-weight:600;pointer-events:none;"><span class="ic">&#128200;</span>Report</button>
+    <div style="overflow:hidden;">
+      <button class="ss" id="sn-stu" onclick="nav('rep-stu')">&#128101; Student List</button>
+      <button class="ss" id="sn-ratt" onclick="nav('rep-att')">&#128203; Attendance Record</button>
+      <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
+    </div>
+    <button class="sb-item" id="sn-tt" onclick="goToTimetable()"><span class="ic">&#128197;</span>Timetable<span id="sn-tt-badge" style="display:none;margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--gM);color:#fff;">COORD</span></button>
+    <button class="sb-item" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
+    <button class="sb-item" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
+  </div>
+  <div class="sb-bottom">
+    <button class="sb-logout-btn" onclick="doLogout('manual', 'success', '7000')" title="Logout">
+      <div class="logout-sign">
+        <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
+      </div>
+      <div class="logout-text">Logout</div>
+    </button>
+  </div>
+</nav>
+
+<div class="mc" id="maincontent">
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:32px;flex-shrink:0;"></div><!-- spacer for fixed toggle btn -->
+    <div style="font-size:11px;color:var(--tmu);background:var(--gLt);padding:4px 12px;border-radius:11px;border:1px solid var(--br);font-weight:500;white-space:nowrap;" id="datelbl"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tb-icon" style="position:relative;" onclick="togNotif()">&#128276;
+      <div class="tb-badge" id="nbadge">0</div>
+      <div class="ndrop" id="ndrop">
+        <div class="ndh"><div class="ndht">Notifications</div><div class="ndhc" onclick="clearNotifs(event)">Mark all read</div></div>
+        <div class="ndl" id="ndlist"></div>
+      </div>
+    </div>
+    <div class="profile-chip" onclick="nav('profile')">
+      <div class="profile-av" id="tpav">T</div>
+      <div><div class="profile-name" id="tpname">Teacher</div><div class="profile-role" id="tpdept">Sri Shakthi</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="pg act" id="pg-dash">
+  <div class="page-hd">
+    <div><div class="page-title" id="dashtit">Dashboard</div><div class="page-sub" id="dashsub">Here's your day at a glance.</div></div>
+    <div class="page-actions">
+      <button class="btn-pri" onclick="nav('att')">&#9989; Take Attendance</button>
+      <button class="btn-out" onclick="nav('sched')">&#128197; My Schedule</button>
+    </div>
+  </div>
+  <!-- ROW 1: Today Schedule | Calendar -->
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:14px;">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:13px;color:var(--tdi);font-weight:700;"></div></div>
+      <div class="card-body" style="padding-top:6px;max-height:320px;overflow-y:auto;" id="todaysched"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes today.</p></div></div>
+    </div>
+    <div class="card" style="aspect-ratio:1;align-self:start;display:flex;flex-direction:column;">
+      <div class="card-hd" style="padding-bottom:6px;flex-shrink:0;margin-bottom:20px;"><div class="card-title">&#128197; Calendar</div></div>
+      <div class="calw" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="calh" style="flex-shrink:0;"><button class="caln" onclick="calNav(-1)">&#8249;</button><div class="calm" id="calmth"></div><button class="caln" onclick="calNav(1)">&#8250;</button></div>
+        <div class="calg" id="calgrid" style="flex:1;grid-auto-rows:1fr;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ROW 2: Attendance Overview | Defaulters -->
+  <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">&#128202; Attendance Overview</div></div>
+      <div class="fwrap" style="padding-top:0;">
+        <div class="fg"><label class="fl">Class</label><select class="fc" id="fc" onchange="renderChart()"><option value="">All</option></select></div>
+        <div class="fg"><label class="fl">Subject</label><select class="fc" id="fs" onchange="renderChart()"><option value="">All</option></select></div>
+        <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="ff" onchange="renderChart()"></div>
+        <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ft" onchange="renderChart()"></div>
+      </div>
+      <div style="display:flex;gap:5px;padding:0 18px 10px;flex-wrap:wrap;">
+        <button class="rpill act" id="rpw" onclick="setRange('week')">This Week</button>
+        <button class="rpill" id="rplw" onclick="setRange('lweek')">Last Week</button>
+        <button class="rpill" id="rpm" onclick="setRange('month')">This Month</button>
+      </div>
+      <div class="bwrap"><div class="bchart" id="bchart"></div></div>
+      <div class="legwrap">
+        <div class="legi"><div class="legd" style="background:var(--gD);"></div>High (&#8805;75%)</div>
+        <div class="legi"><div class="legd" style="background:var(--gL);"></div>Moderate</div>
+        <div class="legi"><div class="legd" style="background:repeating-linear-gradient(135deg,#fecaca 0,#fecaca 3px,#fff5f5 3px,#fff5f5 7px);border:1px solid #fca5a5;"></div>Low</div>
+      </div>
+      <div class="csumwrap">
+        <div class="csbox"><div class="csv" id="csv-p" style="color:var(--gD);">—</div><div class="csl">Avg Present</div></div>
+        <div class="csbox"><div class="csv" id="csv-a" style="color:#ef4444;">—</div><div class="csl">Avg Absent</div></div>
+        <div class="csbox"><div class="csv" id="csv-pct" style="color:var(--gK);">—%</div><div class="csl">Avg %</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">&#128308; Defaulters</div><span id="defcnt" style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#dc2626;padding:2px 8px;border-radius:10px;">0</span></div>
+      <div class="card-body" style="padding-top:0;max-height:360px;overflow-y:auto;" id="defmini"><div class="est"><span class="ei">&#127881;</span><p style="font-size:14px;">No defaulters!</p></div></div>
+      <div style="padding:10px 18px;border-top:1px solid var(--brl);"><button class="btno bsm" style="width:100%;justify-content:center;" onclick="nav('rep-def')">View All &#8594;</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- MY SCHEDULE -->
+<div class="pg" id="pg-sched">
+  <div class="page-hd">
+    <div><div class="page-title">&#128197; My Schedule</div><div class="page-sub">View your week, day, and manage your timetable.</div></div>
+    <div class="page-actions"><button class="btn-pri" onclick="openAddSlot()">&#65291; Add Slot</button></div>
+  </div>
+
+  <!-- Schedule View Tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <button class="sched-tab act" id="stab-week" onclick="switchSchedTab('week')">&#128197; Week View</button>
+    <button class="sched-tab" id="stab-day" onclick="switchSchedTab('day')">&#128336; Day View</button>
+    <button class="sched-tab" id="stab-tt" onclick="switchSchedTab('tt')">&#128203; My Timetable</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;" id="sched-nav-controls">
+      <button class="btno bsm" onclick="schedNav(-1)">&#8249; Prev</button>
+      <div style="font-size:13px;font-weight:700;color:var(--td);min-width:160px;text-align:center;" id="weeklbl">—</div>
+      <button class="btno bsm" onclick="schedNav(1)">Next &#8250;</button>
+      <button class="btnp bsm" onclick="scheduleWeekOffset=0;renderSchedulePage()">Today</button>
+    </div>
+  </div>
+
+  <!-- Week View -->
+  <div id="sched-week-view">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;" id="schedbyday"></div>
+  </div>
+
+  <!-- Day View -->
+  <div id="sched-day-view" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btno bsm" onclick="dayNavStep(-1)">&#8249; Prev Day</button>
+      <div style="font-size:14px;font-weight:700;color:var(--td);min-width:180px;text-align:center;" id="daylbl">—</div>
+      <button class="btno bsm" onclick="dayNavStep(1)">Next Day &#8250;</button>
+      <button class="btnp bsm" onclick="dayOffset=0;renderDayView()">Today</button>
+    </div>
+    <div id="dayschedcont"></div>
+  </div>
+
+  <!-- My Timetable -->
+  <div id="sched-tt-view" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;color:var(--tmu);">Your reference weekly timetable — stored and editable.</div>
+      <button class="btnp bsm" onclick="openAddSlot()">&#65291; Add Slot</button>
+    </div>
+    <div id="tt-grid"></div>
+  </div>
+</div>
+
+<!-- TAKE ATTENDANCE -->
+<div class="pg" id="pg-att">
+  <div class="page-hd"><div><div class="page-title">&#9989; Take Attendance</div><div class="page-sub">Select class and subject to mark attendance.</div></div></div>
+  <div class="asel">
+    <div class="aselrow">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="attcls" onchange="attLoadSubs()"><option value="">— Select —</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="attsub"><option value="">— Select —</option></select></div>
+      <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="attdate"></div>
+      <div class="fg" style="max-width:120px;"><label class="fl">Period</label><select class="fc" id="attperiod"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
+      <button class="btn-pri" onclick="loadAttendanceSheet()">Load Students</button>
+    </div>
+
+  </div>
+  <div id="attsheet" style="display:none;">
+    <div class="ainfobar">
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Class</div><div style="font-size:12.5px;font-weight:700;" id="ainfc">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Subject</div><div style="font-size:12.5px;font-weight:700;" id="ainfs">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Date</div><div style="font-size:12.5px;font-weight:700;" id="ainfd">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Period</div><div style="font-size:12.5px;font-weight:700;" id="ainfp">—</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Students</div><div style="font-size:12.5px;font-weight:700;" id="ainft">—</div></div>
+    </div>
+
+    <div class="asumwrap">
+      <div class="asbox"><div class="asval" id="stotal">0</div><div class="aslbl">Total</div></div>
+      <div class="asbox"><div class="asval" id="spres" style="color:var(--gD);">0</div><div class="aslbl">Present</div></div>
+      <div class="asbox"><div class="asval" id="sabs" style="color:#ef4444;">0</div><div class="aslbl">Absent</div></div>
+    </div>
+    <div id="live-session-panel" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:11px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div>
+        <div style="font-size:13px; font-weight:700; color:#166534;">📡 Live Passcode Session</div>
+        <div style="font-size:11px; color:#15803d; margin-top:2px;">Let students self-mark attendance via the portal.</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;" id="live-session-controls">
+        <button class="btn-pri" onclick="startLiveSession()" style="background:#16a34a;box-shadow:none;">Start Live Session</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btnp bsm" onclick="markAll('present')">&#9989; Mark All Present</button>
+      <button class="btno bsm" onclick="markAll('absent')">&#10060; Mark All Absent</button>
+      <div style="flex:1;"></div>
+      <button class="btn-pri" onclick="submitAtt()">&#128190; Save Attendance</button>
+    </div>
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead><tr><th style="width:50px;">S.No</th><th>Reg No</th><th>Student Name</th><th style="text-align:center;">Present / Absent</th></tr></thead>
+        <tbody id="atttbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE RECORD -->
+<div class="pg" id="pg-rep-att">
+  <div class="page-hd">
+    <div><div class="page-title">&#128203; Attendance Record</div><div class="page-sub">Student-wise attendance for selected date range.</div></div>
+    <button class="btn-out" onclick="exportAttCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="rfc" onchange="renderAttRec()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="rfs" onchange="renderAttRec()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="rff" onchange="renderAttRec()"></div>
+      <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="rft" onchange="renderAttRec()"></div>
+    </div>
+  </div>
+  <div class="card"><div class="tw">
+    <table class="tbl"><thead><tr><th>#</th><th>Student Name</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Total Hours</th><th>Present Hours</th><th>Attendance %</th></tr></thead>
+    <tbody id="attrec"></tbody></table>
+  </div></div>
+</div>
+
+<!-- DEFAULTERS -->
+<div class="pg" id="pg-rep-def">
+  <div class="page-hd">
+    <div><div class="page-title">&#128308; Defaulters List</div><div class="page-sub">Students below attendance threshold.</div></div>
+    <button class="btn-out" onclick="exportDefCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr 1fr;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="dfc" onchange="renderDefs()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Subject</label><select class="fc" id="dfs" onchange="renderDefs()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Threshold</label><select class="fc" id="dfth" onchange="renderDefs()"><option value="75">Below 75%</option><option value="50">Below 50%</option><option value="85">Below 85%</option></select></div>
+    </div>
+  </div>
+  <div class="card"><div class="tw">
+    <table class="tbl"><thead><tr><th>#</th><th>Student</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
+    <tbody id="deftbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- STUDENT LIST -->
+<div class="pg" id="pg-rep-stu">
+  <div class="page-hd">
+    <div><div class="page-title">&#128101; Student List</div><div class="page-sub">Students in your assigned classes.</div></div>
+    <button class="btn-out" onclick="exportStuCSV()">&#8659; Export CSV</button>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr;">
+      <div class="fg"><label class="fl">Class</label><select class="fc" id="slc" onchange="renderStuList()"><option value="">All</option></select></div>
+      <div class="fg"><label class="fl">Search</label><input type="text" class="fc" id="slq" placeholder="Name or Reg No…" oninput="renderStuList()"></div>
+    </div>
+  </div>
+  <div class="card"><div class="tw">
+    <table class="tbl"><thead><tr><th>#</th><th>Name</th><th>Reg No</th><th>Class</th><th>Section</th><th>Department</th></tr></thead>
+    <tbody id="stutbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- GRIEVANCE -->
+<div class="pg" id="pg-griev">
+  <div class="page-hd">
+    <div><div class="page-title">&#128225; Grievance</div><div class="page-sub">Raise a complaint — admin will be notified immediately.</div></div>
+    <button class="btn-pri" onclick="openModal('mgriev')">&#65291; New Grievance</button>
+  </div>
+  <div id="grievlist"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div></div>
+</div>
+
+<!-- PROFILE -->
+<div class="pg" id="pg-profile">
+  <div class="page-hd"><div><div class="page-title">&#128100; My Profile</div><div class="page-sub">View your details and update your password.</div></div></div>
+  <div class="profile-page" id="profile-content">
+    <div class="prof-hero">
+      <div class="prof-hero-av" id="profav">T</div>
+      <div class="prof-hero-info">
+        <div class="prof-hero-name" id="profname">—</div>
+        <div class="prof-hero-reg" id="pdrdesig">—</div>
+        <div class="prof-hero-tags">
+          <span class="prof-hero-tag">Faculty</span>
+          <span class="prof-hero-tag rep" id="prof-hod-tag" style="display:none;">HOD</span>
+        </div>
+      </div>
+    </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🪪 Identity Information</div></div>
+      <div class="prof-section-body">
+        <div class="fields-grid">
+          <div class="field-group"><div class="field-label">Employee ID</div><div class="field-val" id="pdremp">—</div></div>
+          <div class="field-group"><div class="field-label">Username</div><div class="field-val" id="pdrusr">—</div></div>
+          <div class="field-group"><div class="field-label">Email</div><div class="field-val" id="pdremail">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🎓 Roles &amp; Academic Details</div></div>
+      <div class="prof-section-body">
+        <div class="fields-grid">
+          <div class="field-group"><div class="field-label">Department</div><div class="field-val" id="pdrdept">—</div></div>
+          <div class="field-group"><div class="field-label">Assigned Classes</div><div class="field-val" id="pdrcls">—</div></div>
+          <div class="field-group"><div class="field-label">HOD</div><div id="pdrhod"></div></div>
+          <div class="field-group"><div class="field-label">Class Advisor</div><div id="pdrclassadv"></div></div>
+          <div class="field-group"><div class="field-label">Timetable Coordinator</div><div id="pdrttcoord"></div></div>
+          <div class="field-group"><div class="field-label">Admin Rights</div><div id="pdradmin"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">🔐 Change Password</div></div>
+      <div class="prof-section-body">
+        <div id="pwerr" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:9px 13px;font-size:12px;color:#dc2626;margin-bottom:12px;"></div>
+        <div class="chpw-grid">
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="fl">Current Password</label>
+            <input type="password" class="fc2" id="pwcur" placeholder="Current password">
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="fl">New Password</label>
+            <input type="password" class="fc2" id="pwnew" placeholder="Min 6 characters">
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="fl">Confirm New Password</label>
+            <input type="password" class="fc2" id="pwconf" placeholder="Re-enter new password">
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn-form-pri" onclick="changePw()" style="padding:10px 28px;">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></div>
+
+<!-- MODAL: Schedule Slot -->
+<div class="modal-bg" id="msched">
+  <div class="modal msm">
+    <div class="modal-hd"><div><div class="modal-title" id="mschedtit">&#10133; Add Schedule Slot</div><div class="modal-sub">Add a slot to your weekly timetable.</div></div><button class="modal-close" onclick="closeModal('msched')">☰;</button></div>
+    <div class="mbody">
+      <input type="hidden" id="schedeid">
+      <div class="fr fr2">
+        <div><label class="fl">Class</label><select class="fc2" id="schedcls" onchange="populateSchedSubs()"><option value="">— Select —</option></select></div>
+        <div><label class="fl">Subject</label><select class="fc2" id="schedsub"><option value="">— Select —</option></select></div>
+      </div>
+      <div class="fr fr3">
+        <div><label class="fl">Day</label><select class="fc2" id="schedday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></div>
+        <div><label class="fl">Start</label><input type="time" class="fc2" id="schedst" value="08:00"></div>
+        <div><label class="fl">End</label><input type="time" class="fc2" id="schedet" value="09:00"></div>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn-form-ghost" onclick="closeModal('msched')">Cancel</button><button class="btn-form-pri" onclick="saveSlot()">Save Slot</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Grievance -->
+<div class="modal-bg" id="mgriev">
+  <div class="modal msm">
+    <div class="modal-hd"><div><div class="modal-title">&#128225; Raise Grievance</div><div class="modal-sub">Admin will be notified immediately.</div></div><button class="modal-close" onclick="closeModal('mgriev')">✖</button></div>
+    <div class="mbody">
+      <div style="margin-bottom:14px;"><label class="fl">Title / Subject</label><input type="text" class="fc2" id="gsubj" placeholder="Brief title of the issue"></div>
+      <div style="margin-bottom:14px;"><label class="fl">Category</label><select class="fc2" id="gcat"><option>Timetable Issue</option><option>Attendance Correction</option><option>Facilities / Infrastructure</option><option>Student Behaviour</option><option>Administrative</option><option>Other</option></select></div>
+      <div><label class="fl">Details</label><textarea class="fc2" id="gdetail" rows="4" placeholder="Describe the issue in detail…"></textarea></div>
+    </div>
+    <div class="modal-actions"><button class="btn-form-ghost" onclick="closeModal('mgriev')">Cancel</button><button class="btn-form-pri" onclick="submitGriev()">&#128228; Submit</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<div id="db-toast"></div>
+
+<div id="msg-toast">
+  <div id="msg-toast-bar"></div>
+  <div id="msg-toast-text"></div>
+  <button id="msg-toast-close" onclick="hideMsgToast()">✕</button>
+</div>
+
+<script src="js/core/session.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/toast.js"></script>
+<script src="js/core/modal.js"></script>
+<script src="js/pages/teacher.page.js"></script>
+
+<!-- ═══ FORCE CHANGE PASSWORD POPUP ═══════════════════════════════════════ -->
+<div id="forcePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:2.2rem;margin-bottom:8px;">🔐</div>
+    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Your Password</h2>
+    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">You are using the default password. Please set a new password to continue.</p>
+    <div id="forcePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <input id="forcePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="forcePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="forcePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
+    <button onclick="submitForcePw()" style="width:100%;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update Password</button>
+  </div>
+</div>
+
+<!-- ═══ OPTIONAL CHANGE PASSWORD POPUP ════════════════════════════════════ -->
+<div id="changePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">🔑</div>
+    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Password</h2>
+    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">Enter your current password and choose a new one.</p>
+    <div id="changePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <div id="changePwOk"  style="display:none;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <input id="changePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="changePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
+    <input id="changePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeChangePwModal()" style="flex:1;padding:12px;background:#f5f5f5;color:#333;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">Cancel</button>
+      <button onclick="submitChangePw()" style="flex:1;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,17 +1,47 @@
+## 🔹 `v2.2.10.1` — 19 July 2026 *(Uncomplete Push)*
+
+### *V1 Changes of Frontend Restructure*
+
+ *Soon Log Updated*
+
+
 ## 🔹 `v2.2.9` — 18 July 2026 *(Performance Improvement Update)*
+
+### `Total 46 Files changed and updated in v2.2.10.1`
+
+----------------------------------
 
 ### *V1 Changes of Performance Improvement*
 
--	Frontend restructure (split files)	Out of scope — target monolithic admin.html as it exists on GitHub
--	"Show List" gating fields (Students page)	Year + Batch + Dept required. Course Type is an optional refine, not required to enable the button
--	Teacher ↔ Department relationship	Add a real deptId ObjectId ref to TeacherSchema (replacing reliance on the free-text department string)
--	Fetch timeout ("time-cut")	8 seconds, applied to every fetch everywhere
--	Log.time never-populated bug + year.routes.js dead route	Fix both, as part of this pass
--	Dropdown filter changes (Students page)	Never auto-refetch — only an explicit Show List click re-queries. Load More continues the same query
--	Class-card student counts (Classes & Subjects page)	Keep them, but computed via server-side aggregation, not the current client-side full-array scan
--	Teacher→Dept migration	Proceed directly against the live DB, no pre-check report first
--	Students-page search box	Independent of Show List — auto-filters live (exact mechanism below, flagged as an assumption in §7)
--	Students-page column sort	New requirement (Windows-Explorer style): clicking Name / Register No. column headers sorts the list
+- **Frontend (`admin.html`, `teacher.html`)**
+    - Dashboard: split init into fast path + deferred widgets (attendance-overview, defaulters, unmarked-teachers) with `AbortController` 8s timeout & per-widget retry.
+    - Students: cascade filter (year → batch → dept → class → section), Show List always enabled, default sort by `regNo`, limit=65, client-side live search, column sort triggers server re-fetch.
+    - Teachers: dept dropdown uses `_id`, GET filtered by `?deptId=` param.
+    - Reports/Analytics: date range gate on all three report generators.
+    - Activity Logs: cursor-based pagination (initial 50, Load More via `?before=`), switched to `_logData` array instead of `DB.get('logs')`.
+    - Classes/Subjects: `openCD` uses roster mode (`?classId=X&roster=1`), `studentCount` shown from server-side aggregation.
+    - ETA: dropped localStorage history persistence; now computed live from current-session task durations.
+
+- **Backend (`routes/*.js`)**
+    - `students.routes.js`: response shape changed to `{data, total, page, hasMore}`, academic year format auto-conversion (`2025-2026` → `2025-26`).
+    - `logs.routes.js`: sort/filter/cursor uses `createdAt` instead of `time`.
+    - `teachers.routes.js`: GET supports `?deptId` (ObjectId) and `?dept` (code).
+    - `attendance.routes.js`: filter-required guard + selective student query (only referenced `studentTrackId`s).
+    - `dashboard.routes.js`: `/summary` wrapped in try/catch.
+
+- **Database Models (`models/*.js`)**
+    - Added 14 indexes across Student, Teacher, Class, Subject, Assignment, Log schemas.
+    - TeacherSchema: added `deptId` and `deptCode` fields.
+    - LogSchema: added `{createdAt: -1}` index.
+
+- **Migration (`scripts/backfillTeacherDeptId.js`)**
+    - One-shot migration that matches `Teacher.department` (case-insensitive) against `Department.name/code/threeLetterCode` and sets `deptId`+`deptCode`.
+
+- **Utilities (`utils/logAction.js`, `start.js`)**
+    - `logAction` fixes for new field names.
+    - `start.js`: `addTeacher`/`addAdmin`/`addStudent` now create `User` entries; `_demoTeachers` sets `deptId`/`deptCode`; removed `password` from User.create params.
+
+*Still multiple bugs and fixes to be made. Cureently version 1 of improvement is done*
 
 ### `Total 19 Files changed and updated in v2.2.9`
 

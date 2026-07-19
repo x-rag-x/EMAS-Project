@@ -26,7 +26,7 @@ app.use(helmet({
 }));
 app.use(cors({origin: cfg.CORS_ORIGIN,credentials: true}));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 startSessionMonitor();
 app.use('/api', require('./routes/index'));

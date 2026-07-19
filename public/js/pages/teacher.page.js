@@ -1,738 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EAMS – Teacher | Sri Shakthi</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<style>
-:root{--gD:#1b5e20;--gK:#2e7d32;--gM:#388e3c;--gB:#4caf50;--gL:#66bb6a;--gLr:#a5d6a7;--gLt:#e8f5e9;--gP:#f4f7f4;--red:#ef4444;--td:#1a2e1a;--tmu:#5a7a5a;--tdi:#8aab8a;--br:rgba(27,94,32,0.1);--brl:rgba(27,94,32,0.06);--shd:0 8px 32px rgba(0,0,0,0.08);--sb-w:240px;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Poppins',sans-serif;background:var(--gP);color:var(--td);min-height:100vh;display:flex;}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--gLr);border-radius:4px}
-
-.sb{width:var(--sb-w);background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:200;transition:transform .28s ease;}
-.sb.sb-hidden{transform:translateX(-100%);}
-.sb-toggle-btn{position:fixed;top:14px;left:252px;z-index:300;width:32px;height:32px;border-radius:50%;background:var(--gD);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(27,94,32,.3);transition:left .28s ease;line-height:1;}
-.sb-toggle-btn.closed{left:12px;}
-.mc{transition:margin-left .28s ease;}
-.mc.sb-expanded{margin-left:0!important;}
-.sb-logo{padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brl);}
-.sb-logomark{width:36px;height:36px;border:2.5px solid var(--gD);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
-.sb-brand{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--td);line-height:1.3;}
-.sb-brand small{display:block;font-family:'Poppins',sans-serif;font-size:9.5px;font-weight:400;color:var(--tdi);}
-.si{display:flex;align-items:center;gap:10px;padding:11px 14px 11px 16px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:14.5px;font-weight:500;color:var(--tmu);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:all .18s;}
-.si:hover{background:var(--gLt);color:var(--gK);}
-.si.act{background:var(--gLt);color:var(--gD);font-weight:700;border-left:3px solid var(--gD);border-radius:0 10px 10px 0;padding-left:13px;}
-.si .ic{width:22px;text-align:center;font-size:17px;flex-shrink:0;}
-.ss{display:flex;align-items:center;gap:9px;padding:9px 14px 9px 50px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tdi);border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:'Poppins',sans-serif;transition:all .18s;}
-.ss:hover{background:var(--gLt);color:var(--gK);}
-.ss.act{color:var(--gD);font-weight:700;background:rgba(76,175,80,.06);}
-.navs{flex:1;overflow-y:auto;padding:8px 0;}
-.sb-bot{padding:12px;border-top:1px solid var(--brl);}
-/* ── ANIMATED LOGOUT BUTTON ─────────────────────── */
-.sb-logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 45px;
-  height: 45px;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: width .3s ease, border-radius .3s ease;
-  box-shadow: 2px 2px 10px rgba(239, 68, 68, .25);
-  background-color: #ff4141;
-  margin: 0 auto;
-  padding: 0;
-  flex-shrink: 0;
-}
-.sb-logout-btn .logout-sign {
-  width: 100%;
-  transition: width .3s, padding .3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.sb-logout-btn .logout-sign svg { width: 17px; flex-shrink: 0; }
-.sb-logout-btn .logout-sign svg path { fill: white; }
-.sb-logout-btn .logout-text {
-  position: absolute;
-  right: 0;
-  width: 0;
-  opacity: 0;
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  transition: opacity .3s, width .3s, padding .3s;
-  white-space: nowrap;
-  font-family: 'Poppins', sans-serif;
-  overflow: hidden;
-}
-.sb-logout-btn:hover { width: 130px; border-radius: 40px; }
-.sb-logout-btn:hover .logout-sign { width: 35%; padding-left: 18px; }
-.sb-logout-btn:hover .logout-text { opacity: 1; width: 65%; padding-right: 12px; }
-.sb-logout-btn:active { transform: translate(2px, 2px); }
-.mc{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
-#app{display:none;width:100%;}#app.vis{display:flex;}
-.topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.tbic{width:36px;height:36px;border-radius:50%;background:#fff;border:1.5px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;position:relative;}
-.tbic:hover{background:var(--gLt);}
-.tbbadge{position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-.pchip{display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 12px 4px 4px;border-radius:28px;border:1.5px solid var(--br);background:#fff;}
-.pchip:hover{background:var(--gLt);border-color:var(--gLr);}
-.pav{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c8e6c9,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gD);}
-.pn{font-size:12px;font-weight:700;color:var(--td);}
-.pe{font-size:10px;color:var(--tmu);}
-.ndrop{position:absolute;top:46px;right:0;width:320px;background:#fff;border:1px solid var(--br);border-radius:16px;box-shadow:var(--shd);z-index:500;display:none;}
-.ndrop.open{display:block;}
-.ndh{padding:12px 16px;border-bottom:1px solid var(--brl);display:flex;align-items:center;justify-content:space-between;}
-.ndht{font-size:13px;font-weight:700;color:var(--td);}
-.ndhc{font-size:11px;color:var(--gK);cursor:pointer;font-weight:600;}
-.ndl{max-height:300px;overflow-y:auto;}
-.ndi{padding:10px 14px;border-bottom:1px solid var(--brl);cursor:pointer;display:flex;gap:9px;}
-.ndi:hover{background:var(--gP);}
-.ndi.unread{background:#f0fdf4;}
-.ndic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--gLt);}
-.pg{display:none;padding:22px 24px;animation:pi .28s ease;}
-.pg.act{display:block;}
-@keyframes pi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
-.phd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.sched-tab{padding:7px 16px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--br);color:var(--tmu);background:#fff;transition:all .2s;font-family:'Poppins',sans-serif;}
-.sched-tab:hover{border-color:var(--gLr);background:var(--gLt);color:var(--gD);}
-.sched-tab.act{background:var(--gD);border-color:var(--gD);color:#fff;}
-.tt-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--br);}
-.tt-table th{background:var(--gD);color:#fff;font-size:12px;font-weight:700;padding:10px 14px;text-align:left;}
-.tt-table td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--brl);vertical-align:top;}
-.tt-table tr:last-child td{border-bottom:none;}
-.tt-table tr:hover td{background:var(--gLt);}
-.tt-slot-pill{display:inline-block;background:var(--gLt);border:1px solid var(--gLr);border-radius:8px;padding:3px 9px;font-size:11px;margin:2px 2px 2px 0;color:var(--gD);font-weight:600;}
-.day-slot-card{background:#fff;border:1.5px solid var(--br);border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:16px;}
-.day-slot-card.today-slot{border-color:var(--gM);box-shadow:0 3px 14px rgba(27,94,32,.12);}
-.day-time-col{min-width:90px;text-align:center;background:var(--gP);border-radius:10px;padding:8px;font-size:11.5px;font-weight:700;color:var(--gK);}
-.day-empty{text-align:center;padding:48px 0;color:var(--tdi);font-size:13px;}
-.pt{font-size:25px;font-weight:800;color:var(--td);letter-spacing:-.5px;}
-.ps{font-size:12px;color:var(--tmu);margin-top:3px;}
-.pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.btnp{background:var(--gD);color:#fff;border:none;border-radius:22px;padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(27,94,32,.22);}
-.btnp:hover{background:var(--gM);}
-.btno{background:#fff;color:var(--td);border:1.5px solid #cdd8cd;border-radius:22px;padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:6px;}
-.btno:hover{border-color:var(--gLr);background:var(--gLt);}
-.bsm{padding:5px 12px!important;font-size:11.5px!important;border-radius:14px!important;}
-.card{background:#fff;border-radius:18px;border:1px solid var(--br);overflow:hidden;}
-.chd{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 11px;}
-.ct{font-size:13.5px;font-weight:700;color:var(--td);}
-.cb{padding:0 18px 16px;}
-.scard{background:#fff;border-radius:12px;border:1px solid var(--br);padding:12px 14px;display:flex;align-items:center;gap:11px;margin-bottom:8px;}
-.scard:hover{border-color:var(--gLr);}
-.scard.uc{border-left:3px solid var(--gB);}
-.scard.dn{opacity:.58;}
-.stb{background:var(--gLt);border:1.5px solid var(--gLr);border-radius:9px;padding:5px 8px;text-align:center;flex-shrink:0;min-width:52px;}
-.stb .t{font-size:10.5px;font-weight:700;color:var(--gK);}
-.stb .d{font-size:9px;color:var(--tdi);display:block;}
-.sinfo{flex:1;min-width:0;}
-.scls{font-size:12.5px;font-weight:700;color:var(--td);}
-.ssub{font-size:11px;color:var(--tmu);margin-top:1px;}
-.attbtn{background:var(--gD);color:#fff;border:none;border-radius:11px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;flex-shrink:0;}
-.attbtn:hover{background:var(--gM);}
-.donetag{background:var(--gLt);color:var(--gK);padding:4px 10px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;}
-.fwrap{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;padding:0 18px 12px;}
-.fg{display:flex;flex-direction:column;gap:3px;}
-.fl{font-size:11px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.7px;}
-.fc{background:var(--gP);border:1.5px solid var(--br);border-radius:8px;padding:6px 9px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;}
-.fc:focus{border-color:var(--gM);}
-.bwrap{padding:12px 18px 6px;height:160px;}
-.bchart{display:flex;align-items:flex-end;gap:8px;height:145px;}
-.bcol{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
-.bout{width:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative;}
-.bpct{position:absolute;top:-17px;font-size:9px;font-weight:700;color:var(--gK);}
-.bpill{width:100%;max-width:28px;border-radius:26px 26px 6px 6px;}
-.bpill.hi{background:var(--gD);}
-.bpill.mi{background:var(--gL);}
-.bpill.lo{background:repeating-linear-gradient(135deg,#fecaca 0,#fecaca 4px,#fff5f5 4px,#fff5f5 10px);border:1.5px dashed #fca5a5;}
-.bday{font-size:9.5px;font-weight:600;color:var(--tmu);}
-.bday.td{color:var(--gK);font-weight:800;}
-.legwrap{display:flex;gap:12px;padding:0 18px 12px;flex-wrap:wrap;}
-.legi{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tmu);}
-.legd{width:9px;height:9px;border-radius:3px;}
-.csumwrap{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 14px;}
-.csbox{background:var(--gP);border-radius:9px;padding:9px 12px;text-align:center;}
-.csv{font-size:19px;font-weight:800;}
-.csl{font-size:9.5px;color:var(--tmu);text-transform:uppercase;margin-top:1px;}
-.rpill{padding:4px 12px;border-radius:18px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--br);color:var(--tmu);background:#fff;font-family:'Poppins',sans-serif;}
-.rpill.act{background:var(--gD);border-color:var(--gD);color:#fff;}
-.calw{padding:0 14px 14px;}
-.calh{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;}
-.calm{font-size:12.5px;font-weight:700;color:var(--td);}
-.caln{background:none;border:1.5px solid var(--br);border-radius:7px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:'Poppins',sans-serif;}
-.caln:hover{background:var(--gLt);}
-.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.caldow{text-align:center;font-size:8.5px;font-weight:700;color:var(--tdi);padding:3px 0;text-transform:uppercase;}
-.cday{text-align:center;font-size:10.5px;font-weight:500;color:var(--tmu);padding:5px 1px;border-radius:6px;cursor:pointer;position:relative;}
-.cday:hover{background:var(--gLt);color:var(--gK);}
-.cday.today{background:var(--gD);color:#fff;font-weight:700;}
-.cday.sel{background:var(--gLt);color:var(--gD);font-weight:700;border:1.5px solid var(--gLr);}
-.cday.hc::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--gB);}
-.cday.today::after{background:rgba(255,255,255,.7);}
-.cday.emp{opacity:.2;cursor:default;}
-.cday.wknd{color:var(--tdi);}
-.uccard{background:linear-gradient(135deg,var(--gD),#2d6a30);border-radius:15px;padding:15px;color:#fff;position:relative;overflow:hidden;}
-.uccard::before{content:'';position:absolute;top:-22px;right:-22px;width:80px;height:80px;background:rgba(255,255,255,.06);border-radius:50%;}
-.uclbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;opacity:.7;margin-bottom:5px;}
-.uctime{font-size:18px;font-weight:800;}
-.ucsub{font-size:12px;font-weight:600;margin-top:2px;opacity:.9;}
-.uccls{font-size:10px;opacity:.65;margin-top:2px;}
-.uccnt{background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;display:inline-block;margin-top:8px;}
-.defrow{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(239,68,68,.04);border-radius:10px;margin-bottom:5px;border:1px solid rgba(239,68,68,.09);}
-.defav{width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,.14);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#dc2626;flex-shrink:0;}
-.asel{background:var(--gLt);border-radius:14px;padding:15px;border:1.5px solid var(--gLr);margin-bottom:14px;}
-.aselrow{display:grid;grid-template-columns:1fr 1fr 1fr 0.5fr auto;gap:10px;align-items:end;}
-.ainfobar{background:var(--gP);border-radius:11px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border:1px solid var(--br);flex-wrap:wrap;gap:8px;}
-.asumwrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
-.asbox{background:#fff;border-radius:11px;padding:10px 12px;text-align:center;border:1px solid var(--br);}
-.asval{font-size:21px;font-weight:800;}
-.aslbl{font-size:9.5px;color:var(--tmu);text-transform:uppercase;}
-.atbl{width:100%;border-collapse:collapse;}
-.atbl th{text-align:left;padding:9px 12px;font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;background:var(--gP);border-bottom:1.5px solid var(--brl);}
-.atbl td{padding:9px 12px;border-bottom:1px solid var(--brl);font-size:12.5px;color:var(--td);}
-.atbl tr:last-child td{border-bottom:none;}
-.atbl tr.pr td{background:rgba(76,175,80,.04);}
-.atbl tr.ab td{background:rgba(239,68,68,.03);}
-.attog{display:flex;gap:4px;justify-content:center;}
-.abp{padding:4px 11px;border-radius:10px;border:1.5px solid rgba(76,175,80,.35);background:transparent;color:var(--gK);font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
-.abp.act{background:var(--gD);border-color:var(--gD);color:#fff;}
-.aba{padding:4px 11px;border-radius:10px;border:1.5px solid rgba(239,68,68,.3);background:transparent;color:#dc2626;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
-.aba.act{background:#dc2626;border-color:#dc2626;color:#fff;}
-.rtwrap{overflow-x:auto;padding:0 18px 18px;}
-.rtbl{width:100%;border-collapse:collapse;font-size:12px;}
-.rtbl th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid var(--brl);background:var(--gP);}
-.rtbl td{padding:9px 10px;border-bottom:1px solid var(--brl);color:var(--td);}
-.rtbl tr:hover td{background:var(--gP);}
-.rtbl tr:last-child td{border-bottom:none;}
-.pb{padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;}
-.ph{background:rgba(76,175,80,.12);color:var(--gK);}
-.pm{background:rgba(245,158,11,.1);color:#b45309;}
-.pl{background:rgba(239,68,68,.1);color:#dc2626;}
-.wdblk{background:#fff;border-radius:14px;border:1px solid var(--br);overflow:hidden;height:fit-content;}.wdblk.today-col{border:2px solid var(--gM);box-shadow:0 4px 16px rgba(27,94,32,.12);}
-.wdhd{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--brl);background:var(--gP);}
-.wdnm{font-size:13px;font-weight:700;color:var(--td);}
-.wddt{font-size:11px;color:var(--tdi);background:#fff;padding:2px 8px;border-radius:7px;border:1px solid var(--brl);}
-.wdtd{font-size:9px;font-weight:700;color:var(--gK);background:var(--gLt);padding:2px 8px;border-radius:10px;border:1px solid var(--gLr);}
-.wdslots{padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
-.slotc{background:var(--gP);border-radius:11px;border:1px solid var(--brl);padding:11px 13px;display:flex;align-items:center;gap:11px;}
-.slotc:hover{border-color:var(--gLr);background:var(--gLt);}
-.slott{font-size:11px;font-weight:700;color:var(--gK);background:#fff;padding:4px 8px;border-radius:8px;border:1.5px solid var(--gLr);text-align:center;min-width:70px;flex-shrink:0;line-height:1.4;}
-.sloti{flex:1;min-width:0;}
-.slotcl{font-size:12.5px;font-weight:700;color:var(--td);}
-.slotsb{font-size:11px;color:var(--tmu);}
-.slota{display:flex;gap:5px;flex-shrink:0;align-items:center;}
-.mbg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
-.mbg.open{opacity:1;pointer-events:all;}
-.modal{background:#fff;border-radius:22px;width:500px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,.2);transform:scale(.95);transition:transform .22s;}
-.mbg.open .modal{transform:scale(1);}
-.msm{width:420px;}
-.mhd{padding:18px 22px;border-bottom:1px solid var(--brl);display:flex;align-items:flex-start;justify-content:space-between;}
-.mtit{font-size:16px;font-weight:700;color:var(--td);}
-.msub{font-size:11px;color:var(--tmu);margin-top:2px;}
-.mclose{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:var(--tmu);flex-shrink:0;margin-left:8px;border:none;background:none;}
-.mclose:hover{background:var(--gP);}
-.mbody{padding:20px 22px;overflow-y:auto;flex:1;}
-.mfoot{padding:14px 22px;border-top:1px solid var(--brl);display:flex;justify-content:flex-end;gap:8px;}
-.mfp{background:var(--gD);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
-.mfp:hover{background:var(--gM);}
-.mfg{background:var(--gP);color:var(--tmu);border:1px solid var(--br);border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
-.flbl{font-size:10.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
-.finp{background:var(--gP);border:1.5px solid var(--br);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Poppins',sans-serif;color:var(--td);outline:none;width:100%;}
-.finp:focus{border-color:var(--gM);}
-textarea.finp{resize:vertical;min-height:80px;}
-.fr{display:grid;gap:12px;margin-bottom:14px;}
-.fr2{grid-template-columns:1fr 1fr;}
-.fr3{grid-template-columns:1fr 1fr 1fr;}
-.prbav{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--gM),var(--gL));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;margin:0 auto 12px;}
-.pdrcard{background:var(--gP);border-radius:12px;padding:14px;border:1px solid var(--brl);margin-bottom:14px;}
-.pdrrow{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--brl);}
-.pdrrow:last-child{border-bottom:none;}
-.pdric{width:30px;height:30px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--br);}
-.pdrlbl{font-size:9.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;}
-.pdrval{font-size:12.5px;font-weight:600;color:var(--td);margin-top:1px;}
-.gcard{background:#fff;border-radius:13px;border:1px solid var(--br);padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;}
-.gic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.gic.pend{background:rgba(245,158,11,.12);}
-.gic.res{background:rgba(76,175,80,.12);}
-.spill{padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;}
-.spend{background:rgba(245,158,11,.1);color:#b45309;}
-.sres{background:rgba(76,175,80,.1);color:var(--gK);}
-.bge{padding:2px 9px;border-radius:10px;font-size:10px;font-weight:600;display:inline-block;background:rgba(245,158,11,.1);color:#b45309;}
-.toast{position:fixed;bottom:24px;right:24px;background:#fff;border:1px solid var(--br);border-left:4px solid var(--gM);border-radius:12px;padding:12px 18px;font-size:12.5px;color:var(--td);box-shadow:var(--shd);z-index:9999;transform:translateY(70px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);max-width:320px;}
-.toast.show{transform:none;opacity:1;}
-.est{text-align:center;padding:28px 16px;color:var(--tdi);}
-.est .ei{font-size:32px;display:block;margin-bottom:8px;}
-
-/* ══════════════════════════════════════════
-   MY PROFILE PAGE STYLES
-══════════════════════════════════════════ */
-.profile-page{max-width:960px;margin:0 auto;padding:0;}
-.prof-hero{
-  background:linear-gradient(140deg,var(--gD) 0%,#2e7d32 55%,#388e3c 100%);
-  border-radius:22px;padding:28px;
-  display:flex;align-items:center;gap:20px;
-  margin-bottom:22px;position:relative;overflow:hidden;
-}
-.prof-hero::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07);}
-.prof-hero::after{content:'';position:absolute;bottom:-30px;left:50%;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05);}
-.prof-hero-av{
-  width:80px;height:80px;border-radius:50%;flex-shrink:0;
-  background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.4);
-  display:flex;align-items:center;justify-content:center;
-  font-size:30px;font-weight:800;color:#fff;
-  position:relative;z-index:1;
-}
-.prof-hero-info{flex:1;position:relative;z-index:1;}
-.prof-hero-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;}
-.prof-hero-reg{font-size:12px;color:rgba(255,255,255,.7);margin-bottom:8px;}
-.prof-hero-tags{display:flex;gap:7px;flex-wrap:wrap;}
-.prof-hero-tag{font-size:10.5px;font-weight:600;padding:3px 11px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
-.prof-hero-tag.rep{background:rgba(250,204,21,.25);color:#fde68a;}
-
-.prof-section{background:#fff;border-radius:18px;border:1px solid var(--br);overflow:hidden;margin-bottom:18px;}
-.prof-section-hd{
-  padding:14px 20px 12px;border-bottom:1px solid var(--brl);
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-}
-.prof-section-title{font-size:15.5px;font-weight:700;color:var(--td);display:flex;align-items:center;gap:8px;}
-.prof-section-body{padding:18px 20px;}
-
-.fields-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-.field-group{display:flex;flex-direction:column;gap:4px;}
-.field-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tdi);}
-.field-val{font-size:13px;font-weight:600;color:var(--td);}
-.field-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
-.fb-yes{background:rgba(76,175,80,.12);color:var(--gK);}
-.fb-no{background:#f3f4f6;color:#6b7280;}
-
-.chpw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-
-/* ── RESPONSIVE MOBILE ─────────────────────── */
-@media (max-width:768px){
-  :root{--sb-w:0px;}
-  .sb{transform:translateX(-100%);}
-  .sb.sb-mobile-open{transform:translateX(0);width:240px;}
-  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:199;}
-  .sb-overlay.visible{display:block;}
-  .mc{margin-left:0!important;}
-  .sb-toggle-btn{left:12px!important;}
-  .sb-toggle-btn.closed{left:12px;}
-  .topbar{padding-left:56px!important;}
-  .phd{flex-direction:column;gap:8px;}
-  .phd .pa{width:100%;}
-  .wdblk{min-width:0;}
-  #schedbyday{grid-template-columns:1fr!important;}
-  .day-slot-card{flex-wrap:wrap;gap:10px;}
-  .stats-row,
-  [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
-  [style*="grid-template-columns:1fr 1fr 1fr"],
-  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr 1fr!important;}
-}
-@media (max-width:480px){
-  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}
-  .pchip .pe{display:none;}
-  .sched-tab{padding:5px 10px;font-size:11px;}
-}
-body{-webkit-user-select:none;user-select:none;}
-</style>
-</head>
-<body>
-
-<!-- APP -->
-<div id="app">
-<div class="sb-overlay" id="sb-overlay-t" onclick="toggleSidebar()"></div>
-<button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle menu">✖</button>
-<nav class="sb" id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-brand">Sri Shakthi EAMS<small>Teacher Portal</small></div>
-  </div>
-  <div class="navs">
-    <button class="si act" id="sn-dash" onclick="nav('dash')"><span class="ic">&#128202;</span>Dashboard</button>
-    <button class="si" id="sn-sched" onclick="nav('sched')"><span class="ic">&#128197;</span>My Schedule</button>
-    <button class="si" id="sn-att" onclick="nav('att')"><span class="ic">&#9989;</span>Take Attendance</button>
-    <button class="si" style="cursor:default;color:var(--td);font-weight:600;pointer-events:none;"><span class="ic">&#128200;</span>Report</button>
-    <div style="overflow:hidden;">
-      <button class="ss" id="sn-stu" onclick="nav('rep-stu')">&#128101; Student List</button>
-      <button class="ss" id="sn-ratt" onclick="nav('rep-att')">&#128203; Attendance Record</button>
-      <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
-    </div>
-    <button class="si" id="sn-tt" onclick="goToTimetable()"><span class="ic">&#128197;</span>Timetable<span id="sn-tt-badge" style="display:none;margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--gM);color:#fff;">COORD</span></button>
-    <button class="si" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
-    <button class="si" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
-  </div>
-  <div class="sb-bot">
-    <button class="sb-logout-btn" onclick="doLogout('manual', 'success', '7000')" title="Logout">
-      <div class="logout-sign">
-        <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
-      </div>
-      <div class="logout-text">Logout</div>
-    </button>
-  </div>
-</nav>
-
-<div class="mc" id="maincontent">
-<!-- TOPBAR -->
-<div class="topbar">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div style="width:32px;flex-shrink:0;"></div><!-- spacer for fixed toggle btn -->
-    <div style="font-size:11px;color:var(--tmu);background:var(--gLt);padding:4px 12px;border-radius:11px;border:1px solid var(--br);font-weight:500;white-space:nowrap;" id="datelbl"></div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div class="tbic" style="position:relative;" onclick="togNotif()">&#128276;
-      <div class="tbbadge" id="nbadge">0</div>
-      <div class="ndrop" id="ndrop">
-        <div class="ndh"><div class="ndht">Notifications</div><div class="ndhc" onclick="clearNotifs(event)">Mark all read</div></div>
-        <div class="ndl" id="ndlist"></div>
-      </div>
-    </div>
-    <div class="pchip" onclick="nav('profile')">
-      <div class="pav" id="tpav">T</div>
-      <div><div class="pn" id="tpname">Teacher</div><div class="pe" id="tpdept">Sri Shakthi</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- DASHBOARD -->
-<div class="pg act" id="pg-dash">
-  <div class="phd">
-    <div><div class="pt" id="dashtit">Dashboard</div><div class="ps" id="dashsub">Here's your day at a glance.</div></div>
-    <div class="pa">
-      <button class="btnp" onclick="nav('att')">&#9989; Take Attendance</button>
-      <button class="btno" onclick="nav('sched')">&#128197; My Schedule</button>
-    </div>
-  </div>
-  <!-- ROW 1: Today Schedule | Calendar -->
-  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:14px;">
-    <div class="card">
-      <div class="chd"><div class="ct">&#128336; Today's Schedule</div><div id="todaylbl" style="font-size:13px;color:var(--tdi);font-weight:700;"></div></div>
-      <div class="cb" style="padding-top:6px;max-height:320px;overflow-y:auto;" id="todaysched"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No classes today.</p></div></div>
-    </div>
-    <div class="card" style="aspect-ratio:1;align-self:start;display:flex;flex-direction:column;">
-      <div class="chd" style="padding-bottom:6px;flex-shrink:0;margin-bottom:20px;"><div class="ct">&#128197; Calendar</div></div>
-      <div class="calw" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-        <div class="calh" style="flex-shrink:0;"><button class="caln" onclick="calNav(-1)">&#8249;</button><div class="calm" id="calmth"></div><button class="caln" onclick="calNav(1)">&#8250;</button></div>
-        <div class="calg" id="calgrid" style="flex:1;grid-auto-rows:1fr;"></div>
-      </div>
-    </div>
-  </div>
-  <!-- ROW 2: Attendance Overview | Defaulters -->
-  <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;">
-    <div class="card">
-      <div class="chd"><div class="ct">&#128202; Attendance Overview</div></div>
-      <div class="fwrap" style="padding-top:0;">
-        <div class="fg"><label class="fl">Class</label><select class="fc" id="fc" onchange="renderChart()"><option value="">All</option></select></div>
-        <div class="fg"><label class="fl">Subject</label><select class="fc" id="fs" onchange="renderChart()"><option value="">All</option></select></div>
-        <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="ff" onchange="renderChart()"></div>
-        <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="ft" onchange="renderChart()"></div>
-      </div>
-      <div style="display:flex;gap:5px;padding:0 18px 10px;flex-wrap:wrap;">
-        <button class="rpill act" id="rpw" onclick="setRange('week')">This Week</button>
-        <button class="rpill" id="rplw" onclick="setRange('lweek')">Last Week</button>
-        <button class="rpill" id="rpm" onclick="setRange('month')">This Month</button>
-      </div>
-      <div class="bwrap"><div class="bchart" id="bchart"></div></div>
-      <div class="legwrap">
-        <div class="legi"><div class="legd" style="background:var(--gD);"></div>High (&#8805;75%)</div>
-        <div class="legi"><div class="legd" style="background:var(--gL);"></div>Moderate</div>
-        <div class="legi"><div class="legd" style="background:repeating-linear-gradient(135deg,#fecaca 0,#fecaca 3px,#fff5f5 3px,#fff5f5 7px);border:1px solid #fca5a5;"></div>Low</div>
-      </div>
-      <div class="csumwrap">
-        <div class="csbox"><div class="csv" id="csv-p" style="color:var(--gD);">—</div><div class="csl">Avg Present</div></div>
-        <div class="csbox"><div class="csv" id="csv-a" style="color:#ef4444;">—</div><div class="csl">Avg Absent</div></div>
-        <div class="csbox"><div class="csv" id="csv-pct" style="color:var(--gK);">—%</div><div class="csl">Avg %</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="chd"><div class="ct">&#128308; Defaulters</div><span id="defcnt" style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#dc2626;padding:2px 8px;border-radius:10px;">0</span></div>
-      <div class="cb" style="padding-top:0;max-height:360px;overflow-y:auto;" id="defmini"><div class="est"><span class="ei">&#127881;</span><p style="font-size:14px;">No defaulters!</p></div></div>
-      <div style="padding:10px 18px;border-top:1px solid var(--brl);"><button class="btno bsm" style="width:100%;justify-content:center;" onclick="nav('rep-def')">View All &#8594;</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- MY SCHEDULE -->
-<div class="pg" id="pg-sched">
-  <div class="phd">
-    <div><div class="pt">&#128197; My Schedule</div><div class="ps">View your week, day, and manage your timetable.</div></div>
-    <div class="pa"><button class="btnp" onclick="openAddSlot()">&#65291; Add Slot</button></div>
-  </div>
-
-  <!-- Schedule View Tabs -->
-  <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-    <button class="sched-tab act" id="stab-week" onclick="switchSchedTab('week')">&#128197; Week View</button>
-    <button class="sched-tab" id="stab-day" onclick="switchSchedTab('day')">&#128336; Day View</button>
-    <button class="sched-tab" id="stab-tt" onclick="switchSchedTab('tt')">&#128203; My Timetable</button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;" id="sched-nav-controls">
-      <button class="btno bsm" onclick="schedNav(-1)">&#8249; Prev</button>
-      <div style="font-size:13px;font-weight:700;color:var(--td);min-width:160px;text-align:center;" id="weeklbl">—</div>
-      <button class="btno bsm" onclick="schedNav(1)">Next &#8250;</button>
-      <button class="btnp bsm" onclick="scheduleWeekOffset=0;renderSchedulePage()">Today</button>
-    </div>
-  </div>
-
-  <!-- Week View -->
-  <div id="sched-week-view">
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;" id="schedbyday"></div>
-  </div>
-
-  <!-- Day View -->
-  <div id="sched-day-view" style="display:none;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-      <button class="btno bsm" onclick="dayNavStep(-1)">&#8249; Prev Day</button>
-      <div style="font-size:14px;font-weight:700;color:var(--td);min-width:180px;text-align:center;" id="daylbl">—</div>
-      <button class="btno bsm" onclick="dayNavStep(1)">Next Day &#8250;</button>
-      <button class="btnp bsm" onclick="dayOffset=0;renderDayView()">Today</button>
-    </div>
-    <div id="dayschedcont"></div>
-  </div>
-
-  <!-- My Timetable -->
-  <div id="sched-tt-view" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:13px;color:var(--tmu);">Your reference weekly timetable — stored and editable.</div>
-      <button class="btnp bsm" onclick="openAddSlot()">&#65291; Add Slot</button>
-    </div>
-    <div id="tt-grid"></div>
-  </div>
-</div>
-
-<!-- TAKE ATTENDANCE -->
-<div class="pg" id="pg-att">
-  <div class="phd"><div><div class="pt">&#9989; Take Attendance</div><div class="ps">Select class and subject to mark attendance.</div></div></div>
-  <div class="asel">
-    <div class="aselrow">
-      <div class="fg"><label class="fl">Class</label><select class="fc" id="attcls" onchange="attLoadSubs()"><option value="">— Select —</option></select></div>
-      <div class="fg"><label class="fl">Subject</label><select class="fc" id="attsub"><option value="">— Select —</option></select></div>
-      <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="attdate"></div>
-      <div class="fg" style="max-width:120px;"><label class="fl">Period</label><select class="fc" id="attperiod"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
-      <button class="btnp" onclick="loadAttendanceSheet()">Load Students</button>
-    </div>
-
-  </div>
-  <div id="attsheet" style="display:none;">
-    <div class="ainfobar">
-      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Class</div><div style="font-size:12.5px;font-weight:700;" id="ainfc">—</div></div>
-      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Subject</div><div style="font-size:12.5px;font-weight:700;" id="ainfs">—</div></div>
-      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Date</div><div style="font-size:12.5px;font-weight:700;" id="ainfd">—</div></div>
-      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Period</div><div style="font-size:12.5px;font-weight:700;" id="ainfp">—</div></div>
-      <div><div style="font-size:9px;font-weight:700;color:var(--tdi);text-transform:uppercase;">Students</div><div style="font-size:12.5px;font-weight:700;" id="ainft">—</div></div>
-    </div>
-
-    <div class="asumwrap">
-      <div class="asbox"><div class="asval" id="stotal">0</div><div class="aslbl">Total</div></div>
-      <div class="asbox"><div class="asval" id="spres" style="color:var(--gD);">0</div><div class="aslbl">Present</div></div>
-      <div class="asbox"><div class="asval" id="sabs" style="color:#ef4444;">0</div><div class="aslbl">Absent</div></div>
-    </div>
-    <div id="live-session-panel" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:11px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
-      <div>
-        <div style="font-size:13px; font-weight:700; color:#166534;">📡 Live Passcode Session</div>
-        <div style="font-size:11px; color:#15803d; margin-top:2px;">Let students self-mark attendance via the portal.</div>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px;" id="live-session-controls">
-        <button class="btnp" onclick="startLiveSession()" style="background:#16a34a;box-shadow:none;">Start Live Session</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button class="btnp bsm" onclick="markAll('present')">&#9989; Mark All Present</button>
-      <button class="btno bsm" onclick="markAll('absent')">&#10060; Mark All Absent</button>
-      <div style="flex:1;"></div>
-      <button class="btnp" onclick="submitAtt()">&#128190; Save Attendance</button>
-    </div>
-    <div class="card" style="overflow:auto;">
-      <table class="atbl">
-        <thead><tr><th style="width:50px;">S.No</th><th>Reg No</th><th>Student Name</th><th style="text-align:center;">Present / Absent</th></tr></thead>
-        <tbody id="atttbody"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- ATTENDANCE RECORD -->
-<div class="pg" id="pg-rep-att">
-  <div class="phd">
-    <div><div class="pt">&#128203; Attendance Record</div><div class="ps">Student-wise attendance for selected date range.</div></div>
-    <button class="btno" onclick="exportAttCSV()">&#8659; Export CSV</button>
-  </div>
-  <div class="card" style="margin-bottom:14px;">
-    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;">
-      <div class="fg"><label class="fl">Class</label><select class="fc" id="rfc" onchange="renderAttRec()"><option value="">All</option></select></div>
-      <div class="fg"><label class="fl">Subject</label><select class="fc" id="rfs" onchange="renderAttRec()"><option value="">All</option></select></div>
-      <div class="fg"><label class="fl">From</label><input type="date" class="fc" id="rff" onchange="renderAttRec()"></div>
-      <div class="fg"><label class="fl">To</label><input type="date" class="fc" id="rft" onchange="renderAttRec()"></div>
-    </div>
-  </div>
-  <div class="card"><div class="rtwrap">
-    <table class="rtbl"><thead><tr><th>#</th><th>Student Name</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Total Hours</th><th>Present Hours</th><th>Attendance %</th></tr></thead>
-    <tbody id="attrec"></tbody></table>
-  </div></div>
-</div>
-
-<!-- DEFAULTERS -->
-<div class="pg" id="pg-rep-def">
-  <div class="phd">
-    <div><div class="pt">&#128308; Defaulters List</div><div class="ps">Students below attendance threshold.</div></div>
-    <button class="btno" onclick="exportDefCSV()">&#8659; Export CSV</button>
-  </div>
-  <div class="card" style="margin-bottom:14px;">
-    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr 1fr;">
-      <div class="fg"><label class="fl">Class</label><select class="fc" id="dfc" onchange="renderDefs()"><option value="">All</option></select></div>
-      <div class="fg"><label class="fl">Subject</label><select class="fc" id="dfs" onchange="renderDefs()"><option value="">All</option></select></div>
-      <div class="fg"><label class="fl">Threshold</label><select class="fc" id="dfth" onchange="renderDefs()"><option value="75">Below 75%</option><option value="50">Below 50%</option><option value="85">Below 85%</option></select></div>
-    </div>
-  </div>
-  <div class="card"><div class="rtwrap">
-    <table class="rtbl"><thead><tr><th>#</th><th>Student</th><th>Reg No</th><th>Class</th><th>Subject</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
-    <tbody id="deftbody"></tbody></table>
-  </div></div>
-</div>
-
-<!-- STUDENT LIST -->
-<div class="pg" id="pg-rep-stu">
-  <div class="phd">
-    <div><div class="pt">&#128101; Student List</div><div class="ps">Students in your assigned classes.</div></div>
-    <button class="btno" onclick="exportStuCSV()">&#8659; Export CSV</button>
-  </div>
-  <div class="card" style="margin-bottom:14px;">
-    <div class="fwrap" style="padding-top:14px;padding-bottom:14px;grid-template-columns:1fr 1fr;">
-      <div class="fg"><label class="fl">Class</label><select class="fc" id="slc" onchange="renderStuList()"><option value="">All</option></select></div>
-      <div class="fg"><label class="fl">Search</label><input type="text" class="fc" id="slq" placeholder="Name or Reg No…" oninput="renderStuList()"></div>
-    </div>
-  </div>
-  <div class="card"><div class="rtwrap">
-    <table class="rtbl"><thead><tr><th>#</th><th>Name</th><th>Reg No</th><th>Class</th><th>Section</th><th>Department</th></tr></thead>
-    <tbody id="stutbody"></tbody></table>
-  </div></div>
-</div>
-
-<!-- GRIEVANCE -->
-<div class="pg" id="pg-griev">
-  <div class="phd">
-    <div><div class="pt">&#128225; Grievance</div><div class="ps">Raise a complaint — admin will be notified immediately.</div></div>
-    <button class="btnp" onclick="openModal('mgriev')">&#65291; New Grievance</button>
-  </div>
-  <div id="grievlist"><div class="est"><span class="ei">&#128205;</span><p style="font-size:12px;">No grievances raised yet.</p></div></div>
-</div>
-
-<!-- PROFILE -->
-<div class="pg" id="pg-profile">
-  <div class="phd"><div><div class="pt">&#128100; My Profile</div><div class="ps">View your details and update your password.</div></div></div>
-  <div class="profile-page" id="profile-content">
-    <div class="prof-hero">
-      <div class="prof-hero-av" id="profav">T</div>
-      <div class="prof-hero-info">
-        <div class="prof-hero-name" id="profname">—</div>
-        <div class="prof-hero-reg" id="pdrdesig">—</div>
-        <div class="prof-hero-tags">
-          <span class="prof-hero-tag">Faculty</span>
-          <span class="prof-hero-tag rep" id="prof-hod-tag" style="display:none;">HOD</span>
-        </div>
-      </div>
-    </div>
-    <div class="prof-section">
-      <div class="prof-section-hd"><div class="prof-section-title">🪪 Identity Information</div></div>
-      <div class="prof-section-body">
-        <div class="fields-grid">
-          <div class="field-group"><div class="field-label">Employee ID</div><div class="field-val" id="pdremp">—</div></div>
-          <div class="field-group"><div class="field-label">Username</div><div class="field-val" id="pdrusr">—</div></div>
-          <div class="field-group"><div class="field-label">Email</div><div class="field-val" id="pdremail">—</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="prof-section">
-      <div class="prof-section-hd"><div class="prof-section-title">🎓 Roles &amp; Academic Details</div></div>
-      <div class="prof-section-body">
-        <div class="fields-grid">
-          <div class="field-group"><div class="field-label">Department</div><div class="field-val" id="pdrdept">—</div></div>
-          <div class="field-group"><div class="field-label">Assigned Classes</div><div class="field-val" id="pdrcls">—</div></div>
-          <div class="field-group"><div class="field-label">HOD</div><div id="pdrhod"></div></div>
-          <div class="field-group"><div class="field-label">Class Advisor</div><div id="pdrclassadv"></div></div>
-          <div class="field-group"><div class="field-label">Timetable Coordinator</div><div id="pdrttcoord"></div></div>
-          <div class="field-group"><div class="field-label">Admin Rights</div><div id="pdradmin"></div></div>
-        </div>
-      </div>
-    </div>
-    <div class="prof-section">
-      <div class="prof-section-hd"><div class="prof-section-title">🔐 Change Password</div></div>
-      <div class="prof-section-body">
-        <div id="pwerr" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:9px 13px;font-size:12px;color:#dc2626;margin-bottom:12px;"></div>
-        <div class="chpw-grid">
-          <div class="field-group" style="margin-bottom:0;">
-            <label class="flbl">Current Password</label>
-            <input type="password" class="finp" id="pwcur" placeholder="Current password">
-          </div>
-          <div class="field-group" style="margin-bottom:0;">
-            <label class="flbl">New Password</label>
-            <input type="password" class="finp" id="pwnew" placeholder="Min 6 characters">
-          </div>
-          <div class="field-group" style="margin-bottom:0;">
-            <label class="flbl">Confirm New Password</label>
-            <input type="password" class="finp" id="pwconf" placeholder="Re-enter new password">
-          </div>
-        </div>
-        <div style="margin-top:16px;">
-          <button class="mfp" onclick="changePw()" style="padding:10px 28px;">Update Password</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-</div></div>
-
-<!-- MODAL: Schedule Slot -->
-<div class="mbg" id="msched">
-  <div class="modal msm">
-    <div class="mhd"><div><div class="mtit" id="mschedtit">&#10133; Add Schedule Slot</div><div class="msub">Add a slot to your weekly timetable.</div></div><button class="mclose" onclick="closeModal('msched')">☰;</button></div>
-    <div class="mbody">
-      <input type="hidden" id="schedeid">
-      <div class="fr fr2">
-        <div><label class="flbl">Class</label><select class="finp" id="schedcls" onchange="populateSchedSubs()"><option value="">— Select —</option></select></div>
-        <div><label class="flbl">Subject</label><select class="finp" id="schedsub"><option value="">— Select —</option></select></div>
-      </div>
-      <div class="fr fr3">
-        <div><label class="flbl">Day</label><select class="finp" id="schedday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></div>
-        <div><label class="flbl">Start</label><input type="time" class="finp" id="schedst" value="08:00"></div>
-        <div><label class="flbl">End</label><input type="time" class="finp" id="schedet" value="09:00"></div>
-      </div>
-    </div>
-    <div class="mfoot"><button class="mfg" onclick="closeModal('msched')">Cancel</button><button class="mfp" onclick="saveSlot()">Save Slot</button></div>
-  </div>
-</div>
-
-<!-- MODAL: Grievance -->
-<div class="mbg" id="mgriev">
-  <div class="modal msm">
-    <div class="mhd"><div><div class="mtit">&#128225; Raise Grievance</div><div class="msub">Admin will be notified immediately.</div></div><button class="mclose" onclick="closeModal('mgriev')">✖</button></div>
-    <div class="mbody">
-      <div style="margin-bottom:14px;"><label class="flbl">Title / Subject</label><input type="text" class="finp" id="gsubj" placeholder="Brief title of the issue"></div>
-      <div style="margin-bottom:14px;"><label class="flbl">Category</label><select class="finp" id="gcat"><option>Timetable Issue</option><option>Attendance Correction</option><option>Facilities / Infrastructure</option><option>Student Behaviour</option><option>Administrative</option><option>Other</option></select></div>
-      <div><label class="flbl">Details</label><textarea class="finp" id="gdetail" rows="4" placeholder="Describe the issue in detail…"></textarea></div>
-    </div>
-    <div class="mfoot"><button class="mfg" onclick="closeModal('mgriev')">Cancel</button><button class="mfp" onclick="submitGriev()">&#128228; Submit</button></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-
-<div id="db-toast"></div>
-
-<div id="msg-toast">
-  <div id="msg-toast-bar"></div>
-  <div id="msg-toast-text"></div>
-  <button id="msg-toast-close" onclick="hideMsgToast()">✕</button>
-</div>
-
-<script>
+// -- State ----------------------------------------------
 var _memStore = {};
   const DB = {
     get: function(collection) {
@@ -801,7 +67,7 @@ var _memStore = {};
   // ─── AUTHENTICATION ──────────────────────────────────────────────────────────
   let currentUser = null;
   function logToServer(action, details, category) {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return;
     fetch('/api/logs', {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
@@ -809,23 +75,7 @@ var _memStore = {};
     }).catch(function(){});
   }
 
-  async function doLogout() {
-    try {
-      const token = sessionStorage.getItem('eams_token') || localStorage.getItem('eams_token');
-
-      if (token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-    } catch (err) {}
-    localStorage.clear();
-    sessionStorage.clear();
-
-    history.replaceState(null, '', 'index.html');
-    window.location.replace('index.html');
-  }
+  async 
 
   // ── Session Auto-Logout after 45 minutes
   (function() {
@@ -878,7 +128,7 @@ var _memStore = {};
   // and "Assigned Classes" were always empty: there was no code path that could
   // have populated them, regardless of what's actually in the Database.
   function syncMyProfile() {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return Promise.resolve(null);
     return fetch('/api/profile/me', { headers: { 'Authorization': 'Bearer ' + tok } })
       .then(function(r) { return r.json(); })
@@ -919,7 +169,7 @@ var _memStore = {};
   }
 
   function syncMyAssignments() {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return Promise.resolve([]);
     // No query params needed — /api/assignments filters to the logged-in
     // teacher's own records server-side (req.user._id), same id as currentUser._id.
@@ -937,7 +187,7 @@ var _memStore = {};
   // and stores the deduplicated result in the render cache (DB). Called after
   // syncMyAssignments() has populated DB.get('assignments').
   function syncMyStudents() {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return Promise.resolve([]);
     var myClasses = getMyClasses();
     if (!myClasses.length) return Promise.resolve([]);
@@ -972,7 +222,7 @@ var _memStore = {};
   // Report pages (renderAttendanceRecord, renderDefaultersList) call
   // fetchAttendanceForReport() independently so they can honour arbitrary filters.
   function syncMyAttendance() {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return Promise.resolve([]);
     var to = todayISO();
     var from90 = new Date();
@@ -998,7 +248,7 @@ var _memStore = {};
   // server does the heavy filtering; only subjectId is client-side (not a param
   // the attendance route supports).
   function fetchAttendanceForReport(classId, subjectId, from, to) {
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) return Promise.resolve([]);
     var url = '/api/attendance?teacherId=' + encodeURIComponent(currentUser._id);
     if (classId) url += '&classId=' + encodeURIComponent(classId);
@@ -1047,7 +297,7 @@ var _memStore = {};
     const targetPage = document.getElementById('pg-' + pageName);
     if (targetPage) targetPage.classList.add('act');
 
-    document.querySelectorAll('.si,.ss').forEach(function(item) { item.classList.remove('act'); });
+    document.querySelectorAll('.sb-item,.ss').forEach(function(item) { item.classList.remove('act'); });
 
     const navMap = {
       'dash':    'sn-dash',  'sched':   'sn-sched', 'att':     'sn-att',
@@ -1518,7 +768,7 @@ var _memStore = {};
 
   // Close dropdown on outside click
   document.addEventListener('click', function(e) {
-    if (!e.target.closest('#ndrop') && !e.target.closest('.tbic')) {
+    if (!e.target.closest('#ndrop') && !e.target.closest('.tb-icon')) {
       document.getElementById('ndrop').classList.remove('open');
     }
   });
@@ -1848,7 +1098,7 @@ var _memStore = {};
     var assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
     if (!assignment) { showToast('Not assigned to this class / subject', 'warn'); return; }
 
-    var tok = sessionStorage.getItem('eams_token');
+    var tok = getToken();
     if (!tok) { showToast('Not authenticated', 'warn'); return; }
 
     // Fetch students for the class and any existing records for this session
@@ -1965,7 +1215,7 @@ var _memStore = {};
 
     fetch('/api/live-session/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
       body: JSON.stringify({ classId: classId, subjectId: subjectId, date: date })
     })
     .then(function(res){ return res.json(); })
@@ -1974,7 +1224,7 @@ var _memStore = {};
       activeLiveSessionId = data._id;
       document.getElementById('live-session-controls').innerHTML =
         '<div style="background:#fff;border:2px dashed #16a34a;border-radius:8px;padding:4px 12px;font-size:22px;font-weight:800;color:#166534;letter-spacing:4px;margin-right:12px;">' + data.passcode + '</div>' + 
-        '<button class="btnp" onclick="endLiveSession()" style="background:#dc2626;box-shadow:none;">End Session</button>';
+        '<button class="btn-pri" onclick="endLiveSession()" style="background:#dc2626;box-shadow:none;">End Session</button>';
       
       if(liveSessionPollTimer) clearInterval(liveSessionPollTimer);
       liveSessionPollTimer = setInterval(pollLiveSession, 3000);
@@ -1987,7 +1237,7 @@ var _memStore = {};
   function pollLiveSession() {
     if (!activeLiveSessionId) return;
     fetch('/api/live-session/status/' + activeLiveSessionId, {
-      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') }
+      headers: { 'Authorization': 'Bearer ' + getToken() }
     })
     .then(function(res){ return res.json(); })
     .then(function(data) {
@@ -2012,13 +1262,13 @@ var _memStore = {};
     if (!autoEnded && activeLiveSessionId) {
       fetch('/api/live-session/end/' + activeLiveSessionId, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('eams_token') }
+        headers: { 'Authorization': 'Bearer ' + getToken() }
       }).catch(function(e){});
     }
 
     activeLiveSessionId = null;
     document.getElementById('live-session-controls').innerHTML =
-      '<button class="btnp" onclick="startLiveSession()" style="background:#16a34a;box-shadow:none;">Start Live Session</button>';
+      '<button class="btn-pri" onclick="startLiveSession()" style="background:#16a34a;box-shadow:none;">Start Live Session</button>';
     if(!autoEnded) { showToast('Live session ended manually.', 'info'); }
     else { showToast('Live session expired.', 'warn'); }
   }
@@ -2033,7 +1283,7 @@ var _memStore = {};
     var periodEl    = document.getElementById('attperiod');
     var periodNumber = periodEl ? Number(periodEl.value) || 1 : 1;
     var assignment  = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
-    var tok         = sessionStorage.getItem('eams_token');
+    var tok         = getToken();
 
     if (!tok) { showToast('Not authenticated', 'warn'); return; }
     if (!assignment) { showToast('Assignment not found', 'warn'); return; }
@@ -2402,33 +1652,19 @@ var _memStore = {};
   var changePw = changePassword;
 
   // ─── MODAL HELPERS ───────────────────────────────────────────────────────────
-  function openModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('open');
-  }
+  
 
-  function closeModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('open');
-  }
+  
 
   // Close modal on backdrop click
-  document.querySelectorAll('.mbg').forEach(function(bg) {
+  document.querySelectorAll('.modal-bg').forEach(function(bg) {
     bg.addEventListener('click', function(e) {
       if (e.target === bg) bg.classList.remove('open');
     });
   });
 
   // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
-  function showToast(message, type) {
-    const toast      = document.getElementById('toast');
-    toast.innerHTML  = message;
-    const colorMap   = { warn: '#ef4444', info: '#3b82f6' };
-    toast.style.borderLeftColor = colorMap[type] || 'var(--gM)';
-    toast.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function() { toast.classList.remove('show'); }, 3200);
-  }
+  
   var showT = showToast;
 
   function downloadCSV(rows, filename) {
@@ -2461,42 +1697,9 @@ var _memStore = {};
     }
     bootApp();
   })();
-</script>
 
-<!-- ═══ FORCE CHANGE PASSWORD POPUP ═══════════════════════════════════════ -->
-<div id="forcePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
-    <div style="font-size:2.2rem;margin-bottom:8px;">🔐</div>
-    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Your Password</h2>
-    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">You are using the default password. Please set a new password to continue.</p>
-    <div id="forcePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
-    <input id="forcePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
-    <input id="forcePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
-    <input id="forcePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
-    <button onclick="submitForcePw()" style="width:100%;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update Password</button>
-  </div>
-</div>
-
-<!-- ═══ OPTIONAL CHANGE PASSWORD POPUP ════════════════════════════════════ -->
-<div id="changePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center;">
-    <div style="font-size:2rem;margin-bottom:8px;">🔑</div>
-    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#1a237e;">Change Password</h2>
-    <p style="color:#666;font-size:0.88rem;margin-bottom:20px;">Enter your current password and choose a new one.</p>
-    <div id="changePwErr" style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
-    <div id="changePwOk"  style="display:none;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.85rem;"></div>
-    <input id="changePwCur"  type="password" placeholder="Current password"  style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
-    <input id="changePwNew"  type="password" placeholder="New password (min 6 chars)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;font-size:0.95rem;" />
-    <input id="changePwConf" type="password" placeholder="Confirm new password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:18px;font-size:0.95rem;" />
-    <div style="display:flex;gap:10px;">
-      <button onclick="closeChangePwModal()" style="flex:1;padding:12px;background:#f5f5f5;color:#333;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">Cancel</button>
-      <button onclick="submitChangePw()" style="flex:1;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Update</button>
-    </div>
-  </div>
-</div>
-
-<script>
-var _pwToken = sessionStorage.getItem('eams_token');
+// -- Change Password ----------------------------------
+var _pwToken = getToken();
 
 function showForcePwModal() {
   document.getElementById('forcePwModal').style.display = 'flex';
@@ -2556,8 +1759,7 @@ window.addEventListener('load',function(){
   // Security
   document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   document.addEventListener('keydown', function(e){
-    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
+    if(e.key==='F12'||(e.card-titlerlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.card-titlerlKey&&e.key==='U')){ e.preventDefault(); return false; }
   });
-</script>
-</body>
-</html>
+
+function hideMsgToast() { /* no-op - toast hidden by timer */ }
