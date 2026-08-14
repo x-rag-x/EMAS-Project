@@ -37,8 +37,8 @@ const TeacherSchema = new mongoose.Schema({
     value:      { type: mongoose.Schema.Types.Mixed },
   }],
   isAdmin:            { type: Boolean, default: false },
-  adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModule', 
-    'deleteModule', 'bulkPage', 'settingsModule', 'none'], default: 'none' },
+  adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModules', 
+    'deletings', 'bulkPage', 'settingsModule', 'reportsModule', 'downloadDatas', 'none'], default: 'none' },
   mustChangePassword:   { type: Boolean, default: false },
 }, { timestamps: true });
 
@@ -75,7 +75,7 @@ StudentSchema.index({ classId: 1, section: 1 });
 StudentSchema.index({ fullName: 1 });
 StudentSchema.index({ registerNo: 1 });
 
-// ── UserSchema ─────────────────────────────────
+// ── Base User Schema ───────────────────────────────────
 const UserSchema = new mongoose.Schema({
   username:   { type: String, required: true, unique: true, trim: true, lowercase: true },
   role:       { type: String, enum: ['admin','teacher','student'], required: true },
@@ -85,8 +85,8 @@ const UserSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = {
-    Admin:        mongoose.model('Admin', AdminSchema),
-    Teacher:      mongoose.model('Teacher', TeacherSchema),
-    Student:      mongoose.model('Student', StudentSchema),
-    User:         mongoose.model('User', UserSchema),
+  Admin:   mongoose.model('Admin', AdminSchema),
+  Teacher: mongoose.model('Teacher', TeacherSchema),
+  Student: mongoose.model('Student', StudentSchema),
+  User:    mongoose.model('User', UserSchema),
 };

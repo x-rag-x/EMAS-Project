@@ -1,15 +1,25 @@
-## 🔹 `v2.2.10.1` — 19 July 2026 *(Uncomplete Push)*
+## 🔹 `v2.3` — 14 August 2026 *(Frontend Restructure)*
 
-### *V1 Changes of Frontend Restructure*
+### *Changes of Frontend Restructure*
+A complete rotation of code and file restructure. This adds an additional important security.
 
- *Soon Log Updated*
+- All HTML files moved to `public/` folder, and each file's css and js are separated from main html file.
+- Updated backend for frontend changes.
+- Moved `CHANGELOG.MD` again to main directory.
+- Modified entire `/models` dir, a complete restructure.
+- Moved `start.js` to `scripts/` and its now available publicly.
 
+### *General Changes & Fixes*
+- Improved Session Monitor and Logins
+- Improved Loading time and restructured API Calls in admin page.
+- Replaced the 11 parallel full-collection fetches at startup in admin.page.js with fetching only counts
+- `JWT_SECRET` default fallback removed (security)
+- New auth endpoints: `/report-unknown`, `/verify-password`, full `/login-history`
+- Admin page loading toasts + dashboard `/counts`
+
+### `Total 63 Files changed and updated in v2.3`
 
 ## 🔹 `v2.2.9` — 18 July 2026 *(Performance Improvement Update)*
-
-### `Total 46 Files changed and updated in v2.2.10.1`
-
-----------------------------------
 
 ### *V1 Changes of Performance Improvement*
 

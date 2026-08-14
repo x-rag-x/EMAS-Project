@@ -47,7 +47,7 @@
     <nav class="sb">
       <div class="sb-logo">
         <div class="sb-brand">EAMS Admin</div>
-        <button class="btn-form-ghost" onclick="window.location.reload()">Refresh</button>
+        <button class="btn-pri" onclick="refreshAll()">Refresh</button>
       </div>
 
       <div class="nav-section" style="flex:1;overflow-y:auto;padding:6px 0;">
@@ -57,13 +57,13 @@
 
         <div class="sb-section-label">Management</div>
         <button class="sb-item" data-page="depts" onclick="nav('depts')"><span class="sbi-ic">🏛️</span>Departments<span
-            class="sb-badge" id="sb-dept-badge">0</span></button>
+            class="sb-badge" id="dept-count">0</span></button>
         <button class="sb-item" data-page="struct" onclick="nav('struct')"><span class="sbi-ic">🏫</span>Classes &amp;
           Subjects</button>
         <button class="sb-item" data-page="students" onclick="nav('students')"><span
-            class="sbi-ic">👨‍🎓</span>Students<span class="sb-badge" id="sb-stu-badge">0</span></button>
+            class="sbi-ic">👨‍🎓</span>Students<span class="sb-badge" id="stud-count">0</span></button>
         <button class="sb-item" data-page="teachers" onclick="nav('teachers')"><span
-            class="sbi-ic">👩‍🏫</span>Teachers<span class="sb-badge" id="sb-teach-badge">0</span></button>
+            class="sbi-ic">👩‍🏫</span>Teachers<span class="sb-badge" id="teach-count">0</span></button>
 
         <button class="sb-item" onclick="window.location.href='timetable.html'"><span
             class="sbi-ic">🗓️</span>Timetable</button>
@@ -384,42 +384,97 @@
 
       <!-- ── DEPARTMENTS PAGE ── -->
       <div class="pg" id="pg-depts">
-        <div class="shd">
-          <div class="stl"><span class="sdo"></span>Departments</div>
-          <button class="btn-pri" onclick="om('m-add-dept')">+ Add Department</button>
+        <div class="page-wrap">
+          <div class="page-hd">
+            <div>
+              <div class="page-title">Departments</div>
+              <div class="page-sub">Manage departments</div>
+            </div>
+            <div class="page-actions">
+              <button class="btn-pri" id="hdr-add-dept" onclick="om('m-add-dept')">+ Add Department</button>
+            </div>
+          </div>
+          <div id="stats-dept" class="stats-row"></div>
         </div>
         <div id="dg2" class="tgrd"></div>
       </div>
 
       <!-- ── CLASSES & SUBJECTS PAGE ── -->
       <div class="pg" id="pg-struct">
-        <div class="bcrumb" id="sbc"></div>
-        <div id="sv-dept">
-          <div class="shd">
-            <div class="stl"><span class="sdo"></span>Select Department</div>
-          </div>
-          <div id="sdg" class="tgrd"></div>
-        </div>
-        <div id="sv-cs" style="display:none">
-          <div class="tabs">
-            <button class="tab act" onclick="sst('classes')">🏫 Classes</button>
-            <button class="tab" onclick="sst('subjects')">📚 Subjects</button>
-          </div>
-          <div id="sp-classes">
-            <div class="shd">
-              <div class="stl"><span class="sdo"></span>Classes</div>
-              <button class="btn-pri" onclick="openAddClassModal()">+ Add Class</button>
+        <div class="page-wrap">
+          <div class="page-hd">
+            <div>
+              <div class="page-title">Classes &amp; Subjects</div>
+              <div class="page-sub">Manage classes and subjects across departments.</div>
             </div>
-            <div id="scg" class="egrd"></div>
+            <div class="page-actions" id= "cls-page-btn" style="display:none;">
+              <button class="btn-pri" id="hdr-add-class" onclick="sst('classes');openAddClassModal()">+ Add Class</button>
+              <button class="btn-out" id="hdr-add-subj" onclick="sst('subjects');openAddSubj()">+ Add Subject</button>
+            </div>
           </div>
-          <div id="sp-subjects" style="display:none">
+
+          <div class="bcrumb" id="sbc"></div>
+
+          <div class="stats-row" id="cls-stat-cards"></div>
+
+          <div id="sv-dept">
             <div class="shd">
-              <div class="stl"><span class="sdo"></span>Subjects</div>
-              <div style="display:flex;gap:7px;">
-                <button class="btn-pri" onclick="openAddSubj()">+ Add Subject</button>
+              <div class="stl"><span class="sdo"></span>Select Department</div>
+            </div>
+            <div id="sdg" class="tgrd"></div>
+          </div>
+
+          <div id="sv-cs" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+              <div class="tabs" style="margin-bottom:0;margin-top:18px;">
+                <button class="tab act" onclick="sst('classes')">🏫 Classes</button>
+                <button class="tab" onclick="sst('subjects')">📚 Subjects</button>
+              </div>
+              <div style="margin-left:auto;display:flex;gap:4px;">
+                <button type="button" class="t-vt-btn act" id="cs-vt-grid" onclick="toggleClassView('grid')" title="Grid view">▦</button>
+                <button type="button" class="t-vt-btn" id="cs-vt-table" onclick="toggleClassView('table')" title="Table view">☰</button>
               </div>
             </div>
-            <div id="ssg2" class="egrd"></div>
+
+            <div id="sp-classes">
+              <div id="scg" class="egrd"></div>
+              <div id="scg-tbl" class="tw" style="display:none;">
+                <table class="tbl t-tbl">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Batch</th>
+                      <th>Section</th>
+                      <th>Year</th>
+                      <th>Sem</th>
+                      <th>Hall</th>
+                      <th>Students</th>
+                      <th>Subjects</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scg-tbl-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div id="sp-subjects" style="display:none">
+              <div id="ssg2" class="egrd"></div>
+              <div id="ssg2-tbl" class="tw" style="display:none;">
+                <table class="tbl t-tbl">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Code</th>
+                      <th>Type</th>
+                      <th>Credits</th>
+                      <th>Sections</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ssg2-tbl-body"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -514,26 +569,88 @@
 
       <!-- ── TEACHERS PAGE ── -->
       <div class="pg" id="pg-teachers">
-        <div class="shd">
-          <div class="stl"><span class="sdo"></span>Teachers</div>
-          <button class="btn-pri" onclick="om('m-add-teacher')">+ Add Teacher</button>
-        </div>
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-body-p">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-              <div style="position:relative;flex:1;min-width:200px;">
-                <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tdi);">🔍</span>
-                <input
-                  style="width:100%;padding:8px 13px 8px 35px;border:1.5px solid var(--br);border-radius:9px;background:#fff;font-size:12.5px;font-family:'Poppins',sans-serif;outline:none;color:var(--td);"
-                  placeholder="Search loaded teachers…" id="tf-q" oninput="filterTeachersLive(this.value)">
-              </div>
-              <select class="fc" id="tf-dept" onchange="onTeacherDeptChange()" style="max-width:200px;">
-                <option value="">All Departments</option>
-              </select>
+        <div class="page-wrap">
+          <div class="page-hd">
+            <div>
+              <div class="page-title">Teachers</div>
+              <div class="page-sub">Manage faculty members across all departments.</div>
+            </div>
+            <div class="page-actions">
+              <button class="btn-pri" onclick="om('m-add-teacher')">+ Add Teacher</button>
+              <button class="btn-out" onclick="exportTeachersXlsx()">📤 Export Excel</button>
             </div>
           </div>
+
+          <!-- ── Stat Cards ── -->
+          <div class="stats-row" id="t-stat-cards"></div>
+
+          <!-- ── Filter Toolbar ── -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-body-p">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div class="fg"><label class="fl">Department</label>
+                  <select class="fc" id="tf-dept" onchange="onTeacherDeptChange()">
+                    <option value="">All Departments</option>
+                  </select>
+                </div>
+                <div class="fg"><label class="fl">Designation</label>
+                  <select class="fc" id="tf-desig" onchange="filterTeachersByDesig()">
+                    <option value="">All Designations</option>
+                    <option>Assistant Professor</option>
+                    <option>Associate Professor</option>
+                    <option>Professor</option>
+                    <option>HOD</option>
+                    <option>Lecturer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="t-filter-pills" id="t-role-pills">
+                <button type="button" class="t-pill act" data-role="all" onclick="filterTeachersByRole('all')">All</button>
+                <button type="button" class="t-pill" data-role="hod" onclick="filterTeachersByRole('hod')">HOD</button>
+                <button type="button" class="t-pill" data-role="advisor" onclick="filterTeachersByRole('advisor')">Class Advisor</button>
+              </div>
+
+              <div style="display:flex;gap:10px;align-items:center;margin-top:12px;">
+                <div style="position:relative;flex:1;min-width:200px;">
+                  <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tdi);">🔍</span>
+                  <input
+                    style="width:100%;padding:8px 13px 8px 35px;border:1.5px solid var(--br);border-radius:9px;background:#fff;font-size:12.5px;font-family:'Poppins',sans-serif;outline:none;color:var(--td);"
+                    placeholder="Search loaded teachers…" id="tf-q" oninput="filterTeachersLive(this.value)">
+                </div>
+                <div class="t-view-toggle">
+                  <button type="button" class="t-vt-btn act" id="t-vt-grid" onclick="toggleTeacherView('grid')" title="Grid view">▦</button>
+                  <button type="button" class="t-vt-btn" id="t-vt-table" onclick="toggleTeacherView('table')" title="Table view">☰</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Grid View ── -->
+          <div id="tgr" class="tgrd"></div>
+
+          <!-- ── Table View ── -->
+          <div id="ttbl-wrap" class="tw" style="display:none;">
+            <table class="tbl t-tbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th onclick="sortTeachersBy('name')" style="cursor:pointer;user-select:none;">Name <span
+                      class="sort-ind" data-sort="name"></span></th>
+                  <th onclick="sortTeachersBy('empId')" style="cursor:pointer;user-select:none;">Emp ID <span
+                      class="sort-ind" data-sort="empId"></span></th>
+                  <th>Department</th>
+                  <th>Designation</th>
+                  <th>Email</th>
+                  <th>Roles</th>
+                  <th>Subjects</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ttbl-body"></tbody>
+            </table>
+          </div>
         </div>
-        <div id="tgr" class="tgrd"></div>
       </div>
 
       <!-- ── REPORTS PAGE ── -->
@@ -1857,9 +1974,7 @@
             <div class="modal-title">🔐 Authentication Required</div>
           </div>
           <div style="font-size:14px;margin-bottom:8px;">⚠️ Data Management actions require authentication.</div>
-          <div style="font-size:12px;color:var(--tmu);margin-bottom:16px;">Enter your admin login password or the
-            special
-            management password.</div>
+          <div style="font-size:12px;color:var(--tmu);margin-bottom:16px;">Enter your admin login password or the special management password.</div>
           <div id="sppw-err"
             style="display:none;background:#fdecea;color:#c62828;border-radius:8px;padding:8px;font-size:12px;margin-bottom:12px;">
           </div>
@@ -1877,8 +1992,6 @@
     </div>
   </div>
 
-
-  
 <script src="js/core/session.js"></script>
 <script src="js/core/api.js"></script>
 <script src="js/core/toast.js"></script>
@@ -1886,5 +1999,4 @@
 <script src="js/pages/admin.page.js"></script>
 
 </body>
-
 </html>

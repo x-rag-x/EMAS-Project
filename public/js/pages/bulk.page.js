@@ -19,18 +19,32 @@ function toggleBulkSidebar() {
 
 function goBack() { window.location.href = "./admin.html"; }
 
-var DB = {
-  get: function (c) { try { return JSON.parse(localStorage.getItem('ss3_' + c) || '[]'); } catch (e) { return []; } },
-  set: function (c, d) { localStorage.setItem('ss3_' + c, JSON.stringify(d)); },
-  insert: function (c, doc) { var r = DB.get(c); doc._id = '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); r.push(doc); DB.set(c, r); return doc; },
-  update: function (c, id, u) { var r = DB.get(c), i = r.findIndex(function (x) { return x._id === id; }); if (i >= 0) { r[i] = Object.assign({}, r[i], u); DB.set(c, r); } },
-  delete: function (c, id) { DB.set(c, DB.get(c).filter(function (x) { return x._id !== id; })); },
-  find: function (c, q) { q = q || {}; return DB.get(c).filter(function (d) { return Object.keys(q).every(function (k) { return d[k] === q[k]; }); }); },
-  one: function (c, q) { q = q || {}; return DB.get(c).find(function (d) { return Object.keys(q).every(function (k) { return d[k] === q[k]; }); }) || null; },
-};
+// ── In-memory cache of real backend data ──────────────────────────────────
+// Populated from the API on load and kept in sync as rows are uploaded, so
+// duplicate/conflict checks run against what's actually in MongoDB instead
+// of a disconnected local copy.
+var _cache = { depts: [], classes: [], subjects: [], batches: [] };
+var _cacheReady = null;
 
+async function loadCache() {
+  return Promise.all([
+    apiCall('GET', '/depts').catch(function () { return []; }),
+    apiCall('GET', '/classes').catch(function () { return []; }),
+    apiCall('GET', '/subjects').catch(function () { return []; }),
+    apiCall('GET', '/year/batches').catch(function () { return []; })
+  ]).then(function (res) {
+    _cache.depts    = Array.isArray(res[0]) ? res[0] : [];
+    _cache.classes  = Array.isArray(res[1]) ? res[1] : [];
+    _cache.subjects = Array.isArray(res[2]) ? res[2] : [];
+    _cache.batches  = Array.isArray(res[3]) ? res[3] : [];
+  });
+}
+
+// WIZARD_STEPS intentionally lists only the 5 real data-upload steps (not
+// the "Start" screen itself) — the intro text says "Follow all 5 steps",
+// and completion is judged against this list, so a 6th unreachable entry
+// here would mean the "Setup Complete" screen could never appear.
 var WIZARD_STEPS = [
-  { key: 'wizard', icon:'🧙‍♂️', label:'Start', tab:'wizard' },
   { key: 'dept',    icon: '🏛️',  label: 'Departments', tab: 'dept'    },
   { key: 'teacher', icon: '👩‍🏫', label: 'Teachers',    tab: 'teacher' },
   { key: 'class',   icon: '🏫',  label: 'Classes',     tab: 'class'   },
@@ -40,30 +54,33 @@ var WIZARD_STEPS = [
 var _wizDone = {}, _wizActive = '';
 
 function initWizard() {
-  var adminName = sessionStorage.getItem('adminName') || sessionStorage.getItem('name') || 'Administrator';
   var nameEl = document.getElementById('sb-name');
   var avEl   = document.getElementById('sb-av');
-  if (nameEl) nameEl.textContent = adminName;
-  if (avEl)   avEl.textContent   = adminName.charAt(0).toUpperCase();
+  if (nameEl) nameEl.textContent = currentUser.name || 'Administrator';
+  if (avEl)   avEl.textContent   = (currentUser.name || 'A').charAt(0).toUpperCase();
 
-  var isEmpty = DB.get('depts').length === 0 && DB.get('classes').length === 0;
-  var isDeptEmpty = DB.get('depts').length === 0;
-  document.getElementById('wizard-banner').style.display = isEmpty ? 'block' : 'none';
-  document.getElementById('wizard-badge').style.display  = isEmpty ? 'inline-flex' : 'none';
-  if (isEmpty) renderWizSteps();
+  // Show a real tab immediately so the page is never blank while the
+  // network request below is in flight.
+  var deptBtn = document.getElementById('wz-tab-dept');
+  if (deptBtn) bulkTab(deptBtn, 'dept');
 
-  if (isDeptEmpty) {
-    var wizBtn = document.getElementById('wz-tab-wizard');
-    if (wizBtn) bulkTab(wizBtn, 'wizard');
-  } else {
-    var deptBtn = document.getElementById('wz-tab-dept');
-    if (deptBtn) bulkTab(deptBtn, 'dept');
-  }
+  _cacheReady.then(function () {
+    var isEmpty     = _cache.depts.length === 0 && _cache.classes.length === 0;
+    var isDeptEmpty = _cache.depts.length === 0;
+    document.getElementById('wizard-banner').style.display = isEmpty ? 'block' : 'none';
+    document.getElementById('wizard-badge').style.display  = isEmpty ? 'inline-flex' : 'none';
+    if (isEmpty) renderWizSteps();
 
-  var wizTab = document.getElementById('wz-tab-wizard');
-  if (wizTab) {
-    wizTab.style.display = isDeptEmpty ? '' : 'none';
-  }
+    var wizTab = document.getElementById('wz-tab-wizard');
+    if (wizTab) wizTab.style.display = isDeptEmpty ? '' : 'none';
+
+    if (isDeptEmpty) {
+      var wizBtn = document.getElementById('wz-tab-wizard');
+      if (wizBtn) bulkTab(wizBtn, 'wizard');
+    }
+  }).catch(function () {
+    showToast('Could not load current setup status — you can still upload files.', 'warn');
+  });
 }
 
 function dismissWizard() {
@@ -148,7 +165,7 @@ function bulkTab(btn, tab) {
   btn.classList.add('act');
   document.querySelectorAll('.bulk-panel').forEach(function (p) { p.style.display = 'none'; });
   var p = document.getElementById('bulk-' + tab);
-  if (p) p.style.display = '';
+  if (p) p.style.display = 'block';
   if (tab === 'wizard') {
     document.getElementById('wizard-banner').style.display = 'block';
   }
@@ -181,16 +198,18 @@ function showConflictDialog(existing, incoming, keyLabel, cb) {
   document.getElementById('bulk-conflict-overlay').classList.add('open');
 }
 
+// Resolves whichever Promise is waiting on the dialog (see decideConflict).
+// "cancel" now still invokes the callback (with 'cancel') instead of
+// silently orphaning it — otherwise an async upload loop awaiting the
+// decision would hang forever with no final summary shown.
 function resolveConflict(choice) {
-  if (choice === 'cancel') {
-    _confCb     = null;
-    _confChoice = null;
-    document.getElementById('bulk-conflict-overlay').classList.remove('open');
-    showToast('Upload cancelled', 'warn');
-    return;
-  }
-  if (document.getElementById('conflict-apply-all').checked) _confChoice = choice;
   document.getElementById('bulk-conflict-overlay').classList.remove('open');
+  if (choice === 'cancel') {
+    _confChoice = null;
+    showToast('Upload cancelled', 'warn');
+  } else if (document.getElementById('conflict-apply-all').checked) {
+    _confChoice = choice;
+  }
   if (_confCb) { var cb = _confCb; _confCb = null; cb(choice); }
 }
 
@@ -202,6 +221,14 @@ function checkConflict(existing, incoming, keyLabel, onDecide) {
   }
   if (_confChoice) { onDecide(_confChoice); return; }
   showConflictDialog(existing, incoming, keyLabel, onDecide);
+}
+
+// Promise wrapper around the callback-based conflict dialog so upload
+// loops can simply `await` a user's decision.
+function decideConflict(existing, incoming, keyLabel) {
+  return new Promise(function (resolve) {
+    checkConflict(existing, incoming, keyLabel, resolve);
+  });
 }
 
 function esc(s) {
@@ -230,10 +257,10 @@ function showUploadPreview(elId, added, skipped, errors) {
 
 function dlTemplate(type) {
   var T = {
-    dept:    [['DeptName', 'Code', 'Icon'],                                                                                        ['Computer Science Engineering', 'CSE', '💻']],
-    teacher: [['Name', 'EmployeeID', 'Department', 'Designation', 'Username', 'Password'],                                         ['John Doe', 'EMP001', 'CSE', 'Assistant Professor', 'johndoe', 'teacher123']],
-    class:   [['Department', 'HallNo', 'Year', 'Semester', 'Section'],                                                             ['CSE', 'LH01', 'I Year', 'I', 'A']],
-    subject: [['Name', 'Code', 'Department', 'Credits', 'Type', 'Teacher'],                                                        ['Data Structures', 'CS201', 'CSE', '4', 'Theory', '']],
+    dept:    [['DeptName', 'Code', 'Icon'],                                                                       ['Computer Science Engineering', 'CSE', '💻']],
+    teacher: [['Name', 'EmployeeID', 'Department', 'Designation', 'Username', 'Password'],                        ['John Doe', 'EMP001', 'CSE', 'Assistant Professor', 'johndoe', 'teacher123']],
+    class:   [['Department', 'HallNo', 'Year', 'Semester', 'Section', 'Batch'],                                   ['CSE', 'LH01', 'I Year', 'I', 'A', '2025-29']],
+    subject: [['Name', 'Code', 'Department', 'Credits', 'Type'],                                                  ['Data Structures', 'CS201', 'CSE', '4', 'Theory']],
     student: [['FullName', 'RegisterNo', 'AcademicYear', 'CourseType', 'Branch', 'Department', 'Year', 'Class', 'Section', 'Email', 'Username', 'Password'], ['Arun Kumar', '714025104000', '2025-26', 'UG', 'B.E', 'Computer Science Engineering', 'I Year', 'CSE-I-A', 'A', 'arun@eams.edu', 'arun25', 'Student@123']],
   };
   var data = T[type] || [['No template']];
@@ -242,14 +269,42 @@ function dlTemplate(type) {
   XLSX.writeFile(wb, 'EAMS_' + type + '_template.xlsx');
 }
 
-function dlUploaded(collection, roleFilter) {
-  var data = DB.get(collection);
-  if (roleFilter) data = data.filter(function (r) { return r.role === roleFilter; });
-  if (!data.length) { showToast('No data to download', 'warn'); return; }
-  var clean = data.map(function (r) { var c = Object.assign({}, r); delete c.password; delete c._id; return c; });
-  var ws = XLSX.utils.json_to_sheet(clean), wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, collection);
-  XLSX.writeFile(wb, 'EAMS_' + collection + '_export.xlsx');
+// Which real API endpoint backs each "Exported" download button.
+var EXPORT_ENDPOINTS = { depts: '/depts', teacher: '/teachers', classes: '/classes', subjects: '/subjects', students: '/students' };
+
+// GET /api/students is paginated (60 per page by default) — a plain single
+// fetch would silently truncate the export for any dataset over one page,
+// so walk every page until the server says there's no more.
+function fetchAllStudents(page, acc) {
+  page = page || 1; acc = acc || [];
+  return apiCall('GET', '/students?limit=500&page=' + page).then(function (data) {
+    var rows = (data && Array.isArray(data.data)) ? data.data : [];
+    acc = acc.concat(rows);
+    if (data && data.hasMore) return fetchAllStudents(page + 1, acc);
+    return acc;
+  });
+}
+
+function dlUploaded(type) {
+  var endpoint = EXPORT_ENDPOINTS[type];
+  if (!endpoint) { showToast('Unknown export type', 'warn'); return; }
+  var fetcher = type === 'students'
+    ? fetchAllStudents()
+    : apiCall('GET', endpoint).then(function (d) { return Array.isArray(d) ? d : []; });
+
+  fetcher.then(function (rows) {
+    if (!rows.length) { showToast('No data to download', 'warn'); return; }
+    var clean = rows.map(function (r) {
+      var c = Object.assign({}, r);
+      delete c.password; delete c._id; delete c.__v; delete c.trackId;
+      return c;
+    });
+    var ws = XLSX.utils.json_to_sheet(clean), wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, type);
+    XLSX.writeFile(wb, 'EAMS_' + type + '_export.xlsx');
+  }).catch(function (err) {
+    showToast('Could not fetch data: ' + err.message, 'warn');
+  });
 }
 
 function hd(event, type) {
@@ -267,21 +322,55 @@ function hu(input, type) {
 
 function processFile(file, type) {
   _confChoice = null;
-  var reader  = new FileReader();
+
+  // Students go straight to the server: the real bulk-upload endpoint
+  // parses the spreadsheet itself (ExcelJS) and validates row-by-row in
+  // MongoDB, so there's no client-side parsing step for this type.
+  if (type === 'students') { uploadStudentFile(file); return; }
+
+  var reader = new FileReader();
   reader.onload = function (e) {
+    var rows;
     try {
-      var wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-      var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      if      (type === 'dept')     parseDeptRows(rows);
-      else if (type === 'struct')   parseStructureRows(rows);
-      else if (type === 'subjects') parseSubjectRows(rows);
-      else if (type === 'students') parseStudentRows(rows);
-      else if (type === 'teachers') parseTeacherRows(rows);
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
     } catch (err) {
       showToast('Error reading file: ' + err.message, 'warn');
+      return;
     }
+    // Wait for the initial dept/class/subject/batch fetch so duplicate and
+    // batch checks run against real data even if a file is dropped the
+    // instant the page loads.
+    _cacheReady.then(function () {
+      if (type === 'dept')     return parseDeptRows(rows);
+      if (type === 'struct')   return parseStructureRows(rows);
+      if (type === 'subjects') return parseSubjectRows(rows);
+      if (type === 'teachers') return parseTeacherRows(rows);
+    });
   };
   reader.readAsArrayBuffer(file);
+}
+
+function uploadStudentFile(file) {
+  var tok = sessionStorage.getItem('eams_token');
+  var fd = new FormData();
+  fd.append('file', file);
+  showToast('Uploading students…');
+  fetch('/api/students/bulk-upload', {
+    method: 'POST',
+    headers: { 'Authorization': tok ? 'Bearer ' + tok : '' },
+    body: fd
+  }).then(function (r) {
+    if (r.status === 401) { doLogout(); throw new Error('Authentication failed'); }
+    return r.json();
+  }).then(function (data) {
+    if (data && data.error) { showToast(data.error, 'warn'); return; }
+    showUploadPreview('tup', data.added, data.skipped, data.errors);
+    showToast('Students: ' + data.added + ' added' + (data.skipped ? ', ' + data.skipped + ' skipped' : ''));
+    if (data.added > 0) wizMarkDone('student');
+  }).catch(function (err) {
+    showToast('Upload failed: ' + err.message, 'warn');
+  });
 }
 
 function nk(k) { return k.toString().toLowerCase().replace(/[^a-z]/g, ''); }
@@ -294,218 +383,233 @@ function cv(row, aliases) {
   return '';
 }
 
-function parseDeptRows(rows) {
-  var added = 0, skipped = 0, pending = rows.slice();
+async function parseDeptRows(rows) {
+  var added = 0, skipped = 0, cancelled = false;
 
-  function next() {
-    if (!pending.length) {
-      showUploadPreview('dept-up', added, skipped);
-      showToast('Departments: ' + added + ' added, ' + skipped + ' skipped');
-      if (added > 0) wizMarkDone('dept');
-      return;
-    }
-    var row  = pending.shift();
+  for (var i = 0; i < rows.length; i++) {
+    var row  = rows[i];
     var name = cv(row, ['deptname', 'name', 'dept']);
     var code = cv(row, ['code', 'deptcode']);
-    var icon = cv(row, ['icon']) || '🏛️';
 
-    if (!name || !code) { skipped++; next(); return; }
+    if (!name || !code) { skipped++; continue; }
+    code = code.toUpperCase();
 
-    var ex = DB.get('depts').find(function (d) {
-      return d.code.toUpperCase() === code.toUpperCase() || d.name.toLowerCase() === name.toLowerCase();
+    var existing = _cache.depts.find(function (d) {
+      return d.code.toUpperCase() === code || d.name.toLowerCase() === name.toLowerCase();
     });
 
-    if (ex) {
-      checkConflict(ex, { name: name, code: code.toUpperCase(), icon: icon }, 'Dept: ' + name, function (c) {
-        if (c === 'replace') {
-          DB.update('depts', ex._id, { name: name, code: code.toUpperCase(), icon: icon });
+    if (existing) {
+      var choice = await decideConflict(existing, { name: name, code: code }, 'Dept: ' + name);
+      if (choice === 'cancel') { cancelled = true; break; }
+      if (choice === 'replace') {
+        try {
+          var updated = await apiCall('PUT', '/depts/' + existing._id, { name: name, code: code });
+          Object.assign(existing, updated);
           added++;
-        } else {
-          skipped++;
-        }
-        next();
-      });
+        } catch (e) { skipped++; }
+      } else {
+        skipped++;
+      }
     } else {
-      DB.insert('depts', { name: name, code: code.toUpperCase(), icon: icon });
-      added++;
-      next();
+      try {
+        var created = await apiCall('POST', '/depts', { name: name, code: code });
+        _cache.depts.push(created);
+        added++;
+      } catch (e) { skipped++; }
     }
   }
-  next();
+
+  showUploadPreview('dept-up', added, skipped);
+  showToast('Departments: ' + added + ' added, ' + skipped + ' skipped' + (cancelled ? ' — upload cancelled' : ''));
+  if (added > 0) wizMarkDone('dept');
 }
 
-function parseStructureRows(rows) {
-  var added = 0, skipped = 0;
-  rows.forEach(function (row) {
+async function parseStructureRows(rows) {
+  var added = 0, skipped = 0, errors = [];
+
+  // Class documents require a `batch` — this comes from the active
+  // Academic Year's batch list, not from anything the wizard itself sets
+  // up, so bail out with one clear message rather than a wall of
+  // per-row "batch not recognised" errors.
+  if (!_cache.batches.length) {
+    showUploadPreview('sup', 0, 0, [{ row: '-', name: '', issues: ['No active batches found — set up the current Academic Year first (Admin → Settings), then re-upload.'] }]);
+    showToast('Classes: no active academic-year batches found', 'warn');
+    return;
+  }
+
+  for (var i = 0; i < rows.length; i++) {
+    var row  = rows[i], rn = i + 2;
     var dn   = cv(row, ['dept', 'department']);
     var dc   = cv(row, ['code', 'deptcode']);
     var sem  = cv(row, ['sem', 'semester']);
     var sec  = cv(row, ['sec', 'section']);
-    var yr   = cv(row, ['year']);
+    var yr   = cv(row, ['year']) || 'I Year';
     var hall = cv(row, ['hall', 'hallno']);
+    var batchVal = cv(row, ['batch']);
 
-    if (!dn) { skipped++; return; }
+    var rowErrors = [];
+    if (!dn)   rowErrors.push('Department missing');
+    if (!hall) rowErrors.push('HallNo missing');
+    if (!sec)  rowErrors.push('Section missing');
+    var matchedBatch = _cache.batches.find(function (b) { return b.toLowerCase() === batchVal.toLowerCase(); });
+    if (!batchVal) rowErrors.push('Batch missing');
+    else if (!matchedBatch) rowErrors.push('Batch "' + batchVal + '" not active (active: ' + _cache.batches.join(', ') + ')');
 
-    var dept = DB.get('depts').find(function (d) { return d.name === dn || d.code === dc; });
-    if (!dept) dept = DB.insert('depts', { name: dn, code: dc || dn.slice(0, 4).toUpperCase(), icon: '🏛️' });
-
-    if (DB.one('classes', { deptId: dept._id, sem: sem, section: sec, year: yr || 'I Year' })) {
+    if (rowErrors.length) {
       skipped++;
-      return;
+      errors.push({ row: rn, name: dn || '(blank)', issues: rowErrors });
+      continue;
     }
 
-    DB.insert('classes', {
-      deptId:   dept._id,
-      deptName: dept.name,
-      deptCode: dept.code,
-      year:     yr || 'I Year',
-      sem:      sem || 'I',
-      section:  sec || 'A',
-      hallNo:   hall,
-      name:     dept.code + '-' + (sem || 'I') + '-' + (sec || 'A'),
+    var dept = _cache.depts.find(function (d) {
+      return d.name.toLowerCase() === dn.toLowerCase() || d.code.toLowerCase() === dn.toLowerCase() || (dc && d.code.toLowerCase() === dc.toLowerCase());
     });
-    added++;
-  });
-  showUploadPreview('sup', added, skipped);
+    if (!dept) {
+      try {
+        dept = await apiCall('POST', '/depts', { name: dn, code: dc || dn.slice(0, 4).toUpperCase() });
+        _cache.depts.push(dept);
+      } catch (e) {
+        skipped++;
+        errors.push({ row: rn, name: dn, issues: ['Could not create department: ' + e.message] });
+        continue;
+      }
+    }
+
+    var className = dept.code + '-' + sem + '-' + sec;
+    var dupe = _cache.classes.find(function (c) { return c.name.toLowerCase() === className.toLowerCase(); });
+    if (dupe) { skipped++; continue; }
+
+    try {
+      var created = await apiCall('POST', '/classes', {
+        name: className, deptId: dept._id, deptName: dept.name, deptCode: dept.code,
+        year: yr, sem: sem || 'I', section: sec, hallNo: hall, batch: matchedBatch
+      });
+      _cache.classes.push(created);
+      added++;
+    } catch (e) {
+      skipped++;
+      errors.push({ row: rn, name: className, issues: [e.message] });
+    }
+  }
+
+  showUploadPreview('sup', added, skipped, errors);
   showToast('Classes: ' + added + ' added, ' + skipped + ' skipped');
   if (added > 0) wizMarkDone('class');
 }
 
-function parseSubjectRows(rows) {
-  var added = 0, skipped = 0;
-  rows.forEach(function (row) {
+async function parseSubjectRows(rows) {
+  var added = 0, skipped = 0, errors = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i], rn = i + 2;
     var name    = cv(row, ['name', 'subject']);
     var code    = cv(row, ['code']);
-    var dc      = cv(row, ['dept', 'department', 'deptcode']);
+    var dn      = cv(row, ['dept', 'department', 'deptcode']);
     var credits = parseInt(cv(row, ['credit', 'credits'])) || 3;
     var type    = cv(row, ['type']) || 'Theory';
 
-    if (!name) { skipped++; return; }
+    var rowErrors = [];
+    if (!name) rowErrors.push('Name missing');
+    if (!code) rowErrors.push('Code missing');
+    if (!dn)   rowErrors.push('Department missing');
+    if (rowErrors.length) {
+      skipped++;
+      errors.push({ row: rn, name: name || code || '(blank)', issues: rowErrors });
+      continue;
+    }
 
-    var dept = DB.get('depts').find(function (d) { return d.code === dc || d.name === dc; });
-    if (!dept) { skipped++; return; }
-
-    if (DB.one('subjects', { code: code, deptId: dept._id })) { skipped++; return; }
-
-    DB.insert('subjects', {
-      name:     name,
-      code:     code,
-      credits:  credits,
-      type:     type,
-      deptId:   dept._id,
-      deptName: dept.name,
-      deptCode: dept.code,
+    var dept = _cache.depts.find(function (d) {
+      return d.code.toLowerCase() === dn.toLowerCase() || d.name.toLowerCase() === dn.toLowerCase();
     });
-    added++;
-  });
-  showUploadPreview('subup', added, skipped);
+    if (!dept) {
+      skipped++;
+      errors.push({ row: rn, name: name, issues: ['Department "' + dn + '" not found — add it first'] });
+      continue;
+    }
+
+    // subjectCode is required + unique on the backend but isn't a column
+    // the upload sheet asks for — derive it the same way the single-add
+    // form does (deptCode + subject code), just without the manual
+    // "short code" field that form also collects.
+    var subjectCode = dept.code + '-' + code.toUpperCase();
+    if (_cache.subjects.find(function (s) { return s.subjectCode === subjectCode; })) {
+      skipped++;
+      errors.push({ row: rn, name: name, issues: ['Subject code ' + subjectCode + ' already exists'] });
+      continue;
+    }
+
+    try {
+      var created = await apiCall('POST', '/subjects', {
+        name: name, code: code, credits: credits, type: type,
+        deptId: dept._id, deptName: dept.name, deptCode: dept.code, subjectCode: subjectCode
+      });
+      _cache.subjects.push(created);
+      added++;
+    } catch (e) {
+      skipped++;
+      errors.push({ row: rn, name: name, issues: [e.message] });
+    }
+  }
+
+  showUploadPreview('subup', added, skipped, errors);
   showToast('Subjects: ' + added + ' added, ' + skipped + ' skipped');
   if (added > 0) wizMarkDone('subject');
 }
 
-function parseStudentRows(rows) {
+async function parseTeacherRows(rows) {
   var added = 0, skipped = 0, errors = [];
-  var VALID = ['UG', 'PG', 'M.E', 'M.TECH', 'B.E', 'B.TECH'];
 
-  rows.forEach(function (row, ri) {
-    var rn     = ri + 2;
-    var name   = cv(row, ['fullname', 'name', 'studentname']);
-    var regNo  = cv(row, ['registerno', 'regno', 'registernum', 'rollno', 'roll']);
-    var ay     = cv(row, ['academicyear', 'academicyr', 'ay']) || '';
-    var ct     = cv(row, ['coursetype', 'course', 'type']).toUpperCase() || '';
-    var branch = cv(row, ['branch', 'branchname']);
-    var dn     = cv(row, ['department', 'dept', 'deptname']);
-    var yr     = cv(row, ['year', 'studyyear', 'yr']);
-    var cn     = cv(row, ['class', 'classname', 'classid']);
-    var sec    = cv(row, ['section', 'sec']);
-    var email  = cv(row, ['email', 'emailid', 'mail']);
-    var user   = cv(row, ['username', 'user', 'loginid']);
-    var pass   = cv(row, ['password', 'pass', 'pwd']) || 'student@123';
-
-    var errs = [];
-    if (!name)  errs.push('FullName missing');
-    if (!regNo) errs.push('RegisterNo missing');
-    if (!dn)    errs.push('Department missing');
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.push('Invalid email');
-    if (ct && VALID.indexOf(ct) === -1)  errs.push('CourseType "' + ct + '" unknown');
-    if (regNo && DB.one('students', { regNo: regNo })) errs.push('RegisterNo ' + regNo + ' exists');
-    if (user && DB.one('users', { username: user })) errs.push('Username "' + user + '" taken');
-
-    if (errs.length) {
-      skipped++;
-      errors.push({ row: rn, name: name || '(blank)', issues: errs });
-      return;
-    }
-
-    var dept = DB.get('depts').find(function (d) {
-      return d.name.toLowerCase() === dn.toLowerCase() || d.code.toLowerCase() === dn.toLowerCase();
-    });
-    var cls  = DB.get('classes').find(function (c) {
-      return c.name === cn || (c.deptName.toLowerCase() === dn.toLowerCase() && c.section === sec);
-    });
-
-    DB.insert('students', {
-      name:         name,
-      regNo:        regNo,
-      academicYear: ay,
-      courseType:   ct,
-      branch:       branch,
-      deptId:       dept ? dept._id   : '',
-      deptName:     dept ? dept.name  : dn,
-      classId:      cls  ? cls._id    : '',
-      className:    cls  ? cls.name   : cn,
-      year:         yr,
-      section:      sec,
-      email:        email,
-    });
-
-    if (user) {
-      DB.insert('users', {
-        name:     name,
-        username: user,
-        password: pass,
-        role:     'student',
-        regNo:    regNo,
-        deptName: dept ? dept.name : dn,
-        email:    email,
-      });
-    }
-    added++;
-  });
-
-  showUploadPreview('tup', added, skipped, errors);
-  showToast('Students: ' + added + ' added' + (skipped ? ', ' + skipped + ' skipped' : ''));
-  if (added > 0) wizMarkDone('student');
-}
-
-function parseTeacherRows(rows) {
-  var added = 0, skipped = 0;
-  rows.forEach(function (row) {
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i], rn = i + 2;
     var name  = cv(row, ['name']);
     var empId = cv(row, ['empid', 'employeeid', 'employee']);
-    var dept  = cv(row, ['dept', 'department']);
+    var dn    = cv(row, ['dept', 'department']);
     var desig = cv(row, ['desig', 'designation']) || 'Assistant Professor';
     var user  = cv(row, ['user', 'username']);
     var pass  = cv(row, ['pass', 'password']) || 'teacher123';
 
-    if (!name || !user) { skipped++; return; }
-    if (DB.one('users', { username: user })) { skipped++; return; }
+    var rowErrors = [];
+    if (!name) rowErrors.push('Name missing');
+    if (!user) rowErrors.push('Username missing');
+    if (rowErrors.length) {
+      skipped++;
+      errors.push({ row: rn, name: name || '(blank)', issues: rowErrors });
+      continue;
+    }
 
-    DB.insert('users', {
-      name:  name,
-      empId: empId,
-      dept:  dept,
-      desig: desig,
-      username: user,
-      password: pass,
-      role:  'teacher',
-    });
-    added++;
-  });
-  showUploadPreview('tcup', added, skipped);
+    var dept = dn ? _cache.depts.find(function (d) {
+      return d.name.toLowerCase() === dn.toLowerCase() || d.code.toLowerCase() === dn.toLowerCase();
+    }) : null;
+
+    try {
+      await apiCall('POST', '/teachers', {
+        fullName: name, employeeNo: empId, department: dept ? dept.name : dn,
+        deptId: dept ? dept._id : null, deptCode: dept ? dept.code : '',
+        designation: desig, username: user, password: pass
+      });
+      added++;
+    } catch (e) {
+      skipped++;
+      errors.push({ row: rn, name: name, issues: [e.message || 'Could not add teacher'] });
+    }
+  }
+
+  showUploadPreview('tcup', added, skipped, errors);
   showToast('Teachers: ' + added + ' added, ' + skipped + ' skipped');
   if (added > 0) wizMarkDone('teacher');
 }
 
-initWizard();
+// ── BOOT ─────────────────────────────────────────────────────────────────
+var currentUser = null;
+
+(function checkAuthAndBoot() {
+  // Every other protected page in EAMS gates on checkAuth() and bounces
+  // unauthenticated visitors to index.html — this page had no such guard.
+  currentUser = checkAuth('admin');
+  if (!currentUser) return;
+
+  _cacheReady = loadCache();
+  initWizard();
+})();
+
 document.addEventListener('contextmenu', function (e) { e.preventDefault(); });

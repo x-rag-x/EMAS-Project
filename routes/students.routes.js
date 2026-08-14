@@ -118,6 +118,7 @@ router.get('/exam-search', authMiddleware, async (req, res) => {
     // Map to frontend expected structure
     const mapped = students.map(s => ({
       _id: s._id,
+      trackId: s.trackId,
       name: s.fullName,
       regNo: s.registerNo,
       deptName: s.department,
@@ -301,21 +302,33 @@ router.post('/bulk-upload', authMiddleware, adminOnly, upload.single('file'), as
       if (username && await M.User.findOne({ username: username.toLowerCase() })) rowErrors.push(`Username "${username}" taken`);
       if (rowErrors.length) { skipped++; errors.push({ row: i + 2, name: name || '(blank)', issues: rowErrors }); continue; }
       const dept = await M.Department.findOne({ $or: [{ name: new RegExp(escapeRegex(deptName), 'i') }, { code: new RegExp(escapeRegex(deptName), 'i') }] });
+      if (!dept) { skipped++; errors.push({ row: i + 2, name, issues: [`Department "${deptName}" not found`] }); continue; }
       const cls = await M.Class.findOne({ name: className }).lean();
-      
+
       const generatedTrackId = 'TRSTU_' + Math.random().toString(36).substr(2, 9).toUpperCase();
       const defaultPassword = password || cfg.STUDENT_PASSWORD;
       const hash = await bcrypt.hash(defaultPassword, cfg.BCRYPT_ROUNDS);
       const generatedUsername = username || regNo.toLowerCase();
 
-      await M.Student.create({
-        fullName: name, registerNo: regNo, class: className || cls?.name || '', classId: cls?._id, section,
-        courseType, branch, department: dept?.name || deptName, deptId: dept?._id, admissionYear: acadYear,
-        email, username: generatedUsername, password: hash, trackId: generatedTrackId, isRep: false,
-        mustChangePassword: true
-      });
-
-      await M.User.create({username: generatedUsername,role: 'student',trackId: generatedTrackId,status: 'active',});
+      let createdStudent;
+      try {
+        createdStudent = await M.Student.create({
+          fullName: name, registerNo: regNo, class: className || cls?.name || '', classId: cls?._id, section,
+          courseType, branch, department: dept.name, deptId: dept._id, admissionYear: acadYear,
+          email, username: generatedUsername, password: hash, trackId: generatedTrackId, isRep: false,
+          mustChangePassword: true
+        });
+        await M.User.create({ username: generatedUsername, role: 'student', trackId: generatedTrackId, status: 'active' });
+      } catch (rowErr) {
+        // A bad row (e.g. duplicate key slipping past the pre-checks above,
+        // or a validation error) must not abort every row after it — undo
+        // the student doc if the shadow user failed so we don't leave an
+        // orphaned account with no login, then record it and move on.
+        if (createdStudent) await M.Student.findByIdAndDelete(createdStudent._id).catch(() => {});
+        skipped++;
+        errors.push({ row: i + 2, name, issues: [rowErr.message] });
+        continue;
+      }
       added++;
     }
     await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 

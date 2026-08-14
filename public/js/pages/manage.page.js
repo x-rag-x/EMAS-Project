@@ -6,6 +6,15 @@ var eaStudentList= [];
 var _dmDayType   = 'working';
 var _dmWorking   = true;
 
+// ── Utils ─────────────────────────────────────────────────────────────
+function pad2(n){ return String(n).padStart(2,'0'); }
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(s){ if(!s) return '—'; var d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function examDates(ex){
+  var arr=(ex&&Array.isArray(ex.Dates))?ex.Dates.slice().sort():[];
+  return { start: arr[0]||'', end: arr[arr.length-1]||'' };
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────
 (function() {
   var stored = sessionStorage.getItem('eams_user');
@@ -91,7 +100,7 @@ var _dmWorking   = true;
 (function () {
   async function checkSessionExpiry() {
   try {
-      const session = await apiCall('GET', '/login-history');
+      const session = await apiCall('GET', '/auth/login-history');
       if (!session || !session.expireTime) return;
 
       const remainingTime = new Date(session.expireTime).getTime() - Date.now();
@@ -109,6 +118,20 @@ var _dmWorking   = true;
   }
   checkSessionExpiry();
 })();
+
+// ── Sidebar toggle ────────────────────────────────────────────────────
+function toggleSidebar() {
+  var sb = document.querySelector('.sb');
+  var mc = document.querySelector('.mc');
+  var overlay = document.getElementById('sb-overlay');
+  if (window.innerWidth <= 768) {
+    if (sb) sb.classList.toggle('sb-mobile-open');
+    if (overlay) overlay.classList.toggle('visible');
+  } else {
+    if (sb) sb.classList.toggle('sb-hidden');
+    if (mc) mc.classList.toggle('sb-expanded');
+  }
+}
 
 // ── Navigation ────────────────────────────────────────────────────────
 function nav(page) {
@@ -155,17 +178,18 @@ function loadOverview() {
 function renderUpcomingExams(exams) {
   var cont = document.getElementById('ov-exams-list');
   if(!exams.length){ cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">No upcoming exams.</div>'; return; }
-  var typeIcons={'Internal1':'📘','Internal2':'📙','Practicals':'🔬','Semester':'📚'};
-  var typeColors={'Internal1':'#eff6ff','Internal2':'#fdf4ff','Practicals':'#fff7ed','Semester':'#fef2f2'};
+  var typeIcons={'Internal 1':'📘','Internal 2':'📙','Practicals':'🔬','Semester':'📚'};
+  var typeColors={'Internal 1':'#eff6ff','Internal 2':'#fdf4ff','Practicals':'#fff7ed','Semester':'#fef2f2'};
   var html='';
   exams.slice(0,8).forEach(function(ex){
     var ic=typeIcons[ex.examType]||'📄';
     var col=typeColors[ex.examType]||'#f3f4f6';
+    var rng=examDates(ex);
     var statusPill = ex.status==='ongoing'?'<span class="bge bgg">Ongoing</span>':'<span class="bge bgb">'+ex.status+'</span>';
     html+='<div class="upcoming-exam">'
       +'<div class="ue-type-ic" style="background:'+col+'">'+ic+'</div>'
       +'<div class="ue-info"><div class="ue-title">'+ex.title+'</div>'
-      +'<div class="ue-meta">'+fmtDate(ex.startDate)+' – '+fmtDate(ex.endDate)+' &nbsp;|&nbsp; Year '+ex.studentYear+' &nbsp;'+statusPill+'</div></div>'
+      +'<div class="ue-meta">'+fmtDate(rng.start)+' – '+fmtDate(rng.end)+' &nbsp;|&nbsp; Sem '+ex.semester+' &nbsp;'+statusPill+'</div></div>'
       +'</div>';
   });
   cont.innerHTML = html;
@@ -266,10 +290,9 @@ function generateMonthDefaults(){
   var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
   dbToast('Generating defaults…','saving');
   apiCall('POST','/calendar/bulk-generate',{month:m,year:y,overwriteExisting:false}).then(function(r){
-    if(r.error){dbToast('Error: '+r.error,'error');return;}
     dbToast('Defaults applied','success',r.generated+' days set');
     loadCalendar();
-  }).catch(function(){dbToast('Server error','error');});
+  }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 
 function saveCalendarMonth(finalize){
@@ -291,18 +314,8 @@ function saveCalendarMonth(finalize){
   if(savePromises.length===0){ dbToast('No days to save','warn'); return;}
   Promise.all(savePromises).then(function(){
     dbToast(finalize?'Month finalized':'Drafts saved','success',savePromises.length+' days updated');
-    if(finalize) refreshDates();
     loadCalendar();
-    
   }).catch(function(){ dbToast('Error saving some days','error'); });
-}
-
-function refreshDates(){
-  dbToast('Refreshing calendar dates…','saving');
-  apiCall('POST','/calendar/refresh-dates',{}).then(function(r){
-    if(r.error){dbToast('Refresh failed: '+r.error,'error');return;}
-    dbToast('Dates refreshed','success');
-  }).catch(function(){dbToast('Refresh server error','error');});
 }
 
 // ── DAY MODAL ─────────────────────────────────────────────────────────
@@ -346,8 +359,8 @@ function saveDayModal(finalize){
   var details=yrs.map(function(y){return {year:y,dayType:_dmDayType,comments:notes,timing:timing};});
   dbToast('Saving…','saving');
   apiCall('POST','/calendar',{date:dateStr,details:details,isFinalized:!!finalize})
-    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Day saved','success'); closeModal('day-modal-bg'); loadCalendar(); })
-    .catch(function(){dbToast('Server error','error');});
+    .then(function(r){ dbToast('Day saved','success'); closeModal('day-modal-bg'); loadCalendar(); })
+    .catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 
 // ── EXAMS ─────────────────────────────────────────────────────────────
@@ -375,21 +388,22 @@ function loadExams(){
   yr=document.getElementById('ef-year').value;
   var status=document.getElementById('ef-status').value, 
   acyr=document.getElementById('ef-acyear').value.trim();
-  var q='/exams?'; if(type) q+='examType='+encodeURIComponent(type)+'&'; if(yr) q+='studentYear='+encodeURIComponent(yr)+'&';
+  var q='/exams?'; if(type) q+='examType='+encodeURIComponent(type)+'&'; if(yr) q+='semester='+encodeURIComponent(yr)+'&';
   if(status) q+='status='+encodeURIComponent(status)+'&'; if(acyr) q+='academicYear='+encodeURIComponent(acyr)+'&';
   document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:20px;">Loading…</td></tr>';
   apiCall('GET',q).then(function(data){ examsData=Array.isArray(data)?data:[]; renderExamsTable(examsData); }).catch(function(){ document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:20px;">Failed to load</td></tr>'; });
 }
-var typePills={Internal1:'<span class="bge bgb">Int 1</span>',Internal2:'<span class="bge bgp">Int 2</span>',Practicals:'<span class="bge bga">Labs</span>',Semester:'<span class="bge bgr">Sem</span>'};
+var typePills={'Internal 1':'<span class="bge bgb">Int 1</span>','Internal 2':'<span class="bge bgp">Int 2</span>',Practicals:'<span class="bge bga">Labs</span>',Semester:'<span class="bge bgr">Sem</span>'};
 var statusPills={upcoming:'<span class="bge bgb">Upcoming</span>',ongoing:'<span class="bge bgg">Ongoing</span>',completed:'<span class="bge bggy">Done</span>',cancelled:'<span class="bge bgr">Cancelled</span>'};
 function renderExamsTable(exams){
   if(!exams.length){ document.getElementById('exams-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:24px;">No exams. Click <strong>+ Add Exam</strong>.</td></tr>'; return; }
   var html='';
   exams.forEach(function(ex,i){
-    html+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+ex.title+'</td><td>'+(typePills[ex.examType]||ex.examType)+'</td><td><span class="bge bgg">'+ex.studentYear+'</span></td><td>'+(ex.deptName||'<em style="color:var(--tdi)">All</em>')+'</td><td>'+fmtDate(ex.startDate)+'</td><td>'+fmtDate(ex.endDate)+'</td><td style="white-space:nowrap;">'+(ex.timing?ex.timing.start+'–'+ex.timing.end:'—')+'</td><td>'+(statusPills[ex.status]||ex.status)+'</td>'
+    var rng=examDates(ex);
+    html+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+ex.title+'</td><td>'+(typePills[ex.examType]||ex.examType)+'</td><td><span class="bge bgg">'+ex.semester+'</span></td><td>'+(ex.deptName||'<em style="color:var(--tdi)">All</em>')+'</td><td>'+fmtDate(rng.start)+'</td><td>'+fmtDate(rng.end)+'</td><td style="white-space:nowrap;">'+(ex.timing?ex.timing.start+'–'+ex.timing.end:'—')+'</td><td>'+(statusPills[ex.status]||ex.status)+'</td>'
       +'<td style="white-space:nowrap;">'
-      +'<button class="btn-out btn-xs" onclick="openExamModal(\''+ex._id+'\')" style="margin-right:4px;">✏️</button>'
-      +'<button style="background:rgba(59,130,246,.08);color:#2563eb;border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:\'Poppins\',sans-serif;" onclick="quickViewAtt(\''+ex._id+'\',\''+ex.title+'\')">👁️</button>'
+      +'<button class="btn-out btn-xs" onclick="openExamModal(\''+ex.ExamTrackId+'\')" style="margin-right:4px;">✏️</button>'
+      +'<button style="background:rgba(59,130,246,.08);color:#2563eb;border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:\'Poppins\',sans-serif;" onclick="quickViewAtt(\''+ex.ExamTrackId+'\',\''+ex.title+'\')">👁️</button>'
       +'</td></tr>';
   });
   document.getElementById('exams-tbody').innerHTML=html;
@@ -398,12 +412,30 @@ function openExamModal(examId){
   document.getElementById('exam-modal-title').textContent=examId?'Edit Exam':'Add Exam';
   document.getElementById('em-id').value=examId||'';
   document.getElementById('em-delete-btn').style.display=examId?'':'none';
-  ['em-title','em-acyear','em-notes'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('em-type').value=''; document.getElementById('em-student-year').value='All';
+  ['em-title','em-acyear','em-notes','em-batch'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('em-type').value=''; document.getElementById('em-semester').value='';
   document.getElementById('em-dept').value=''; document.getElementById('em-t-start').value='09:00';
   document.getElementById('em-t-end').value='16:00'; document.getElementById('em-status').value='upcoming';
   document.getElementById('em-start').value=''; document.getElementById('em-end').value='';
-  if(examId){ var ex=examsData.find(function(e){return e._id===examId;}); if(ex){ document.getElementById('em-title').value=ex.title||''; document.getElementById('em-type').value=ex.examType||''; document.getElementById('em-acyear').value=ex.academicYear||''; document.getElementById('em-student-year').value=ex.studentYear||'All'; document.getElementById('em-dept').value=ex.deptId||''; document.getElementById('em-start').value=ex.startDate||''; document.getElementById('em-end').value=ex.endDate||''; document.getElementById('em-t-start').value=(ex.timing&&ex.timing.start)||'09:00'; document.getElementById('em-t-end').value=(ex.timing&&ex.timing.end)||'16:00'; document.getElementById('em-status').value=ex.status||'upcoming'; document.getElementById('em-notes').value=ex.notes||''; } }
+  if(examId){
+    var ex=examsData.find(function(e){return e.ExamTrackId===examId;});
+    if(ex){
+      var rng=examDates(ex);
+      document.getElementById('em-title').value=ex.title||'';
+      document.getElementById('em-type').value=ex.examType||'';
+      document.getElementById('em-acyear').value=ex.academicYear||'';
+      document.getElementById('em-semester').value=ex.semester||'';
+      document.getElementById('em-batch').value=ex.batch||'';
+      var deptId=''; if(ex.deptName){ var mdept=deptsData.find(function(d){return d.name===ex.deptName;}); if(mdept) deptId=mdept._id; }
+      document.getElementById('em-dept').value=deptId;
+      document.getElementById('em-start').value=rng.start;
+      document.getElementById('em-end').value=rng.end;
+      document.getElementById('em-t-start').value=(ex.timing&&ex.timing.start)||'09:00';
+      document.getElementById('em-t-end').value=(ex.timing&&ex.timing.end)||'16:00';
+      document.getElementById('em-status').value=ex.status||'upcoming';
+      document.getElementById('em-notes').value=ex.notes||'';
+    }
+  }
   else { var curYr=yearsData.find(function(y){return y.isCurrent;}); if(curYr) document.getElementById('em-acyear').value=curYr.academicYear; }
   openModal('exam-modal-bg');
 
@@ -422,18 +454,17 @@ function saveExam(finalize){
   while(cur<=endD){ Dates.push(cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate())); cur.setDate(cur.getDate()+1); }
   
   apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{title,examType:type,semester,academicYear:document.getElementById('em-acyear').value.trim(),batch:document.getElementById('em-batch').value.trim(),deptId,deptName,Dates,timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},status:document.getElementById('em-status').value,notes:document.getElementById('em-notes').value.trim(),isFinalized:!!finalize})
-    .then(function(r){ 
-      if(r.error){ dbToast('Error: '+r.error,'error');return; } 
+    .then(function(r){
       dbToast('Exam saved','success'); closeModal('exam-modal-bg'); 
       loadExams(); 
       loadCalendar(); 
-    }).catch(function(){ dbToast('Server error','error'); });
+    }).catch(function(err){ dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error'); });
 }
 function deleteExam(){
   if(!confirm('Delete this exam? Calendar exam entries will also be removed.')) return;
   var id=document.getElementById('em-id').value;
   dbToast('Deleting…','saving');
-  apiCall('DELETE','/exams/'+id).then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Exam deleted','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(){dbToast('Server error','error');});
+  apiCall('DELETE','/exams/'+id).then(function(r){ dbToast('Exam deleted','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 
 // ── EXAM ATTENDANCE ───────────────────────────────────────────────────
@@ -441,24 +472,25 @@ function populateExamSel(){
   apiCall('GET','/exams/active').then(function(data){
     var exams=Array.isArray(data)?data:[], sel=document.getElementById('ea-exam-sel');
     sel.innerHTML='<option value="">— Select Exam —</option>';
-    exams.forEach(function(ex){ sel.innerHTML+='<option value="'+ex._id+'">'+ex.title+' ('+fmtDate(ex.startDate)+' – '+fmtDate(ex.endDate)+')</option>'; });
+    exams.forEach(function(ex){ var rng=examDates(ex); sel.innerHTML+='<option value="'+ex.ExamTrackId+'">'+ex.title+' ('+fmtDate(rng.start)+' – '+fmtDate(rng.end)+')</option>'; });
   }).catch(function(){});
 }
 function onExamSelChange(){
   var examId=document.getElementById('ea-exam-sel').value;
   document.getElementById('ea-date-sel').innerHTML='<option value="">— Select Date —</option>';
   if(!examId) return;
-  var ex=examsData.find(function(e){return e._id===examId;});
-  if(ex){ populateDateDrop(ex); } else { apiCall('GET','/exams/'+examId).then(function(r){ if(!r.error) populateDateDrop(r); }).catch(function(){}); }
+  var ex=examsData.find(function(e){return e.ExamTrackId===examId;});
+  if(ex){ populateDateDrop(ex); } else { apiCall('GET','/exams/'+examId).then(function(r){ populateDateDrop(r); }).catch(function(){}); }
   loadHallSummary();
 }
 function populateDateDrop(ex){
   var sel=document.getElementById('ea-date-sel');
   sel.innerHTML='<option value="">— Select Date —</option>';
-  if(!ex.startDate||!ex.endDate) return;
-  var cur=new Date(ex.startDate+'T00:00:00'), end=new Date(ex.endDate+'T00:00:00');
+  var rng=examDates(ex);
+  if(!rng.start||!rng.end) return;
+  var cur=new Date(rng.start+'T00:00:00'), end=new Date(rng.end+'T00:00:00');
   while(cur<=end){ var ds=cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate()); var dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][cur.getDay()]; sel.innerHTML+='<option value="'+ds+'">'+dow+' '+fmtDate(ds)+(ds===todayStr()?' ← Today':'')+'</option>'; cur.setDate(cur.getDate()+1); }
-  if(ex.startDate<=todayStr()&&todayStr()<=ex.endDate) sel.value=todayStr();
+  if(rng.start<=todayStr()&&todayStr()<=rng.end) sel.value=todayStr();
 }
 function onExamDateChange(){ loadHallSummary(); }
 function populateDeptCheckboxes(){
@@ -489,7 +521,7 @@ function renderSrchDd(students){
   dd.classList.add('open');
 }
 document.addEventListener('click',function(e){ if(!e.target.closest('#ea-search-dd')&&!e.target.matches('#ea-regno-inp')) document.getElementById('ea-search-dd').classList.remove('open'); });
-function addStudent(s){ if(eaStudentList.some(function(r){return r.regNo===s.regNo;})){showToast('Already added','warn');return;} eaStudentList.push({_id:s._id||null,regNo:s.regNo,name:s.name||'',deptName:s.deptName||'',year:s.year||'',status:'present'}); renderStudentList(); }
+function addStudent(s){ if(eaStudentList.some(function(r){return r.regNo===s.regNo;})){showToast('Already added','warn');return;} eaStudentList.push({_id:s._id||null,trackId:s.trackId||'',regNo:s.regNo,name:s.name||'',deptName:s.deptName||'',year:s.year||'',status:'present'}); renderStudentList(); }
 function renderStudentList(){
   var cont=document.getElementById('ea-student-list'), pill=document.getElementById('ea-count-pill'), sub=document.getElementById('ea-submit-btn');
   if(!eaStudentList.length){ cont.innerHTML='<div style="text-align:center;color:var(--tdi);font-size:11.5px;padding:30px 0;">No students added yet.</div>'; pill.textContent='0 students'; document.getElementById('ea-present-count').textContent='0'; document.getElementById('ea-absent-count').textContent='0'; sub.disabled=true; sub.style.opacity='.5'; sub.style.cursor='not-allowed'; return; }
@@ -506,13 +538,13 @@ function submitExamAttendance(){
   var examId=document.getElementById('ea-exam-sel').value, date=document.getElementById('ea-date-sel').value, hallNo=document.getElementById('ea-hall-inp').value.trim();
   if(!examId){showToast('Select an exam','warn');return;} if(!date){showToast('Select a date','warn');return;} if(!hallNo){showToast('Enter your hall number','warn');return;} if(!eaStudentList.length){showToast('Add at least one student','warn');return;}
   dbToast('Submitting…','saving');
-  apiCall('POST','/exam-attendance',{examId,date,hallNo,records:eaStudentList.map(function(s){return{studentId:s._id,regNo:s.regNo,name:s.name,deptName:s.deptName,year:s.year,status:s.status};})})
-    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Submitted — Hall '+hallNo,'success',eaStudentList.filter(function(s){return s.status==='present';}).length+' present'); clearExamList(); document.getElementById('ea-hall-inp').value=''; loadHallSummary(); }).catch(function(){dbToast('Server error','error');});
+  apiCall('POST','/exam-attendance',{examTrackId:examId,date,hallNo,records:eaStudentList.map(function(s){return{studentTrackId:s.trackId,regNo:s.regNo,name:s.name,deptName:s.deptName,year:s.year,status:s.status};})})
+    .then(function(r){ dbToast('Submitted — Hall '+hallNo,'success',eaStudentList.filter(function(s){return s.status==='present';}).length+' present'); clearExamList(); document.getElementById('ea-hall-inp').value=''; loadHallSummary(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 function loadHallSummary(){
   var examId=document.getElementById('ea-exam-sel').value, date=document.getElementById('ea-date-sel').value||todayStr();
   if(!examId) return;
-  apiCall('GET','/exam-attendance/halls-today?examId='+examId+'&date='+date).then(function(halls){ renderHallSummary(Array.isArray(halls)?halls:[]); }).catch(function(){});
+  apiCall('GET','/exam-attendance/halls-today?examTrackId='+examId+'&date='+date).then(function(halls){ renderHallSummary(Array.isArray(halls)?halls:[]); }).catch(function(){});
 }
 function renderHallSummary(halls){
   var tbody=document.getElementById('hall-summary-tbody');
@@ -522,7 +554,7 @@ function renderHallSummary(halls){
   tbody.innerHTML=html;
 }
 function viewHallAtt(id){
-  apiCall('GET','/exam-attendance/'+id).then(function(r){ if(r.error||!r){showToast('Failed','warn');return;} document.getElementById('vam-title').textContent='Hall '+r.hallNo; document.getElementById('vam-sub').textContent=r.examTitle+' — '+fmtDate(r.date); document.getElementById('vam-meta').innerHTML='<span>👩‍🏫 <strong>'+r.teacherName+'</strong></span><span>🏛️ '+r.hallNo+'</span><span>📅 '+fmtDate(r.date)+'</span>'; var tb=document.getElementById('vam-tbody'); tb.innerHTML=''; r.records.forEach(function(rec,i){ tb.innerHTML+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+rec.regNo+'</td><td>'+rec.name+'</td><td>'+rec.deptName+'</td><td>'+rec.year+'</td><td>'+(rec.status==='present'?'<span class="bge bgg">Present</span>':'<span class="bge bgr">Absent</span>')+'</td></tr>'; }); document.getElementById('vam-present-total').textContent='✓ Present: '+r.totalPresent; document.getElementById('vam-absent-total').textContent='✗ Absent: '+r.totalAbsent; openModal('view-att-bg'); }).catch(function(){showToast('Server error','warn');});
+  apiCall('GET','/exam-attendance/'+id).then(function(r){ if(!r){showToast('Failed','warn');return;} document.getElementById('vam-title').textContent='Hall '+r.hallNo; document.getElementById('vam-sub').textContent=r.examTitle+' — '+fmtDate(r.date); document.getElementById('vam-meta').innerHTML='<span>👩‍🏫 <strong>'+r.teacherName+'</strong></span><span>🏛️ '+r.hallNo+'</span><span>📅 '+fmtDate(r.date)+'</span>'; var tb=document.getElementById('vam-tbody'); tb.innerHTML=''; r.records.forEach(function(rec,i){ tb.innerHTML+='<tr><td class="b">'+(i+1)+'</td><td class="b">'+rec.regNo+'</td><td>'+rec.name+'</td><td>'+rec.deptName+'</td><td>'+rec.year+'</td><td>'+(rec.status==='present'?'<span class="bge bgg">Present</span>':'<span class="bge bgr">Absent</span>')+'</td></tr>'; }); document.getElementById('vam-present-total').textContent='✓ Present: '+r.totalPresent; document.getElementById('vam-absent-total').textContent='✗ Absent: '+r.totalAbsent; openModal('view-att-bg'); }).catch(function(){showToast('Server error','warn');});
 }
 function quickViewAtt(examId,title){ examSubTab('attendance'); setTimeout(function(){ document.getElementById('ea-exam-sel').value=examId; onExamSelChange(); },100); }
 
@@ -535,7 +567,7 @@ function loadManageAdmins(){
     var html='<div style="display:flex;flex-direction:column;gap:10px;">';
     admins.forEach(function(a){
       var permsHtml=(a.permissions||[]).map(function(p){ return '<span class="perm-chip">'+p+'</span>'; }).join('');
-      var statusPill=a.active?'<span class="bge bgg">Active</span>':'<span class="bge bgr">Inactive</span>';
+      var statusPill=a.status!=='inactive'?'<span class="bge bgg">Active</span>':'<span class="bge bgr">Inactive</span>';
       html+='<div class="admin-card">'
         +'<div class="admin-av">'+a.name[0].toUpperCase()+'</div>'
         +'<div class="admin-info">'
@@ -575,13 +607,13 @@ function saveManageAdmin(){
   if(!id&&!payload.password){showToast('Password required','warn');return;}
   dbToast('Saving…','saving');
   apiCall(id?'PUT':'POST',id?'/manage-admins/'+id:'/manage-admins',payload)
-    .then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Saved','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(){dbToast('Server error','error');});
+    .then(function(r){ dbToast('Saved','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 function deleteManageAdmin(){
   if(!confirm('Remove this manage admin?')) return;
   var id=document.getElementById('am-id').value;
   dbToast('Removing…','saving');
-  apiCall('DELETE','/manage-admins/'+id).then(function(r){ if(r.error){dbToast('Error: '+r.error,'error');return;} dbToast('Removed','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(){dbToast('Server error','error');});
+  apiCall('DELETE','/manage-admins/'+id).then(function(r){ dbToast('Removed','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 
 // init perm checkboxes toggle behavior
@@ -1030,11 +1062,10 @@ function saveYear() {
   var payload = { academicYear: acadYear, batches: batches, isCurrent: _ymCurrent };
   apiCall(id ? 'PUT' : 'POST', id ? '/year/' + id : '/year', payload)
     .then(function(r) {
-      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
       dbToast('Year saved', 'success');
       closeModal('year-modal-bg');
       loadYears();
-    }).catch(function() { dbToast('Server error', 'error'); });
+    }).catch(function(err) { dbToast('Error: ' + (err&&err.message?err.message:'Server error'), 'error'); });
 }
 
 function deleteYear() {
@@ -1043,11 +1074,10 @@ function deleteYear() {
   dbToast('Deleting…', 'saving');
   apiCall('DELETE', '/year/' + id)
     .then(function(r) {
-      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
       dbToast('Year deleted', 'success');
       closeModal('year-modal-bg');
       loadYears();
-    }).catch(function() { dbToast('Server error', 'error'); });
+    }).catch(function(err) { dbToast('Error: ' + (err&&err.message?err.message:'Server error'), 'error'); });
 }
 
 function setYearAsCurrent(yearId) {
@@ -1055,10 +1085,9 @@ function setYearAsCurrent(yearId) {
   dbToast('Updating…', 'saving');
   apiCall('PUT', '/year/' + yearId, { isCurrent: true })
     .then(function(r) {
-      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
       dbToast('Current year updated', 'success');
       loadYears();
-    }).catch(function() { dbToast('Server error', 'error'); });
+    }).catch(function(err) { dbToast('Error: ' + (err&&err.message?err.message:'Server error'), 'error'); });
 }
 
 // ── Edit Batch modal ─────────────────────────────────────────────────
@@ -1123,9 +1152,8 @@ function saveBatch() {
   dbToast('Saving…', 'saving');
   apiCall('PUT', '/year/' + yearId, { batches: updatedBatches })
     .then(function(r) {
-      if (r.error) { dbToast('Error: ' + r.error, 'error'); return; }
       dbToast('Batch updated', 'success');
       closeModal('batch-modal-bg');
       loadYears();
-    }).catch(function() { dbToast('Server error', 'error'); });
+    }).catch(function(err) { dbToast('Error: ' + (err&&err.message?err.message:'Server error'), 'error'); });
 }

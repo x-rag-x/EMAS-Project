@@ -1,17 +1,27 @@
-const usersModels      = require('./users.models');
-const addersModels     = require('./adders.models');
-const attendanceModels = require('./attendance.models');
-const timetableModels  = require('./timetable.models');
-const manageModels     = require('./manage.models');
-const featuresModels   = require('./features.models');
-const adminModels      = require('./admin.models');
+const userModels       = require('./user.model');
+const departmentModels = require('./department.model');
+const classModels      = require('./class.model');
+const subjectModels    = require('./subject.model');
+const assignmentModels = require('./assignment.model');
+const attendanceModels = require('./attendance.model');
+const timetableModels  = require('./timetable.model');
+const calendarModels   = require('./calendar.model');
+const examModels       = require('./exam.model');
+const yearModels       = require('./year.model');
+const settingsModels   = require('./settings.model');
+const systemModels     = require('./system.model');
 
 module.exports = {
-  ...usersModels,
-  ...addersModels,
+  ...userModels,
+  ...departmentModels,
+  ...classModels,
+  ...subjectModels,
+  ...assignmentModels,
   ...attendanceModels,
   ...timetableModels,
-  ...manageModels,
-  ...featuresModels,
-  ...adminModels
+  ...calendarModels,
+  ...examModels,
+  ...yearModels,
+  ...settingsModels,
+  ...systemModels,
 };

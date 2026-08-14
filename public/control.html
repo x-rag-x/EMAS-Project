@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EAMS – System Control Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/control.css">
 </head>
 <body>
@@ -129,7 +128,7 @@
           <button onclick="setErrorsMode('n')" id="err-btn-n" style="padding:5px 12px;background:var(--gLt);border:1px solid var(--gLr);color:var(--gD);border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Last <span id="err-n-disp">20</span></button>
         </div>
       </div>
-      <div id="health-errors-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding-right:4px;"></div>
+      <div id="health-errors-list" class="health-errors-list"></div>
     </div>
 
     <div id="maint-banner" class="maint-banner hidden">
@@ -621,7 +620,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Contact Email <span class="key-label">institutionEmail</span></label>
-          <input type="email" class="form-input" id="inst-email" placeholder="info@siet.ac.in">
+          <input type="email" class="form-input" id="inst-email" placeholder="info@siet.ac.in" autocomplete="off">
         </div>
         <div class="form-group">
           <label class="form-label">Phone <span class="key-label">institutionPhone</span></label>
@@ -974,7 +973,6 @@
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-out btn-sm" onclick="pingServer()">🏓 Ping Server</button>
         <button class="btn btn-out btn-sm" onclick="checkDB()">🔌 Check DB Connection</button>
-        <button class="btn btn-out btn-sm" onclick="clearCache()">🧹 Clear Local Cache</button>
       </div>
       <div id="ping-result" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tmu);"></div>
     </div>
@@ -1157,34 +1155,14 @@
       <div style="font-size:16px;font-weight:800;color:var(--td);">🗑️ Clear Browser Cache</div>
       <button onclick="closeModalBg('m-clear-storage')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tmu);">✖</button>
     </div>
-      <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>browser storage</strong>.</div>
-      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">Cleared data will be re-fetched from MongoDB on next sync.</div>
-
-      <!-- Select All + localStorage collections -->
-      <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;">
-        <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">localStorage (synced data)</div>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="checkbox" id="clr-all" onchange="toggleClearAll(this)" style="accent-color:#ef4444;width:15px;height:15px;">
-          <span style="color:#ef4444;">Select All</span>
-        </label>
-        <hr style="border:none;border-top:1px solid var(--br);margin:0;">
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="depts"         style="accent-color:var(--p);width:14px;height:14px;"> 🏛️ Departments</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="classes"       style="accent-color:var(--p);width:14px;height:14px;"> 🏫 Classes</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="subjects"      style="accent-color:var(--p);width:14px;height:14px;"> 📚 Subjects</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="students"      style="accent-color:var(--p);width:14px;height:14px;"> 👨‍🎓 Students</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="users"         style="accent-color:var(--p);width:14px;height:14px;"> 👩‍🏫 Users / Teachers</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="assignments"   style="accent-color:var(--p);width:14px;height:14px;"> 📋 Assignments</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="attendance"    style="accent-color:var(--p);width:14px;height:14px;"> 📅 Attendance Records</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="notifications" style="accent-color:var(--p);width:14px;height:14px;"> 🔔 Notifications</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="logs"          style="accent-color:var(--p);width:14px;height:14px;"> 📋 Activity Logs</label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ls" value="settings"      style="accent-color:var(--p);width:14px;height:14px;"> ⚙️ Cached Settings</label>
-      </div>
+      <div style="font-size:14px;margin-bottom:4px;">Choose what to clear from <strong>this browser's session data</strong>.</div>
+      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">All academic data lives only in MongoDB and is always fetched fresh — there is nothing else to clear.</div>
 
       <!-- sessionStorage section -->
       <div style="text-align:left;background:var(--gLt);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
         <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">sessionStorage (session data)</div>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="session_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="eams_token" style="accent-color:#b45309;width:14px;height:14px;"> 🔑 Auth Token <span style="font-size:11px;color:#b45309;margin-left:4px;">(logs you out)</span></label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" class="clr-chk clr-ss" value="eams_user"  style="accent-color:#b45309;width:14px;height:14px;"> 👤 Session User Profile</label>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:4px;">
@@ -1193,3 +1171,8 @@
       </div>
   </div>
 </div>
+<script src="js/core/session.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/toast.js"></script>
+<script src="js/core/modal.js"></script>
+<script src="js/pages/control.page.js"></script>

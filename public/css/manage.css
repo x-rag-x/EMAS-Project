@@ -116,3 +116,22 @@
 .ue-info{ flex:1; }
 .ue-title{ font-size:12.5px; font-weight:700; color:var(--td); }
 .ue-meta{ font-size:10.5px; color:var(--tmu); margin-top:2px; }
+
+/* ── SIDEBAR / TOPBAR (page-specific pieces not covered by base.css) ─── */
+.sb-logo-mark{ width:36px; height:36px; border-radius:10px; background:var(--gD); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.sb-logo-text{ font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--td); line-height:1.2; }
+.sb-logo-sub{ font-size:10px; color:var(--tdi); font-weight:500; }
+.sb-nav{ flex:1; overflow-y:auto; padding:10px 0; }
+.sb-section{ font-size:10.5px; text-transform:uppercase; letter-spacing:1.8px; color:var(--tdi); font-weight:600; padding:12px 16px 4px; }
+
+.tb-date{ font-size:11px; color:var(--tmu); background:var(--gLt); padding:4px 12px; border-radius:12px; border:1px solid var(--br); font-weight:500; }
+.tb-profile{ display:flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:24px; border:1.5px solid var(--br); background:#fff; }
+.tb-av{ width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--gM),var(--gL)); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.tb-name{ font-size:12px; font-weight:700; color:var(--td); }
+
+/* ── FORM GRID (page-specific) ──────────────────────────────────────── */
+.fgrid{ display:grid; gap:12px; margin-bottom:12px; }
+.fg2{ grid-template-columns:1fr 1fr; }
+.fg3{ grid-template-columns:1fr 1fr 1fr; }
+
+.btn-xs{ padding:4px 10px; font-size:11px; border-radius:10px; }

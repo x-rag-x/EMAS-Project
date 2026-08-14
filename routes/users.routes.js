@@ -15,20 +15,25 @@ router.get('/', authMiddleware, adminOnly, async (req, res) => {
 
     const users = await M.User.find(filter).sort({ role: 1, username: 1 }).lean();
 
-    // Enrich with names
-    const enrichedUsers = await Promise.all(users.map(async (u) => {
-      let name = '';
-      if (u.role === 'admin') {
-        const doc = await M.Admin.findOne({ trackId: u.trackId }, 'fullName').lean();
-        name = doc ? doc.fullName : '';
-      } else if (u.role === 'teacher') {
-        const doc = await M.Teacher.findOne({ trackId: u.trackId }, 'fullName').lean();
-        name = doc ? doc.fullName : '';
-      } else if (u.role === 'student') {
-        const doc = await M.Student.findOne({ trackId: u.trackId }, 'fullName').lean();
-        name = doc ? doc.fullName : '';
-      }
-      return { ...u, name: name || u.username };
+    // Batch enrich with names via 3 parallel queries instead of N per-user queries
+    const adminTrackIds = users.filter(u => u.role === 'admin').map(u => u.trackId).filter(Boolean);
+    const teacherTrackIds = users.filter(u => u.role === 'teacher').map(u => u.trackId).filter(Boolean);
+    const studentTrackIds = users.filter(u => u.role === 'student').map(u => u.trackId).filter(Boolean);
+
+    const [admins, teachers, students] = await Promise.all([
+      adminTrackIds.length ? M.Admin.find({ trackId: { $in: adminTrackIds } }, 'trackId fullName').lean() : [],
+      teacherTrackIds.length ? M.Teacher.find({ trackId: { $in: teacherTrackIds } }, 'trackId fullName').lean() : [],
+      studentTrackIds.length ? M.Student.find({ trackId: { $in: studentTrackIds } }, 'trackId fullName').lean() : []
+    ]);
+
+    const nameMap = new Map();
+    admins.forEach(a => nameMap.set(a.trackId, a.fullName));
+    teachers.forEach(t => nameMap.set(t.trackId, t.fullName));
+    students.forEach(s => nameMap.set(s.trackId, s.fullName));
+
+    const enrichedUsers = users.map(u => ({
+      ...u,
+      name: nameMap.get(u.trackId) || u.username
     }));
 
     let result = enrichedUsers;

@@ -36,14 +36,15 @@ const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 const readline = require('readline');
 const crypto   = require('crypto');
-const cfg      = require('./config');
-const M        = require('./models');
+const cfg      = require('../config');
+const M        = require('../models');
 
 let COLLECTION;
 
@@ -899,6 +900,104 @@ async function _demoAssignments() {
   return { created, skipped };
 }
 
+// ── Demo Academic Years ──────────────────────────────────────────────────
+async function _demoAcademicYears() {
+  var existing = await M.Year.findOne().lean();
+  if (existing) {
+    warn('Academic years already exist — skipping demo creation.');
+    return { created: 0, skipped: 1 };
+  }
+
+  var acadYear = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+  var startYr = new Date().getFullYear();
+  var batches = [];
+  var yearLevels = ['I', 'II', 'III', 'IV'];
+
+  yearLevels.forEach(function(lv) {
+    var offset = { I: 0, II: 1, III: 2, IV: 3 }[lv];
+    var bs = startYr - offset;
+    var be = bs + 4;
+    var batchLabel = bs + '-' + be;
+    var trackId = 'TR-BATCH-' + String(bs).slice(-2) + String(be).slice(-2);
+    var defaultSem = { I: 'I', II: 'III', III: 'V', IV: 'VII' }[lv];
+    batches.push({ batchTrackId: trackId, batch: batchLabel, currentYear: lv, currentSem: defaultSem });
+    ok(`  Batch ${batchLabel} → Year ${lv}, Sem ${defaultSem}`);
+  });
+
+  await M.Year.create({
+    academicYear: acadYear,
+    batches: batches,
+    isCurrent: true,
+    createdBy: 'Demo CLI',
+  });
+  await logSetup('Demo Academic Years Created (CLI)', acadYear);
+  ok(`Academic year "${acadYear}" created with ${batches.length} batch(es).`);
+  return { created: 1, skipped: 0 };
+}
+
+// ── Demo Exams ───────────────────────────────────────────────────────────
+async function _demoExams() {
+  var depts = await M.Department.find().lean();
+  var yearsData = await M.Year.find().lean();
+  var currentYear = yearsData.find(function(y) { return y.isCurrent; });
+  var acadYear = currentYear ? currentYear.academicYear : (new Date().getFullYear() + '-' + (new Date().getFullYear() + 1));
+  var created = 0, skipped = 0;
+
+  var examTypes = ['Internal 1', 'Internal 2', 'Practicals', 'Semester'];
+  var semesters = ['I', 'II'];
+  var baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + 15);
+
+  for (var si = 0; si < semesters.length; si++) {
+    for (var ti = 0; ti < examTypes.length; ti++) {
+      var sem = semesters[si];
+      var examType = examTypes[ti];
+      var title = examType + ' — Demo (Sem ' + sem + ')';
+      var batchLabel = currentYear && currentYear.batches.length
+        ? currentYear.batches[0].batch
+        : (new Date().getFullYear() + '-' + (new Date().getFullYear() + 4));
+
+      var startD = new Date(baseDate);
+      startD.setDate(startD.getDate() + (si * 30) + (ti * 7));
+      var endD = new Date(startD);
+      endD.setDate(endD.getDate() + 3);
+
+      function pad2Ex(n) { return String(n).padStart(2, '0'); }
+      var startStr = startD.getFullYear() + '-' + pad2Ex(startD.getMonth() + 1) + '-' + pad2Ex(startD.getDate());
+      var endStr = endD.getFullYear() + '-' + pad2Ex(endD.getMonth() + 1) + '-' + pad2Ex(endD.getDate());
+
+      var Dates = [];
+      var cur = new Date(startD);
+      while (cur <= endD) {
+        Dates.push(cur.getFullYear() + '-' + pad2Ex(cur.getMonth() + 1) + '-' + pad2Ex(cur.getDate()));
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      var examExists = await M.Exam.findOne({ title: title });
+      if (examExists) { skipped++; continue; }
+
+      await M.Exam.create({
+        ExamTrackId: 'TREXAM_' + crypto.randomBytes(5).toString('hex').toUpperCase(),
+        title: title,
+        examType: examType,
+        semester: sem,
+        academicYear: acadYear,
+        batch: batchLabel,
+        deptName: undefined,
+        Dates: Dates,
+        timing: { start: '09:00', end: '12:00' },
+        status: si === 0 && ti === 0 ? 'ongoing' : 'upcoming',
+        notes: 'Demo exam created via CLI',
+        createdBy: 'Demo CLI',
+      });
+      ok(`  Exam "${title}" created (${startStr} – ${endStr})`);
+      created++;
+    }
+  }
+  await logSetup('Demo Exams Created (CLI)', `${created} created, ${skipped} skipped`);
+  return { created, skipped };
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  DEMO — MENU WRAPPERS (each asks for count then calls core fn)
 // ══════════════════════════════════════════════════════════════════════
@@ -1025,10 +1124,35 @@ async function demoAssignmentsMenu() {
   console.log(`\n  ${C.green}${C.bold}✅ Assignments done:${C.reset}  ${created} created  |  ${skipped} skipped (already exist)`);
 }
 
+async function demoAcademicYearsMenu() {
+  head('📚  DEMO — ACADEMIC YEARS');
+  const existing = await M.Year.countDocuments();
+  if (existing) {
+    warn(`${existing} academic year(s) already exist. Skipping demo creation.`);
+    return;
+  }
+  console.log(`  Will create one academic year with 4 batches (Year I–IV).\n`);
+  const go = await askYN('Proceed?', true);
+  if (!go) { info('Cancelled.'); return; }
+  const { created, skipped } = await _demoAcademicYears();
+  console.log(`\n  ${C.green}${C.bold}✅ Years done:${C.reset}  ${created} created  |  ${skipped} skipped`);
+}
+
+async function demoExamsMenu() {
+  head('📝  DEMO — EXAMS');
+  const depts = await M.Department.countDocuments();
+  if (!depts) { warn('No departments found. Create Demo Departments first.'); return; }
+  info(`Found ${depts} department(s). Will create sample exams (Internal 1, Internal 2, Practicals, Semester).\n`);
+  const go = await askYN('Proceed?', true);
+  if (!go) { info('Cancelled.'); return; }
+  const { created, skipped } = await _demoExams();
+  console.log(`\n  ${C.green}${C.bold}✅ Exams done:${C.reset}  ${created} created  |  ${skipped} skipped (already exist)`);
+}
+
 // ── Demo All ───────────────────────────────────────────────────────────────
 async function demoAllMenu() {
   head('🎭  DEMO — ALL DATA');
-  info('Generates the full dataset in order: Depts → Classes → Subjects → Teachers → Admins → Students → Assignments.');
+  info('Generates the full dataset in order: Academic Years → Depts → Classes → Subjects → Teachers → Admins → Students → Assignments → Exams.');
   console.log(`  Answer each prompt — then confirm once to create everything.\n`);
 
   // Collect all counts upfront
@@ -1050,6 +1174,7 @@ async function demoAllMenu() {
   // Summary
   console.log(`\n  ${C.bold}${C.blue}Summary${C.reset}`);
   console.log(`  ┌─────────────────────────────────────────────┐`);
+  console.log(`  │  Academic Yrs : auto (1 with 4 batches)     │`);
   console.log(`  │  Departments  : ${String(deptCount).padEnd(28,' ')}│`);
   console.log(`  │  Classes      : ${String(deptCount * perDept).padEnd(28,' ')}│`);
   console.log(`  │  Subjects     : up to ${String(deptCount * subjPerDept).padEnd(23,' ').trim()}│`);
@@ -1057,61 +1182,74 @@ async function demoAllMenu() {
   console.log(`  │  Admins       : ${String(admCount).padEnd(28,' ')}│`);
   console.log(`  │  Students     : ${String(studPerCls) + '/class (total ≈ ' + (deptCount*perDept*studPerCls) + ')  '}${''.padEnd(0,' ')}│`);
   console.log(`  │  Assignments  : auto-generated              │`);
+  console.log(`  │  Exams        : auto (8 sample exams)        │`);
   console.log(`  └─────────────────────────────────────────────┘\n`);
 
   const go = await askYN('Proceed with full demo seed?', true);
   if (!go) { info('Cancelled.'); return; }
 
-  // ── Step 1: Departments ──
-  head('🏛️  Step 1/7 — Departments');
+  // ── Step 1: Academic Years ──
+  head('📚  Step 1/9 — Academic Years');
+  const yr2 = await _demoAcademicYears();
+  ok(`Academic years: ${yr2.created} created, ${yr2.skipped} skipped.`);
+
+  // ── Step 2: Departments ──
+  head('🏛️  Step 2/9 — Departments');
   const dr = await _demoDepts(deptCount);
   ok(`Departments: ${dr.created} created, ${dr.skipped} skipped.`);
 
-  // ── Step 2: Classes ──
-  head('🏫  Step 2/7 — Classes');
+  // ── Step 3: Classes ──
+  head('🏫  Step 3/9 — Classes');
   const cr = await _demoClasses(perDept, batch, yearRaw);
   ok(`Classes: ${cr.created} created, ${cr.skipped} skipped.`);
 
-  // ── Step 3: Subjects ──
-  head('📚  Step 3/7 — Subjects');
+  // ── Step 4: Subjects ──
+  head('📚  Step 4/9 — Subjects');
   const sr = await _demoSubjects(subjPerDept);
   ok(`Subjects: ${sr.created} created, ${sr.skipped} skipped.`);
 
-  // ── Step 4: Teachers ──
-  head('🎓  Step 4/7 — Teachers');
+  // ── Step 5: Teachers ──
+  head('🎓  Step 5/9 — Teachers');
   const tr = await _demoTeachers(tchCount);
   ok(`Teachers: ${tr.created} created, ${tr.skipped} skipped.`);
 
-  // ── Step 5: Admins ──
-  head('👑  Step 5/7 — Admins');
+  // ── Step 6: Admins ──
+  head('👑  Step 6/9 — Admins');
   const ar = await _demoAdmins(admCount);
   ok(`Admins: ${ar.created} created, ${ar.skipped} skipped.`);
 
-  // ── Step 6: Students ──
-  head('🧑‍🎓  Step 6/7 — Students');
+  // ── Step 7: Students ──
+  head('🧑‍🎓  Step 7/9 — Students');
   const stu = await _demoStudents(studPerCls);
   ok(`Students: ${stu.created} created, ${stu.skipped} skipped.`);
 
-  // ── Step 7: Assignments ──
-  head('📋  Step 7/7 — Assignments');
+  // ── Step 8: Assignments ──
+  head('📋  Step 8/9 — Assignments');
   const ass = await _demoAssignments();
   ok(`Assignments: ${ass.created} created, ${ass.skipped} skipped.`);
+
+  // ── Step 9: Exams ──
+  head('📝  Step 9/9 — Exams');
+  const ex = await _demoExams();
+  ok(`Exams: ${ex.created} created, ${ex.skipped} skipped.`);
 
   // Final summary
   console.log(`\n${C.bold}${C.green}  ╔═════════════════════════════════════════════════╗`);
   console.log(`  ║   🎉  Full demo seed complete!                  ║`);
   console.log(`  ║                                                 ║`);
-  console.log(`  ║   Departments : ${String(dr.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Classes     : ${String(cr.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Subjects    : ${String(sr.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Teachers    : ${String(tr.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Admins      : ${String(ar.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Students    : ${String(stu.created).padEnd(30,' ')} ║`);
-  console.log(`  ║   Assignments : ${String(ass.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Academic Yrs : ${String(yr2.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Departments  : ${String(dr.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Classes      : ${String(cr.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Subjects     : ${String(sr.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Teachers     : ${String(tr.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Admins       : ${String(ar.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Students     : ${String(stu.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Assignments  : ${String(ass.created).padEnd(30,' ')} ║`);
+  console.log(`  ║   Exams        : ${String(ex.created).padEnd(30,' ')} ║`);
   console.log(`  ╚═════════════════════════════════════════════════╝${C.reset}\n`);
 
   await logSetup('Demo All Seed Complete (CLI)',
-    `depts=${dr.created} classes=${cr.created} subjects=${sr.created} teachers=${tr.created} admins=${ar.created} students=${stu.created} assignments=${ass.created}`);
+    `years=${yr2.created} depts=${dr.created} classes=${cr.created} subjects=${sr.created} teachers=${tr.created} admins=${ar.created} students=${stu.created} assignments=${ass.created} exams=${ex.created}`);
 }
 
 // ── Demo Menu ──────────────────────────────────────────────────────────────
@@ -1119,14 +1257,16 @@ async function demoMenu() {
   while (true) {
     head('🎭  DEMO DATA');
     console.log(`  ${C.dim}Create realistic sample data for testing EAMS.\n`);
-    console.log(`  1) Students      → pick count per class`);
-    console.log(`  2) Admins        → pick count`);
-    console.log(`  3) Teachers      → pick count`);
-    console.log(`  4) Departments   → pick from predefined pool`);
-    console.log(`  5) Classes       → pick count per department`);
-    console.log(`  6) Subjects      → pick count per department`);
-    console.log(`  7) Assignments   → auto-assign (needs subjects + classes + teachers)`);
-    console.log(`  8) All           → full seed wizard (all in one go)`);
+    console.log(`  1) Students        → pick count per class`);
+    console.log(`  2) Admins          → pick count`);
+    console.log(`  3) Teachers        → pick count`);
+    console.log(`  4) Departments     → pick from predefined pool`);
+    console.log(`  5) Classes         → pick count per department`);
+    console.log(`  6) Subjects        → pick count per department`);
+    console.log(`  7) Assignments     → auto-assign (needs subjects + classes + teachers)`);
+    console.log(`  8) Academic Years  → create academic year + batches`);
+    console.log(`  9) Exams           → create sample exams (needs departments)`);
+    console.log(`  A) All             → full seed wizard (Years + Depts + Classes + Subjects + Teachers + Admins + Students + Assignments + Exams)`);
     console.log(`  0) Back${C.reset}\n`);
     const choice = await ask('Choice', '0');
     if      (choice === '1') await demoStudentsMenu();
@@ -1136,7 +1276,9 @@ async function demoMenu() {
     else if (choice === '5') await demoClassesMenu();
     else if (choice === '6') await demoSubjectsMenu();
     else if (choice === '7') await demoAssignmentsMenu();
-    else if (choice === '8') await demoAllMenu();
+    else if (choice === '8') await demoAcademicYearsMenu();
+    else if (choice === '9') await demoExamsMenu();
+    else if (choice.toLowerCase() === 'a') await demoAllMenu();
     else if (choice === '0') return;
     else warn('Invalid choice.');
   }
@@ -1335,6 +1477,328 @@ async function startServer() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  MANAGE — Academic Years / Batches / Exams
+// ══════════════════════════════════════════════════════════════════════
+
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const ROMAN_YEAR_SEM = { I: ['I', 'II'], II: ['III', 'IV'], III: ['V', 'VI'], IV: ['VII', 'VIII'] };
+const ROMAN_SEM_TO_YEAR = {};
+Object.keys(ROMAN_YEAR_SEM).forEach(function(yr) { ROMAN_YEAR_SEM[yr].forEach(function(s) { ROMAN_SEM_TO_YEAR[s] = yr; }); });
+
+function nextRomanSem(sem) {
+  var idx = ROMAN.indexOf(sem);
+  if (idx === -1 || idx === ROMAN.length - 1) return null;
+  return ROMAN[idx + 1];
+}
+
+async function manageMenu() {
+  while (true) {
+    head('📋  MANAGE');
+    console.log(`  ${C.dim}1) Academic Years   — List / Create / Set Current / Delete`);
+    console.log(`  2) Batches          — View all / Create / Edit progress`);
+    console.log(`  3) Exams            — List / Create / Update Status / Delete`);
+    console.log(`  0) Back to Main Menu${C.reset}\n`);
+    const choice = await ask('Choice', '0');
+    if      (choice === '1') await manageYearsMenu();
+    else if (choice === '2') await manageBatchesMenu();
+    else if (choice === '3') await manageExamsMenu();
+    else if (choice === '0') return;
+    else warn('Invalid choice.');
+  }
+}
+
+// ── Academic Years ──────────────────────────────────────────────────────
+async function manageYearsMenu() {
+  while (true) {
+    head('📚  ACADEMIC YEARS');
+    const years = await M.Year.find().sort({ createdAt: -1 }).lean();
+    if (years.length) {
+      console.log(`  ${C.bold}Current Years:${C.reset}\n`);
+      years.forEach(function(y, i) {
+        var currentTag = y.isCurrent ? `${C.green} 🎯 CURRENT${C.reset}` : '';
+        console.log(`  ${C.dim}${i + 1}.${C.reset} ${y.academicYear}${currentTag}  ${C.dim}(${y.batches.length} batch(es))${C.reset}`);
+      });
+    } else {
+      info('No academic years found.');
+    }
+    console.log(`\n  ${C.dim}1) Create New Year    2) Set Current Year    3) Delete Year    0) Back${C.reset}\n`);
+    const choice = await ask('Choice', '0');
+    if (choice === '1') {
+      await createAcademicYearCLI();
+    } else if (choice === '2') {
+      var yr = await pickYear('Select year to set as current');
+      if (!yr) continue;
+      await M.Year.updateMany({}, { $set: { isCurrent: false } });
+      await M.Year.findByIdAndUpdate(yr._id, { $set: { isCurrent: true } });
+      await logSetup('Year Set Current (CLI)', yr.academicYear);
+      ok(`"${yr.academicYear}" is now the current academic year.`);
+    } else if (choice === '3') {
+      var yr = await pickYear('Select year to delete');
+      if (!yr) continue;
+      var sure = await confirmPhrase('DELETE YEAR', `Delete "${yr.academicYear}" with ${yr.batches.length} batch(es)?`);
+      if (!sure) { info('Cancelled.'); continue; }
+      await M.Year.findByIdAndDelete(yr._id);
+      await logSetup('Year Deleted (CLI)', yr.academicYear, 'warning');
+      ok(`Year "${yr.academicYear}" deleted.`);
+    } else if (choice === '0') return;
+    else warn('Invalid choice.');
+  }
+}
+
+async function pickYear(promptLabel) {
+  const years = await M.Year.find().sort({ createdAt: -1 }).lean();
+  if (!years.length) { warn('No academic years found.'); return null; }
+  return pickFromList(years, function(y) {
+    var ct = y.isCurrent ? ' 🎯 CURRENT' : '';
+    return `${y.academicYear}${ct}  ${C.dim}(${y.batches.length} batches)${C.reset}`;
+  }, promptLabel);
+}
+
+async function createAcademicYearCLI() {
+  head('📚  CREATE ACADEMIC YEAR');
+  var acadYear = await ask('Academic Year (e.g. 2025-2026)', '');
+  if (!acadYear || !/^\d{4}-\d{4}$/.test(acadYear)) { warn('Use format YYYY-YYYY'); return; }
+  var parts2 = acadYear.split('-');
+  if (parseInt(parts2[1], 10) !== parseInt(parts2[0], 10) + 1) { warn('Years must be consecutive (e.g. 2025-2026)'); return; }
+  if (await M.Year.findOne({ academicYear: acadYear })) { warn(`Year "${acadYear}" already exists.`); return; }
+
+  var setCurrent = await askYN('Set as current academic year?', false);
+  var batches = [];
+  var levels = [];
+
+  info('Add batches for this academic year. Which year levels are studying?');
+  for (var lv of ['I', 'II', 'III', 'IV']) {
+    var addLv = await askYN(`  Include Year ${lv} batch?`, lv === 'I');
+    if (addLv) levels.push(lv);
+  }
+  if (!levels.length) { warn('At least one batch required.'); return; }
+
+  var startYr = parseInt(parts2[0], 10);
+  for (var lv2 of levels) {
+    var offset = { I: 0, II: 1, III: 2, IV: 3 }[lv2];
+    var bs = startYr - offset;
+    var be = bs + 4;
+    var batchLabel = bs + '-' + be;
+    var trackId = 'TR-BATCH-' + String(bs).slice(-2) + String(be).slice(-2);
+    var defaultSem = ROMAN_YEAR_SEM[lv2][0];
+    batches.push({ batchTrackId: trackId, batch: batchLabel, currentYear: lv2, currentSem: defaultSem });
+    ok(`  Batch ${batchLabel} → Year ${lv2}, Sem ${defaultSem}`);
+  }
+
+  var sure = await askYN('Create this academic year with the above batches?', true);
+  if (!sure) { info('Cancelled.'); return; }
+
+  await M.Year.create({
+    academicYear: acadYear,
+    batches: batches,
+    isCurrent: setCurrent,
+    createdBy: 'CLI',
+  });
+  await logSetup('Academic Year Created (CLI)', acadYear);
+  ok(`Academic year "${acadYear}" created with ${batches.length} batch(es).`);
+}
+
+// ── Batches ─────────────────────────────────────────────────────────────
+async function manageBatchesMenu() {
+  while (true) {
+    head('📦  BATCHES');
+    var years = await M.Year.find().sort({ createdAt: -1 }).lean();
+    if (years.length) {
+      console.log(`  ${C.bold}All Batches Across Years:${C.reset}\n`);
+      var allBatches = [];
+      years.forEach(function(y) {
+        y.batches.forEach(function(b) {
+          allBatches.push({ acadYear: y.academicYear, yearId: y._id, batchTrackId: b.batchTrackId, batch: b.batch, currentYear: b.currentYear, currentSem: b.currentSem });
+        });
+      });
+      if (allBatches.length) {
+        allBatches.forEach(function(b, i) {
+          console.log(`  ${C.dim}${i + 1}.${C.reset} ${b.batch}  ${C.dim}→ Year ${b.currentYear} · Sem ${b.currentSem}  (${b.acadYear})${C.reset}`);
+        });
+      } else {
+        info('No batches found.');
+      }
+    } else {
+      info('No academic years found — create one first.');
+    }
+    console.log(`\n  ${C.dim}1) Create Batch    2) Edit Batch Progress    0) Back${C.reset}\n`);
+    var choice = await ask('Choice', '0');
+    if (choice === '1') {
+      await createBatchCLI();
+    } else if (choice === '2') {
+      await editBatchCLI();
+    } else if (choice === '0') return;
+    else warn('Invalid choice.');
+  }
+}
+
+async function createBatchCLI() {
+  head('➕  CREATE BATCH');
+  var yr = await pickYear('Select academic year for this batch');
+  if (!yr) return;
+  var lv = await ask('Year Level (I/II/III/IV)', 'I');
+  if (!['I', 'II', 'III', 'IV'].includes(lv)) { warn('Invalid year level.'); return; }
+  var acadYear = yr.academicYear;
+  var match = acadYear.match(/^(\d{4})-\d{4}$/);
+  if (!match) { warn('Invalid academic year format.'); return; }
+  var startYr = parseInt(match[1], 10);
+  var offset = { I: 0, II: 1, III: 2, IV: 3 }[lv];
+  var bs = startYr - offset;
+  var be = bs + 4;
+  var batchLabel = bs + '-' + be;
+  var trackId = 'TR-BATCH-' + String(bs).slice(-2) + String(be).slice(-2);
+  if (yr.batches.some(function(b) { return b.batchTrackId === trackId; })) {
+    warn('This batch already exists in this academic year.'); return;
+  }
+  var defaultSem = ROMAN_YEAR_SEM[lv][0];
+  yr.batches.push({ batchTrackId: trackId, batch: batchLabel, currentYear: lv, currentSem: defaultSem });
+  await M.Year.findByIdAndUpdate(yr._id, { $set: { batches: yr.batches } });
+  await logSetup('Batch Created (CLI)', batchLabel);
+  ok(`Batch "${batchLabel}" (Year ${lv}) added to ${acadYear}.`);
+}
+
+async function editBatchCLI() {
+  head('✏️  EDIT BATCH PROGRESS');
+  var yr = await pickYear('Select academic year');
+  if (!yr) return;
+  if (!yr.batches.length) { warn('No batches in this year.'); return; }
+  var batch = await pickFromList(yr.batches, function(b) {
+    return `${b.batch}  ${C.dim}→ Year ${b.currentYear} · Sem ${b.currentSem}${C.reset}`;
+  }, 'Select batch to edit');
+  if (!batch) return;
+  console.log(`\n  Editing: ${batch.batch} — currently Year ${batch.currentYear} · Sem ${batch.currentSem}\n`);
+  var action = await ask('1) Set Year/Sem manually  2) Advance one semester  0) Cancel', '0');
+  if (action === '1') {
+    var newYear = await ask('New Year Level (I/II/III/IV)', batch.currentYear);
+    var newSem = await ask('New Semester (I-VIII)', batch.currentSem);
+    if (!ROMAN.includes(newYear)) { warn('Invalid year.'); return; }
+    if (!ROMAN.includes(newSem)) { warn('Invalid semester.'); return; }
+    batch.currentYear = newYear;
+    batch.currentSem = newSem;
+  } else if (action === '2') {
+    var nextSem = nextRomanSem(batch.currentSem);
+    if (!nextSem) { warn('Already at final semester (VIII).'); return; }
+    var nextYear = ROMAN_SEM_TO_YEAR[nextSem];
+    batch.currentSem = nextSem;
+    batch.currentYear = nextYear;
+    ok(`Advanced to Year ${nextYear} · Sem ${nextSem}`);
+  } else { return; }
+  await M.Year.findByIdAndUpdate(yr._id, { $set: { batches: yr.batches } });
+  await logSetup('Batch Updated (CLI)', batch.batch);
+  ok(`Batch "${batch.batch}" updated → Year ${batch.currentYear} · Sem ${batch.currentSem}.`);
+}
+
+// ── Exams ───────────────────────────────────────────────────────────────
+async function manageExamsMenu() {
+  while (true) {
+    head('📝  EXAMS');
+    var exams = await M.Exam.find().sort({ createdAt: -1 }).lean();
+    if (exams.length) {
+      console.log(`  ${C.bold}All Exams:${C.reset}\n`);
+      exams.forEach(function(ex, i) {
+        var rng = examDateRange(ex);
+        var statusCol = ex.status === 'upcoming' ? C.blue : ex.status === 'ongoing' ? C.green : ex.status === 'completed' ? C.dim : C.red;
+        console.log(`  ${C.dim}${i + 1}.${C.reset} ${ex.title}  ${C.dim}(${ex.examType} · Sem ${ex.semester} · ${ex.academicYear || '—'})${C.reset}  ${statusCol}[${ex.status}]${C.reset}`);
+        console.log(`       ${fmtDateShort(rng.start)} – ${fmtDateShort(rng.end)}  ${C.dim}| ${ex.batch || '—'}  | ${ex.deptName || 'All'}${C.reset}`);
+      });
+    } else {
+      info('No exams found.');
+    }
+    console.log(`\n  ${C.dim}1) Create Exam    2) Update Status    3) Delete Exam    0) Back${C.reset}\n`);
+    var choice = await ask('Choice', '0');
+    if (choice === '1') {
+      await createExamCLI();
+    } else if (choice === '2') {
+      await updateExamStatusCLI();
+    } else if (choice === '3') {
+      await deleteExamCLI();
+    } else if (choice === '0') return;
+    else warn('Invalid choice.');
+  }
+}
+
+function examDateRange(ex) {
+  var arr = (ex && Array.isArray(ex.Dates)) ? ex.Dates.slice().sort() : [];
+  return { start: arr[0] || '', end: arr[arr.length - 1] || '' };
+}
+
+function fmtDateShort(s) {
+  if (!s) return '—';
+  var d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function createExamCLI() {
+  head('➕  CREATE EXAM');
+  var title = await ask('Exam Title', '');
+  if (!title) { warn('Title is required.'); return; }
+  var typeChoices = ['Internal 1', 'Internal 2', 'Practicals', 'Semester'];
+  console.log(`  ${C.dim}Types: 1) Internal 1  2) Internal 2  3) Practicals  4) Semester${C.reset}`);
+  var typeRaw = await ask('Exam Type (1-4)', '1');
+  var type = typeChoices[parseInt(typeRaw, 10) - 1] || typeChoices[0];
+  var sem = await ask('Semester (I-VIII)', 'I');
+  if (!ROMAN.includes(sem)) { warn('Invalid semester.'); return; }
+  var acadYear = await ask('Academic Year (e.g. 2025-26)', '');
+  var batch = await ask('Batch (e.g. 2026-2030)', '');
+  var deptName = await ask('Department (leave blank for All)', '');
+  var startDate = await ask('Start Date (YYYY-MM-DD)', '');
+  var endDate = await ask('End Date (YYYY-MM-DD)', '');
+  if (!startDate || !endDate) { warn('Start and end dates required.'); return; }
+  if (startDate > endDate) { warn('Start must be before end.'); return; }
+  var Dates = [];
+  var cur = new Date(startDate + 'T00:00:00');
+  var endD = new Date(endDate + 'T00:00:00');
+  while (cur <= endD) {
+    Dates.push(cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0'));
+    cur.setDate(cur.getDate() + 1);
+  }
+  var tStart = await ask('Exam Start Time', '09:00');
+  var tEnd = await ask('Exam End Time', '16:00');
+  var status = await ask('Status (upcoming/ongoing/completed/cancelled)', 'upcoming');
+  var notes = await ask('Notes (optional)', '');
+  var sure = await askYN('Create this exam?', true);
+  if (!sure) { info('Cancelled.'); return; }
+  await M.Exam.create({
+    ExamTrackId: 'TREXAM_' + crypto.randomBytes(5).toString('hex').toUpperCase(),
+    title: title, examType: type, semester: sem, academicYear: acadYear,
+    batch: batch, deptName: deptName || undefined,
+    Dates: Dates, timing: { start: tStart, end: tEnd },
+    status: status, notes: notes, createdBy: 'CLI',
+  });
+  await logSetup('Exam Created (CLI)', title);
+  ok(`Exam "${title}" created (${type}, Sem ${sem}).`);
+}
+
+async function updateExamStatusCLI() {
+  var exams = await M.Exam.find().sort({ createdAt: -1 }).lean();
+  if (!exams.length) { warn('No exams found.'); return; }
+  var ex = await pickFromList(exams, function(e) {
+    return `${e.title}  ${C.dim}(${e.examType} · [${e.status}])${C.reset}`;
+  }, 'Select exam');
+  if (!ex) return;
+  console.log(`\n  Current status: ${ex.status}\n`);
+  var newStatus = await ask('New status (upcoming/ongoing/completed/cancelled)', ex.status);
+  if (!['upcoming', 'ongoing', 'completed', 'cancelled'].includes(newStatus)) { warn('Invalid status.'); return; }
+  await M.Exam.findByIdAndUpdate(ex._id, { $set: { status: newStatus } });
+  await logSetup('Exam Status Updated (CLI)', `${ex.title} → ${newStatus}`);
+  ok(`Exam "${ex.title}" status updated to "${newStatus}".`);
+}
+
+async function deleteExamCLI() {
+  var exams = await M.Exam.find().sort({ createdAt: -1 }).lean();
+  if (!exams.length) { warn('No exams found.'); return; }
+  var ex = await pickFromList(exams, function(e) {
+    return `${e.title}  ${C.dim}(${e.examType} · Sem ${e.semester})${C.reset}`;
+  }, 'Select exam to delete');
+  if (!ex) return;
+  var sure = await confirmPhrase('DELETE EXAM', `Delete "${ex.title}"?`);
+  if (!sure) { info('Cancelled.'); return; }
+  await M.Exam.findByIdAndDelete(ex._id);
+  await logSetup('Exam Deleted (CLI)', ex.title, 'warning');
+  ok(`Exam "${ex.title}" deleted.`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  MAIN MENU
 // ══════════════════════════════════════════════════════════════════════
 
@@ -1342,13 +1806,14 @@ async function mainMenu() {
   while (true) {
     console.log(`\n${C.bold}${C.magenta}
   ╔════════════════════════════════════════════════════════╗
-  ║          MongoDB — DB Control Console  (setup.js)      ║
+  ║          MongoDB — DB Control Console  (start.js)      ║
   ╚════════════════════════════════════════════════════════╝
 ${C.reset}`);
     console.log(`  ${C.dim}1) Addition           → Normal (manual) or Demo Data (auto-seed)`);
     console.log(`  2) Deletion           → Delete User / Dept / Class / All / Entire DB`);
     console.log(`  3) Manage Collections → list & drop any collection`);
     console.log(`  4) Start Server              → launches server.js`);
+    console.log(`  5) Manage                   → Academic Years / Batches / Exams`);
     console.log(`  0) Exit${C.reset}\n`);
 
     const choice = await ask('Choice', '0');
@@ -1356,6 +1821,7 @@ ${C.reset}`);
     else if (choice === '2') await deletionMenu();
     else if (choice === '3') await manageCollectionsMenu();
     else if (choice === '4') { await startServer(); return; }
+    else if (choice === '5') await manageMenu();
     else if (choice === '0') { ok('Goodbye.'); await cleanExit(0); return; }
     else warn('Invalid choice.');
   }

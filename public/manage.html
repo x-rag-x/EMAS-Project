@@ -11,7 +11,7 @@
 <body>
 
 <!-- ── PAGE LOADER ── shown until first DB sync completes -->
-  <div id="page-loader" style="visibility: hidden;">
+  <div id="page-loader">
     <div class="loader-brand">🌿 EAMS Admin</div>
     <div class="three-body">
       <div class="three-body__dot"></div>
@@ -36,6 +36,8 @@
 <div class="toast" id="toast"></div>
 
 <div id="app-shell">
+
+<div class="sb-overlay" id="sb-overlay" onclick="toggleSidebar()"></div>
 
 <!-- SIDEBAR TOGGLE -->
 <button class="sb-toggle-btn" id="sbtoggle" onclick="toggleSidebar()" title="Toggle">✖</button>
@@ -269,16 +271,18 @@
               <label class="fl">Type</label>
               <select class="fc" id="ef-type" onchange="loadExams()">
                 <option value="">All Types</option>
-                <option value="Internal1">Internal 1</option><option value="Internal2">Internal 2</option>
+                <option value="Internal 1">Internal 1</option><option value="Internal 2">Internal 2</option>
                 <option value="Practicals">Practicals</option><option value="Semester">Semester</option>
               </select>
             </div>
             <div class="fg">
-              <label class="fl">Student Year</label>
+              <label class="fl">Semester</label>
               <select class="fc" id="ef-year" onchange="loadExams()">
                 <option value="">All</option>
-                <option value="I">Year I</option><option value="II">Year II</option>
-                <option value="III">Year III</option><option value="IV">Year IV</option>
+                <option value="I">Semester I</option><option value="II">Semester II</option>
+                <option value="III">Semester III</option><option value="IV">Semester IV</option>
+                <option value="V">Semester V</option><option value="VI">Semester VI</option>
+                <option value="VII">Semester VII</option><option value="VIII">Semester VIII</option>
               </select>
             </div>
             <div class="fg">
@@ -304,7 +308,7 @@
         </div>
         <div class="tw">
           <table class="tbl">
-            <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Year</th><th>Dept</th><th>Start</th><th>End</th><th>Timing</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Sem</th><th>Dept</th><th>Start</th><th>End</th><th>Timing</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="exams-tbody"><tr><td colspan="10" style="text-align:center;color:var(--tdi);padding:24px;">Loading…</td></tr></tbody>
           </table>
         </div>
@@ -548,7 +552,7 @@
       <div class="fg" style="grid-column:span 2;"><label class="fl">Title *</label><input type="text" class="fc2" id="em-title" placeholder="e.g. Internal 1 — CSE Year III"></div>
       <div class="fg"><label class="fl">Exam Type *</label>
         <select class="fc2" id="em-type"><option value="">— Select —</option>
-          <option value="Internal1">Internal 1</option><option value="Internal2">Internal 2</option>
+          <option value="Internal 1">Internal 1</option><option value="Internal 2">Internal 2</option>
           <option value="Practicals">Practicals</option><option value="Semester">Semester</option></select></div>
       <div class="fg"><label class="fl">Academic Year</label><input type="text" class="fc2" id="em-acyear" placeholder="2025-26"></div>
       <div class="fg"><label class="fl">Semester *</label>

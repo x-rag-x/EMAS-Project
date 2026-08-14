@@ -9,8 +9,10 @@ document.addEventListener('DOMContentLoaded', function () {
       break;
     case 'manual':
       msgToast('Logged out successfull', type);
+      break;
     case 'error':
       msgToast('Logged out due an unexpected error', type);
+      break;
   }
 
   if (time > 0) { setTimeout(hideMsgToast, time); }
@@ -62,8 +64,10 @@ function hideMsgToast() {
 })();
 
 let selectedRole = 'admin';
+let signingIn = false;
 
 function pickRole(role) {
+  if (signingIn) return;
   selectedRole = role;
   document.getElementById('tab-student').classList.toggle('sel', role === 'student');
   document.getElementById('tab-teacher').classList.toggle('sel', role === 'teacher');
@@ -73,6 +77,7 @@ function pickRole(role) {
 }
 
 function doSignIn() {
+  if (signingIn) return;
   var usernameInput = document.getElementById('lu').value.trim();
   var passwordInput = document.getElementById('lp').value.trim();
   var errorBox = document.getElementById('lerr');
@@ -83,6 +88,19 @@ function doSignIn() {
     errorBox.style.display = 'block';
     return;
   }
+
+  signingIn = true;
+  document.getElementById('tab-student').style.cursor = 'not-allowed';
+  document.getElementById('tab-teacher').style.cursor = 'not-allowed';
+  document.getElementById('tab-admin').style.cursor = 'not-allowed';
+  document.getElementById('lu').style.cursor = 'not-allowed';
+  document.getElementById('lp').style.cursor = 'not-allowed';
+  document.getElementById('lu').disabled = true;
+  document.getElementById('lp').disabled = true;
+  document.querySelectorAll('.rtab').forEach(function (tab) {
+    tab.style.pointerEvents = 'none';
+  });
+
   signInButton.disabled = true;
   signInButton.innerHTML = '<div class="spin"></div><span>Signing in…</span>';
   fetch('/api/auth/login', {
@@ -101,6 +119,7 @@ function doSignIn() {
         return;
       }
       if (data.error) {
+        resetSignInUI();
         signInButton.disabled = false;
         signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
         errorBox.textContent = data.error;
@@ -122,11 +141,26 @@ function doSignIn() {
       }
     })
     .catch(function () {
+      resetSignInUI();
       signInButton.disabled = false;
       signInButton.innerHTML = '<span id="lbn-txt">Sign In</span>';
       errorBox.textContent = 'Cannot reach server. Try Again ;(';
       errorBox.style.display = 'block';
     });
+}
+
+function resetSignInUI() {
+  signingIn = false;
+  document.getElementById('tab-student').style.cursor = '';
+  document.getElementById('tab-teacher').style.cursor = '';
+  document.getElementById('tab-admin').style.cursor = '';
+  document.getElementById('lu').style.cursor = '';
+  document.getElementById('lp').style.cursor = '';
+  document.getElementById('lu').disabled = false;
+  document.getElementById('lp').disabled = false;
+  document.querySelectorAll('.rtab').forEach(function (tab) {
+    tab.style.pointerEvents = '';
+  });
 }
 
 ['lu', 'lp'].forEach(function (fieldId) {

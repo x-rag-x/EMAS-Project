@@ -134,7 +134,7 @@ body {
 }
 .sb-sub { font-size: 10px; color: var(--tmu); font-family: 'JetBrains Mono', monospace; letter-spacing: .5px }
 .sb-section-label {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 1.8px;
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.8px;
   color: var(--tdi); font-weight: 600; padding: 14px 18px 4px;
 }
 

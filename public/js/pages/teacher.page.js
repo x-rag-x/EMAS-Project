@@ -75,8 +75,6 @@ var _memStore = {};
     }).catch(function(){});
   }
 
-  async 
-
   // ── Session Auto-Logout after 45 minutes
   (function() {
     function checkSessionExpiry() {
@@ -413,7 +411,6 @@ var _memStore = {};
       new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
     renderTodaySchedule(todayISO());
-    renderUpcomingClass();
     renderDefaultersMini();
     renderAttendanceChart();
     renderCalendar();
@@ -477,41 +474,6 @@ var _memStore = {};
     }, 200);
   }
   var navAtt = navigateToAttendance;
-
-  function renderUpcomingClass() {
-    const now          = new Date();
-    const dayName      = DAY_NAMES[now.getDay()];
-    const currentMins  = now.getHours() * 60 + now.getMinutes();
-
-    const nextSlot = DB.get('timetable')
-      .filter(function(t) { return t.teacherId === currentUser._id && t.day === dayName; })
-      .filter(function(t) {
-        const parts = t.start.split(':');
-        return parseInt(parts[0]) * 60 + parseInt(parts[1]) > currentMins;
-      })
-      .sort(function(a, b) { return a.start.localeCompare(b.start); })[0];
-
-    const wrapperEl = document.getElementById('ucwrap');
-    if (!nextSlot) {
-      wrapperEl.innerHTML = '<div style="background:var(--gP);border-radius:15px;padding:18px;text-align:center;border:1.5px dashed var(--gLr);">'
-        + '<div style="font-size:28px;margin-bottom:5px;">&#127769;</div>'
-        + '<div style="font-size:12px;color:var(--tdi);font-weight:600;">No more classes today</div>'
-        + '</div>';
-      return;
-    }
-
-    const parts       = nextSlot.start.split(':');
-    const slotMins    = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-    const minsUntil   = slotMins - currentMins;
-
-    wrapperEl.innerHTML = '<div class="uccard">'
-      + '<div class="uclbl">&#8987; Upcoming Class</div>'
-      + '<div class="uctime">' + nextSlot.start + ' – ' + nextSlot.end + '</div>'
-      + '<div class="ucsub">' + nextSlot.subjectName + '</div>'
-      + '<div class="uccls">' + nextSlot.className + '</div>'
-      + '<div class="uccnt">In ' + minsUntil + ' min</div>'
-      + '</div>';
-  }
 
   function renderDefaultersMini() {
     const allAttendance = DB.get('attendance');
@@ -1494,6 +1456,7 @@ var _memStore = {};
         + '</tr>';
     }).join('');
   }
+  var renderStuList = renderStudentList;
 
   function exportStudentCSV() {
     const tableEl = document.getElementById('stutbody');
@@ -1756,10 +1719,10 @@ window.addEventListener('load',function(){
   if(sessionStorage.getItem('eams_mustChangePw')==='1'){ showForcePwModal(); }
 });
 
-  // Security
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-  document.addEventListener('keydown', function(e){
-    if(e.key==='F12'||(e.card-titlerlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.card-titlerlKey&&e.key==='U')){ e.preventDefault(); return false; }
-  });
+// Security
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+document.addEventListener('keydown', function(e){
+  if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C','K'].includes(e.key))||(e.ctrlKey&&e.key==='U')){ e.preventDefault(); return false; }
+});
 
 function hideMsgToast() { /* no-op - toast hidden by timer */ }

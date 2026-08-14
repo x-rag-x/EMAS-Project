@@ -121,9 +121,6 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     let durationMins = 15;
-    if (role === 'admin') durationMins = 10;
-    else if (role === 'student') durationMins = 25;
-    else if (role === 'teacher') durationMins = 15;
 
     const expiresAt = new Date(Date.now() + durationMins * 60 * 1000);
     const clientDetails = getClientDetails(req);
@@ -237,7 +234,7 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     const model = getRoleModel(req.user.role);
     if (!model) return res.status(400).json({ error: 'Invalid role model' });
 
-    const user = await model.findOne({ username: req.user.username });
+    const user = await model.findOne({ username: req.user.username }).select('+password');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const match = await bcrypt.compare(currentPassword, user.password);
@@ -256,8 +253,60 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Password updation failed.' }); }
 });
 
-router.get('/verify-session', authMiddleware, async (req, res) => {
-  res.json({ valid: true, user: req.user });
+// ── POST /report-unknown — report suspicious login & secure account ──
+router.post('/report-unknown', authMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    await M.Log.create({
+      userName: req.user.name || req.user.username,
+      role: req.user.role,
+      action: 'Unknown Login Reported',
+      details: sessionId ? `Session ${sessionId} reported as suspicious` : 'Unknown session reported',
+      category: 'security', severity: 'warning',
+      ip: req.ip, time: new Date(),
+      trackId: req.user.trackId || null,
+    });
+
+    // Reset password to random, force change on next login
+    const model = getRoleModel(req.user.role);
+    const userDoc = await model.findOne({ username: req.user.username });
+    if (userDoc) {
+      const tempPw = crypto.randomBytes(6).toString('hex');
+      userDoc.password = await bcrypt.hash(tempPw, cfg.BCRYPT_ROUNDS);
+      userDoc.mustChangePassword = true;
+      await userDoc.save();
+    }
+
+    // Terminate all sessions
+    await M.LoginHistory.updateOne(
+      { trackId: req.user.trackId },
+      { $set: { "history.$[].active": false, "history.$[].current": "Logged Out" } }
+    );
+    await M.User.updateOne({ trackId: req.user.trackId }, { $set: { online: false } });
+
+    res.json({ message: 'Account secured. All sessions terminated. Please login again.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process report.' });
+  }
+});
+
+router.post('/verify-password', authMiddleware, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ verified: false, error: 'Password required' });
+
+    const model = getRoleModel(req.user.role);
+    if (!model) return res.status(400).json({ verified: false, error: 'Invalid role model' });
+
+    const user = await model.findOne({ username: req.user.username }).select('+password');
+    if (!user) return res.status(404).json({ verified: false, error: 'User not found' });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ verified: false, error: 'Incorrect password' });
+
+    res.json({ verified: true });
+  } catch (err) { res.status(500).json({ verified: false, error: 'Password verification failed.' }); }
 });
 
 router.get('/check', authMiddleware, async (req, res) => {
@@ -277,7 +326,14 @@ router.get('/check', authMiddleware, async (req, res) => {
 
     if (!histObj.active || histObj.current === 'Logged Out') return res.status(401).json({ error: 'User is inactive' });
 
-    if (histObj.expiresAt < new Date()) { 
+    if (histObj.expiresAt - Date.now() <= 5 * 60 * 1000) {
+      histObj.expiresAt = new Date(histObj.expiresAt.getTime() + 10 * 60 * 1000);
+      await M.LoginHistory.updateOne(
+        { trackId, "history.sessionId": histObj.sessionId },
+        { $set: { "history.$.expiresAt": histObj.expiresAt } }
+      );
+    }
+    if (histObj.expiresAt < new Date()) {
       await M.LoginHistory.updateOne(
         { trackId, "history.sessionId": histObj.sessionId },
         { $set: { "history.$.current": "Logged Out", "history.$.active": false, "history.$.logoutTime": new Date() } }
@@ -298,19 +354,24 @@ router.get('/check', authMiddleware, async (req, res) => {
 
 router.get('/login-history', authMiddleware, async (req, res) => {
   try {
-    const trackId = req.user.trackId ;
-
-    const loginHistory = await M.LoginHistory.findOne({ trackId });
-    if (!loginHistory) return res.status(404).json({ error: 'Login history not found' });
-    
-    const histObj = loginHistory.history.find(h => h.sessionId === req.user.sessionId);
-    if (!histObj) return res.status(401).json({ error: 'Session not found' });
+    const loginHistory = await M.LoginHistory.findOne({ trackId: req.user.trackId });
+    if (!loginHistory) return res.json({ history: [], firstLogin: null, lastLogin: null });
 
     res.json({
-      loginTime: histObj.createdAt,
-      expireTime: histObj.expiresAt
-    })
-  } catch (err) {return res.status(500).json({error: 'Server error'})}
+      history: loginHistory.history.map(h => ({
+        time: h.time || h.createdAt,
+        device: (h.browser || 'Unknown') + ' on ' + (h.os || 'Unknown'),
+        ip: h.ip || '—',
+        type: (h.deviceType || '').toLowerCase() === 'mobile' ? 'mobile' : 'web',
+        current: h.active && h.current === 'Logged In',
+        sessionId: h.sessionId,
+      })),
+      firstLogin: loginHistory.firstLogin,
+      lastLogin: loginHistory.lastLogin,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;

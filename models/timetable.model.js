@@ -24,4 +24,4 @@ const SectionTimetableSchema = new mongoose.Schema({
 module.exports = {
   Timetable:        mongoose.model('Timetable',         TimetableSchema),
   SectionTimetable: mongoose.model('SectionTimetable',  SectionTimetableSchema),
-  };
+};

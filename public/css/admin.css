@@ -1,13 +1,4 @@
-
-    
-
-    
-
-    
-
-    
-
-    /* ── SIDEBAR ──────────────────────────── */
+/* ── SIDEBAR ──────────────────────────── */
     .sb-toggle-btn {
       position: fixed;
       top: 14px;
@@ -91,15 +82,6 @@
       font-size: 15px;
       font-weight: 700;
       color: var(--td);
-    }
-
-    .sb-section-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1.8px;
-      color: var(--tdi);
-      font-weight: 600;
-      padding: 14px 18px 4px;
     }
 
     .text-popup {
@@ -2382,34 +2364,6 @@
       border-color: var(--gLr);
     }
 
-    .tce {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      border: none;
-      background: var(--brl);
-      color: var(--tdi);
-      font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all .2s;
-      opacity: 0;
-    }
-
-    .tcrd:hover .tce {
-      opacity: 1;
-    }
-
-    .tce:hover {
-      background: var(--gL);
-      color: #fff;
-    }
-
     .tav {
       width: 60px;
       height: 60px;
@@ -2422,6 +2376,7 @@
       font-weight: 700;
       color: #fff;
       margin: 0 auto 10px;
+      position: relative;
     }
 
     .tnm {
@@ -2555,13 +2510,12 @@
       border-radius: 11px;
       padding: 3px;
       margin-bottom: 18px;
-      width: fit-content;
     }
 
     .tab {
       padding: 6px 14px;
       border-radius: 8px;
-      font-size: 12.5px;
+      font-size: 14px;
       font-weight: 500;
       cursor: pointer;
       color: var(--tmu);
@@ -3169,3 +3123,201 @@
       cursor: help;
     }
   
+    /* ── TEACHERS PAGE — REDESIGN (t- prefixed = new) ─────────────── */
+
+    /* Mini stat cards (Total / HODs / Departments / Admin Rights) */
+    .t-stat-mini {
+      background: #fff;
+      border: 1.5px solid var(--br);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 10px rgba(27, 94, 32, .05);
+      transition: .25s;
+    }
+
+    .t-stat-mini:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shd);
+    }
+
+    .t-stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .t-stat-icon.green {
+      background: var(--gLt);
+      color: var(--gD);
+    }
+
+    .t-stat-icon.blue {
+      background: rgba(59, 130, 246, .12);
+      color: #2563eb;
+    }
+
+    .t-stat-icon.amber {
+      background: rgba(245, 158, 11, .12);
+      color: #b45309;
+    }
+
+    .t-stat-icon.purple {
+      background: rgba(139, 92, 246, .12);
+      color: #7c3aed;
+    }
+
+    .t-stat-val {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--td);
+      line-height: 1.1;
+    }
+
+    .t-stat-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--tmu);
+      margin-top: 2px;
+    }
+
+    /* Role filter pills */
+    .t-filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .t-pill {
+      padding: 6px 15px;
+      border-radius: 20px;
+      border: 1.5px solid var(--br);
+      background: #fff;
+      color: var(--tmu);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      transition: .2s;
+    }
+
+    .t-pill:hover {
+      border-color: var(--gLr);
+      background: var(--gLt);
+    }
+
+    .t-pill.act {
+      background: var(--gD);
+      color: #fff;
+      border-color: var(--gD);
+    }
+
+    /* Grid ↔ Table view toggle */
+    .t-view-toggle {
+      display: flex;
+      border: 1.5px solid var(--br);
+      border-radius: 9px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .t-vt-btn {
+      width: 38px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      color: var(--tdi);
+      transition: .2s;
+    }
+
+    .t-vt-btn+.t-vt-btn {
+      border-left: 1px solid var(--br);
+    }
+
+    .t-vt-btn.act {
+      background: var(--gLt);
+      color: var(--gD);
+    }
+
+    /* Role / admin badges — shown on cards + table rows */
+    .t-role-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      margin: 2px 3px 0 0;
+      white-space: nowrap;
+    }
+
+    .t-role-badge.hod {
+      background: rgba(59, 130, 246, .12);
+      color: #2563eb;
+    }
+
+    .t-role-badge.advisor {
+      background: rgba(245, 158, 11, .12);
+      color: #b45309;
+    }
+
+    .t-role-badge.ttcoord {
+      background: rgba(139, 92, 246, .12);
+      color: #7c3aed;
+    }
+
+    .t-role-badge.admin {
+      background: rgba(239, 68, 68, .12);
+      color: #dc2626;
+    }
+
+    /* Active/inactive status dot on the card avatar */
+    .t-status-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+      border: 2px solid #fff;
+    }
+
+    .t-status-dot.inactive {
+      background: #9ca3af;
+    }
+
+    /* Email line on the card */
+    .t-email {
+      font-size: 10.5px;
+      color: var(--tdi);
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Table view tweaks */
+    .t-tbl td.t-email-cell {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      #t-stat-cards.stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }

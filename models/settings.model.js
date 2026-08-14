@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const { toIndianTime } = require('../utils/dateFormatter');
 
-// Reusable date type definitions for Indian timezone formatting
 const IndianDate = { type: String, default: () => toIndianTime(new Date()) };
-const NullableIndianDate = { type: String, default: null };
 
 const editFieldHistory = new mongoose.Schema({
   editedModule : { type: String, required: true},

@@ -95,6 +95,8 @@ function doChangePwInline() {
   if (!oldPw || !newPw || !cfm) { errEl.textContent = 'All fields required.'; errEl.style.display = 'block'; return; }
   if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
   if (newPw !== cfm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+  if(oldPw === newPw) {errEl.textContent = 'Old and new password must not be same'; errEl.style.display = 'block'; return; }
+  if(newPw.toUpperCase().includes('STUDENT')) {errEl.textContent = 'Password must not contain STUDENT'; errEl.style.display = 'block'; return; }
   api('/api/auth/change-password', { method:'POST', body:JSON.stringify({ currentPassword:oldPw, newPassword:newPw }) }, true)
   .then(function(d) {
     if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
@@ -115,11 +117,11 @@ function openChangePw() { openModal('m-chpw'); }
 function toggleSidebar() {
   var sb = document.getElementById('sidebar');
   var ov = document.getElementById('sb-overlay');
-  sb.classList.toggle('sb-open');
+  sb.classList.toggle('sb-mobile-open');
   ov.classList.toggle('show');
 }
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('sb-open');
+  document.getElementById('sidebar').classList.remove('sb-mobile-open');
   document.getElementById('sb-overlay').classList.remove('show');
 }
 
@@ -237,7 +239,6 @@ function renderPortal(d) {
     + '<span class="hero-pill">🏫 '+(stu.className||'—')+'</span>'
     + '<span class="hero-pill">📅 '+(stu.academicYear||'—')+'</span>'
     + (stu.isClassRep?'<span class="hero-pill">⭐ Class Rep</span>':'')
-    + (stu.isSportsRep?'<span class="hero-pill">🏆 Sports Rep</span>':'')
     + '</div></div>'
     + '<div class="hero-right"><div class="hero-pct-wrap">'
     + '<div class="hero-pct">'+oPct+'%</div>'
@@ -381,7 +382,7 @@ function renderSubjectTabs(subjects) {
 }
 
 function switchSubjectCal(idx, btn) {
-  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('act');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('act');});
   btn.classList.add('act');
   renderCalendar(_data.attendance.subjects[idx]);
 }
@@ -453,7 +454,6 @@ function renderProfilePage(d) {
     + '<span class="prof-hero-tag">📅 '+(stu.academicYear||'—')+'</span>'
     + '<span class="prof-hero-tag">📖 '+(stu.courseType||'—')+'</span>'
     + (stu.isClassRep?'<span class="prof-hero-tag rep">⭐ Class Representative</span>':'')
-    + (stu.isSportsRep?'<span class="prof-hero-tag rep">🏆 Sports Representative</span>':'')
     + '</div></div>'
     + '</div>';
 
@@ -498,7 +498,6 @@ function renderProfilePage(d) {
     + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--tdi);margin-bottom:10px;">Status &amp; Roles</div>'
     + '<div class="fields-grid">'
     + profFieldBadge('Class Representative', stu.isClassRep ? 'Yes' : 'No', stu.isClassRep ? 'fb-yes' : 'fb-no', '⭐')
-    + profFieldBadge('Sports Representative', stu.isSportsRep ? 'Yes' : 'No', stu.isSportsRep ? 'fb-yes' : 'fb-no', '🏆')
     + '</div>'
 
     // ─ Edit actions (hidden by default)
@@ -671,39 +670,35 @@ function setFieldDisplay(id, val) {
 }
 
 // ── Login activity helpers ─────────────────────────────────────────
-var _loginActivities = [
-  { time:'2025-10-27T07:20:00.000Z', device:'Chrome 128 on Windows 11', ip:'182.72.115.44', type:'web', current:false },
-  { time:'2025-11-03T09:14:00.000Z', device:'Safari on iPhone 15', ip:'182.72.115.44', type:'mobile', current:false },
-  { time:'2025-12-09T11:32:00.000Z', device:'Chrome 130 on Windows 11', ip:'182.72.115.44', type:'web', current:false },
-  { time:'2026-01-14T08:50:00.000Z', device:'Firefox 121 on macOS', ip:'103.21.58.77', type:'web', current:false },
-  { time:'2026-02-20T13:44:00.000Z', device:'Chrome 131 on Windows 11', ip:'182.72.115.44', type:'web', current:false },
-  { time:'2026-03-08T10:11:00.000Z', device:'Chrome on Android', ip:'182.72.115.44', type:'mobile', current:false },
-  { time:'2026-04-14T08:06:00.000Z', device:'Chrome 134 on Windows 11', ip:'182.72.115.44', type:'web', current:true }
-];
+var _loginActivities = null;
 
 function openLoginActivity() {
-  var tbody = document.getElementById('activity-tbody');
-  var opts  = document.getElementById('unknown-session-select');
-  var rows  = '';
-  var selectOpts = '<option value="">Select a session…</option>';
-  _loginActivities.slice().reverse().forEach(function(a, idx) {
-    var typeCls = a.type==='web'?'lt-web':a.type==='mobile'?'lt-mobile':'lt-unknown';
-    var typeLabel = a.type==='web'?'🌐 Web':a.type==='mobile'?'📱 Mobile':'❓ Unknown';
-    var deviceIcon = a.type==='mobile'?'📱':'💻';
-    rows += '<tr>'
-      + '<td style="white-space:nowrap;font-size:11.5px;color:var(--td);font-weight:500;">'+fmtDateTime(a.time)+'</td>'
-      + '<td><span class="device-tag"><span class="device-icon">'+deviceIcon+'</span>'+a.device+'</span></td>'
-      + '<td><span class="ip-code">'+a.ip+'</span></td>'
-      + '<td><span class="login-type-badge '+typeCls+'">'+typeLabel+'</span></td>'
-      + '<td>'+(a.current?'<span class="act-current"><span class="act-dot"></span>Current</span>':'<span style="font-size:11px;color:var(--tdi);">Ended</span>')+'</td>'
-      + '</tr>';
-    if (!a.current) {
-      selectOpts += '<option value="'+idx+'">'+fmtDateTime(a.time)+' — '+a.ip+'</option>';
-    }
-  });
-  tbody.innerHTML = rows;
-  if (opts) opts.innerHTML = selectOpts;
-  openModal('m-activity');
+  api('/api/auth/login-history').then(function(data) {
+    if (data.error) { toast(data.error, 'error'); return; }
+    _loginActivities = data.history || [];
+    var tbody = document.getElementById('activity-tbody');
+    var opts  = document.getElementById('unknown-session-select');
+    var rows  = '';
+    var selectOpts = '<option value="">Select a session…</option>';
+    _loginActivities.slice().reverse().forEach(function(a, idx) {
+      var typeCls = a.type==='web'?'lt-web':a.type==='mobile'?'lt-mobile':'lt-unknown';
+      var typeLabel = a.type==='web'?'🌐 Web':a.type==='mobile'?'📱 Mobile':'❓ Unknown';
+      var deviceIcon = a.type==='mobile'?'📱':'💻';
+      rows += '<tr>'
+        + '<td style="white-space:nowrap;font-size:11.5px;color:var(--td);font-weight:500;">'+fmtDateTime(a.time)+'</td>'
+        + '<td><span class="device-tag"><span class="device-icon">'+deviceIcon+'</span>'+a.device+'</span></td>'
+        + '<td><span class="ip-code">'+a.ip+'</span></td>'
+        + '<td><span class="login-type-badge '+typeCls+'">'+typeLabel+'</span></td>'
+        + '<td>'+(a.current?'<span class="act-current"><span class="act-dot"></span>Current</span>':'<span style="font-size:11px;color:var(--tdi);">Ended</span>')+'</td>'
+        + '</tr>';
+      if (!a.current) {
+        selectOpts += '<option value="'+idx+'">'+fmtDateTime(a.time)+' — '+a.ip+'</option>';
+      }
+    });
+    tbody.innerHTML = rows;
+    if (opts) opts.innerHTML = selectOpts;
+    openModal('m-activity');
+  }).catch(function(e) { toast('Failed to load login history', 'error'); });
 }
 
 function reportUnknownLogin() {
@@ -712,8 +707,19 @@ function reportUnknownLogin() {
 }
 
 function submitUnknownReport() {
-  toast('Report submitted. Security team will review your account.', 'warn');
-  closeModal('m-unknown');
+  var sel = document.getElementById('unknown-session-select');
+  var sessionId = sel ? sel.value : '';
+  api('/api/auth/report-unknown', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId: sessionId || undefined })
+  })
+  .then(function(d) {
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('Account secured. All sessions terminated. Please login again.', 'warn');
+    closeModal('m-unknown');
+    setTimeout(doLogout, 2000);
+  })
+  .catch(function(e) { toast(e.message, 'error'); });
 }
 
 function logoutAllDevices() {
@@ -734,12 +740,6 @@ function logoutAllDevices() {
 function getFirstAccessTime(usr) {
   if (usr && usr.firstLogin) return usr.firstLogin;
   if (usr && usr.createdAt) return usr.createdAt;
-  if (_loginActivities && _loginActivities.length) {
-    var earliest = _loginActivities.reduce(function(minIso, a) {
-      return new Date(a.time) < new Date(minIso) ? a.time : minIso;
-    }, _loginActivities[0].time);
-    return earliest;
-  }
   if (usr && usr.lastLogin) return usr.lastLogin;
   return new Date().toISOString();
 }

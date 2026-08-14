@@ -201,7 +201,7 @@
           <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
-                <b>Required Columns:</b> Department | HallNo | Year | Semester | Section — ClassName auto-generated as DEPTCODE-SEM-SECTION
+                <b>Required Columns:</b> Department | HallNo | Year | Semester | Section | Batch — ClassName auto-generated as DEPTCODE-SEM-SECTION. Batch must match an active batch under the current Academic Year.
               </div>
               <div class="uz" onclick="document.getElementById('uf-cls').click()"
                 ondragover="event.preventDefault();this.classList.add('dg')"
@@ -229,7 +229,7 @@
           <div class="card fixed-card" style="margin-top:20px;">
             <div class="card-body">
               <div style="margin-bottom: 20px; font-size: 13px; color: var(--tmu);">
-                <b>Required Columns:</b> Name | Code | Department | Credits | Type | Teacher (optional)
+                <b>Required Columns:</b> Name | Code | Department | Credits | Type — SubjectCode is auto-generated as DEPTCODE-CODE
               </div>
               <div class="uz" onclick="document.getElementById('uf-subj').click()"
                 ondragover="event.preventDefault();this.classList.add('dg')"
@@ -324,6 +324,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="js/core/session.js"></script>
+  <script src="js/core/api.js"></script>
   <script src="js/core/toast.js"></script>
   <script src="js/pages/bulk.page.js"></script>
 </body>

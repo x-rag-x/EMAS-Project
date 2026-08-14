@@ -34,7 +34,7 @@ async function doLogout() {
     var loginTime = sessionStorage.getItem('eams_login_time');
     if (loginTime) {
       var elapsed = Date.now() - parseInt(loginTime, 10);
-      if (elapsed > 45 * 60 * 1000) {
+      if (elapsed > 15 * 60 * 1000) {
         if (typeof dbToast === 'function') {
           dbToast('Session expired. Logging out...', 'error');
         } else if (typeof showToast === 'function') {
@@ -47,3 +47,14 @@ async function doLogout() {
   checkSessionExpiry();
   setInterval(checkSessionExpiry, 15000);
 })();
+
+// ── SESSION CHECK ON EVERY CLICK ──
+document.addEventListener('click', function (e) {
+  if (!sessionStorage.getItem('eams_token')) {
+    e.preventDefault();
+    e.stopPropagation();
+    doLogout();
+    return;
+  }
+  sessionStorage.setItem('eams_login_time', Date.now().toString());
+}, true);

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { toIndianTime } = require('../utils/dateFormatter');
 
 const LoginHistorySchema = new mongoose.Schema({
   username:   { type: String, required: true, trim: true, lowercase: true, unique: true},
@@ -68,7 +67,7 @@ const LogSchema = new mongoose.Schema({
   severity:  { type: String, default: 'info' },
   ip:        { type: String, default: '' },
   sessionId: { type: String, default: '' },
-  time:      { type: Date, default: Date.now }, // defense-in-depth: schema-level default in case a write path forgets to set it explicitly
+  time:      { type: Date, default: Date.now },
 }, { timestamps: true });
 
 LogSchema.index({ createdAt: -1 });
@@ -89,10 +88,20 @@ const LiveSessionSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+const ManageAdminSchema = new mongoose.Schema({
+  trackId    : { type: String, required: true, unique: true},
+  role       : { type: String, enum: ['admin','teacher']},
+  permissions: { type: [String], default: ['calendar','exam','attendance'] },
+  addedBy    : { type: String, required: true },
+  createdAt  : { type: Date, default: Date.now },
+  status     : { type: String, enum: ['active','inactive'], default: 'active' },
+});
+
 module.exports = {
-  LoginHistory:     mongoose.model('LoginHistory',      LoginHistorySchema),
-  Notification:     mongoose.model('Notification',      NotificationSchema),
-  Grievance:        mongoose.model('Grievance',         GrievanceSchema),
-  Log:              mongoose.model('Log',               LogSchema),
-  LiveSession:      mongoose.model('LiveSession',       LiveSessionSchema),
+  LoginHistory: mongoose.model('LoginHistory', LoginHistorySchema),
+  Notification: mongoose.model('Notification', NotificationSchema),
+  Grievance:    mongoose.model('Grievance',    GrievanceSchema),
+  Log:          mongoose.model('Log',          LogSchema),
+  LiveSession:  mongoose.model('LiveSession',  LiveSessionSchema),
+  ManageAdmin:  mongoose.model('ManageAdmin', ManageAdminSchema),
 };

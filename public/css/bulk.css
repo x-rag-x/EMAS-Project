@@ -36,7 +36,7 @@
 .wiz-bar-fill{height:100%;background:rgba(255,255,255,.85);border-radius:8px;width:0%;transition:width .5s;}
 .wiz-bar-lbl{font-size:10.5px;color:rgba(255,255,255,.75);margin-top:5px;}
 
-.fixed-card{width:550px;height:300px;overflow:hidden;display:flex;flex-direction:column;}
+.fixed-card{width:100%;max-width:550px;min-height:300px;overflow:visible;display:flex;flex-direction:column;}
 
 .bulk-panel.pg{padding:0;animation:pi .25s ease;}
 
