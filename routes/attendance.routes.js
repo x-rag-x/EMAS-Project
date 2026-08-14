@@ -379,6 +379,22 @@ router.delete('/all', authMiddleware, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Delete attendance records within a date range (inclusive)
+router.delete('/clear', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { from, to } = req.body;
+    if (!from || !to) return res.status(400).json({ error: 'from and to dates are required' });
+    const start = new Date(from);
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    const filter = { date: { $gte: start, $lte: end } };
+    const res1 = await M.ClassAttendance.deleteMany(filter);
+    const res2 = await M.StudentAttendance.deleteMany(filter);
+    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Attendance Cleared (Range)', `Deleted ${res1.deletedCount} class sessions from ${from} to ${to}`, 'data', 'warning', req.ip);
+    res.json({ deleted: res1.deletedCount + res2.deletedCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Delete single session/record
 router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {

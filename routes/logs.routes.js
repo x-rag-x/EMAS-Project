@@ -12,6 +12,12 @@ router.get('/', authMiddleware, adminOnly, async (req, res) => {
     if (req.query.before) {
       filter.createdAt = { $lt: new Date(req.query.before) };
     }
+    if (req.query.severity) {
+      filter.severity = req.query.severity;
+    }
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
     const logs = await M.Log.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
     const total = await M.Log.countDocuments({});
     res.json({ logs, total, hasMore: logs.length === limit });

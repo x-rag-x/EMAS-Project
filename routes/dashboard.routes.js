@@ -19,6 +19,27 @@ router.get('/summary', authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
+router.get('/counts', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const [depts, classes, subjects, students, users, teachers, assignments, logs, notifications, pendingNotifs] = await Promise.all([
+      M.Department.countDocuments(),
+      M.Class.countDocuments(),
+      M.Subject.countDocuments(),
+      M.Student.countDocuments(),
+      M.User.countDocuments(),
+      M.User.countDocuments({ role: 'teacher', status: { $ne: 'inactive' } }),
+      M.Assignment.countDocuments(),
+      M.Log.countDocuments(),
+      M.Notification.countDocuments(),
+      M.Notification.countDocuments({ status: 'Pending', read: false }),
+    ]);
+    res.json({ depts, classes, subjects, students, users, teachers, assignments, logs, notifications, pendingNotifs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // GET /api/dashboard/attendance-overview — Aggregated attendance chart data
 // Query: ?deptId=&classId=&from=&to=&date=&reportType=overall|specific
 router.get('/attendance-overview', authMiddleware, adminOnly, async (req, res) => {

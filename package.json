@@ -1,11 +1,11 @@
 {
   "name": "eams",
-  "version": "1.0.0",
+  "version": "2.3",
   "description": "Electronic Attendance Management System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "setup": "node scripts/start.js"
   },
   "engines": {
     "node": ">=18.0.0"

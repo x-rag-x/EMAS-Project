@@ -15,7 +15,7 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.query.semester)    filter.semester    = sanitizeToString(req.query.semester);
     if (req.query.status)      filter.status      = sanitizeToString(req.query.status);
     if (req.query.academicYear) filter.academicYear = sanitizeToString(req.query.academicYear);
-    if (req.query.deptId)      filter.deptId      = sanitizeToString(req.query.deptId);
+    if (req.query.deptName)    filter.deptName    = sanitizeToString(req.query.deptName);
     if (req.query.batch)       filter.batch       = sanitizeToString(req.query.batch);
     const exams = await M.Exam.find(filter).sort({ createdAt: -1 });
     res.json(exams);

@@ -142,8 +142,13 @@ router.get('/health', authMiddleware, adminOnly, async (req, res) => {
     ]);
     const totalUsers = activeTeachersCount + activeStudentsCount + activeAdminsCount;
     const activeTeachers = activeTeachersCount;
-    const recentErrors = await M.Log.find({ severity: { $in: ['critical', 'error', 'warning'] } })
-      .sort({ time: -1 }).limit(5).lean();
+    const errFilter = { severity: { $in: ['critical', 'error', 'warning'] } };
+    const errLimit = Math.min(100, Math.max(1, parseInt(req.query.errLimit, 10) || 20));
+    if (req.query.errMode === 'week') {
+      errFilter.time = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+    }
+    const recentErrors = await M.Log.find(errFilter)
+      .sort({ time: -1 }).limit(req.query.errMode === 'week' ? 100 : errLimit).lean();
     res.json({
       dbStatus: dbStateMap[dbState] || 'Unknown',
       dbConnected: dbState === 1,
@@ -153,6 +158,48 @@ router.get('/health', authMiddleware, adminOnly, async (req, res) => {
       nodeVersion: process.version,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════
+//  DELETE ADDER  (bulk-wipe one or more core collections)
+// ════════════════════════════════════════════════════════
+const ADDER_MODELS = {
+  departments: M.Department,
+  classes:     M.Class,
+  subjects:    M.Subject,
+  students:    M.Student,
+  teachers:    M.Teacher,
+};
+
+router.post('/delete-adder', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { collections } = req.body;
+    if (!Array.isArray(collections) || collections.length === 0) {
+      return res.status(400).json({ success: false, error: 'No collections specified' });
+    }
+    const invalid = collections.filter((c) => !ADDER_MODELS[c]);
+    if (invalid.length) {
+      return res.status(400).json({ success: false, error: 'Unknown collection(s): ' + invalid.join(', ') });
+    }
+
+    let deleted = 0;
+    for (const name of collections) {
+      const result = await ADDER_MODELS[name].deleteMany({});
+      deleted += result.deletedCount || 0;
+      // Students and teachers also have a shadow User account - clean those up too
+      // so no orphaned, un-loginable shadow accounts are left behind.
+      if (name === 'students') {
+        const shadow = await M.User.deleteMany({ role: 'student' });
+        deleted += shadow.deletedCount || 0;
+      } else if (name === 'teachers') {
+        const shadow = await M.User.deleteMany({ role: 'teacher' });
+        deleted += shadow.deletedCount || 0;
+      }
+    }
+
+    await logAction(req.user.trackId, req.user.name, req.user.role, 'Bulk Delete', 'Deleted collections: ' + collections.join(', '), 'data', 'warning', req.ip);
+    res.json({ success: true, deleted, collections });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 module.exports = router;

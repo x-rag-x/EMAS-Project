@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cfg = require('./index');
 const bcrypt = require('bcryptjs');
 const M = require('../models');
+const { startSessionMonitor } = require('../utils/sessionMonitor');
 
 
 const { migrateDateFields } = require('../utils/dbMigrator');
@@ -188,6 +189,7 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
     });
 
     console.log(`EAMS ready for Access...`)
+    startSessionMonitor();
   }
 
   async function seedAdmin() {

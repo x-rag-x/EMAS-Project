@@ -14,7 +14,6 @@ const path = require('path');
 const cfg = require('./config');
 require('./config/db');
 require('./utils/serverState');
-const { startSessionMonitor } = require('./utils/sessionMonitor');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -26,9 +25,8 @@ app.use(helmet({
 }));
 app.use(cors({origin: cfg.CORS_ORIGIN,credentials: true}));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(path.join(__dirname, 'public')));
 
-startSessionMonitor();
 app.use('/api', require('./routes/index'));
 
 // ── Start Server ──────────────────────────────────────

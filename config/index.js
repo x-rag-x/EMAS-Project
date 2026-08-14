@@ -22,7 +22,7 @@ module.exports = {
   EXPORT_DATA_PASSWORD: process.env.exportDataPassword,
 
   // ── Auth ─────────────────────────────────────────────
-  JWT_SECRET:        process.env.JWT_SECRET || 'eams_jwt_secret_change_in_production',
+  JWT_SECRET:        process.env.JWT_SECRET,
   JWT_EXPIRES_IN:    process.env.JWT_EXPIRES_IN || '24h',
   BCRYPT_ROUNDS:     parseInt(process.env.BCRYPT_ROUNDS) || 10,
 

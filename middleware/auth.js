@@ -37,6 +37,9 @@ async function authMiddleware(req, res, next) {
     if (!session) {return res.status(401).json({error: 'Session not found'});}
     if (!session.active) {return res.status(401).json({error: 'Session expired'});}
     if (session.current === 'Logged Out') {return res.status(401).json({error: 'Logged out'});}
+    if (session.expiresAt - Date.now() <= 5 * 60 * 1000) {
+      session.expiresAt = new Date(session.expiresAt.getTime() + 10 * 60 * 1000);
+    }
     if (session.expiresAt < new Date()) {return res.status(401).json({error: 'Session expired'});}
 
     const userObj = user.toObject();

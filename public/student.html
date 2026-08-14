@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAMS – Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/student.css">
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
+<div class="app-shell">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sb" id="sidebar">
+
+  <!-- Brand -->
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div>
+      <div class="sb-title">EAMS</div>
+      <div class="sb-subtitle">Student Portal</div>
+    </div>
+  </div>
+
+  <!-- Student chip -->
+  <div class="sb-student-chip">
+    <div class="sb-uav" id="sb-av">S</div>
+    <div style="overflow:hidden;">
+      <div class="sb-uname" id="sb-name">Loading…</div>
+      <div class="sb-urole" id="sb-reg">—</div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sb-nav">
+    <div class="sb-section-label">Main Menu</div>
+    <button class="sb-item active" id="nav-dashboard" onclick="showView('dashboard')">
+      <span class="sbi-ic">📊</span>Dashboard
+    </button>
+    <button class="sb-item" id="nav-profile" onclick="showView('profile')">
+      <span class="sbi-ic">👤</span>My Profile
+    </button>
+    <button class="sb-item" id="nav-attendance" onclick="showView('attendance')">
+      <span class="sbi-ic">📅</span>Attendance
+    </button>
+    <button class="sb-item" id="nav-timetable" onclick="window.location.href='timetable.html'">
+      <span class="sbi-ic">🗓️</span>Timetable
+    </button>
+  </nav>
+
+  <!-- Footer: animated logout -->
+  <div class="sb-bottom">
+    <button class="sb-logout-btn" onclick="doLogout()" title="Logout">
+      <div class="logout-sign">
+        <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
+      </div>
+      <div class="logout-text">Logout</div>
+    </button>
+  </div>
+</aside>
+
+<!-- ══ CONTENT SHELL ══ -->
+<div class="mc">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-brand">
+      <div class="tb-hamburger" id="hamburger" onclick="toggleSidebar()">☰</div>
+      <div id="tb-page-label" class="topbar-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-icon" title="Notifications">🔔</div>
+      <div class="profile-chip" onclick="showView('profile')" title="My Profile">
+        <div class="profile-av" id="av-initials">S</div>
+        <div>
+          <div class="profile-name" id="tb-name">Loading…</div>
+          <div class="profile-role">Student</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD VIEW ── -->
+  <div class="pg act" id="view-dashboard">
+    <div class="main" id="main-content">
+      <div class="loading-screen" id="loading-screen">
+        <div class="spinner"></div>
+        <div style="font-size:13px;color:var(--tmu);">Loading your attendance data…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROFILE VIEW ── -->
+  <div class="pg" id="view-profile">
+    <div class="profile-page" id="profile-content">
+      <div class="loading-screen">
+        <div class="spinner"></div>
+        <div style="font-size:13px;color:var(--tmu);">Loading profile…</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end content-shell -->
+</div><!-- end app-shell -->
+
+<!-- ══ CHANGE PASSWORD MODAL ══ -->
+<div class="modal-bg" id="m-chpw">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">🔐 Change Password</div>
+    </div>
+    <div id="chpw-err" class="err-msg"></div>
+    <div class="fg">
+      <label class="fl">Current Password</label>
+      <div class="pw-wrap"><input type="password" class="fc2" id="chpw-old" placeholder="Current password"><button type="button" class="pw-eye" onclick="togglePw('chpw-old',this)">👁</button></div>
+    </div>
+    <div class="fg">
+      <label class="fl">New Password</label>
+      <div class="pw-wrap">
+        <input type="password" class="fc2" id="chpw-new" placeholder="Min. 6 characters" 
+          oninput="updateStrength(this.value,'chpw-strength')">
+        <button type="button" class="pw-eye" onclick="togglePw('chpw-new',this)">👁</button>
+      </div>
+      <div class="strength-bar">
+        <div class="strength-fill" id="chpw-strength" style="width:0%;"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Confirm New Password</label>
+      <div class="pw-wrap">
+        <input type="password" class="fc2" id="chpw-confirm" placeholder="Repeat new password">
+        <button type="button" class="pw-eye" onclick="togglePw('chpw-confirm',this)">👁</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn-pri" onclick="doChangePw()" style="flex:2;">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN ACTIVITY MODAL ══ -->
+<div class="modal-bg" id="m-activity">
+  <div class="modal modal-lg">
+    <div class="modal-hd">
+      <div class="modal-title">🔒 Login Activity</div>
+      <div class="modal-close" onclick="closeModal('m-activity')">✕</div>
+    </div>
+    <div id="activity-table-container">
+      <div style="font-size:12px;color:var(--tmu);margin-bottom:14px;">All recent login sessions for your account.</div>
+      <div style="overflow-x:auto;">
+        <table class="tbl">
+          <thead><tr>
+            <th>Date &amp; Time</th>
+            <th>Device</th>
+            <th>IP Address</th>
+            <th>Type</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="activity-tbody">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--brl);">
+      <button class="btn-warn" onclick="reportUnknownLogin()">⚠️ Unknown Login?</button>
+      <button class="btn-danger" onclick="logoutAllDevices()" style="margin-left:auto;">🔴 Logout from All Devices</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UNKNOWN LOGIN MODAL ══ -->
+<div class="modal-bg" id="m-unknown">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hd">
+      <div class="modal-title">⚠️ Report Unknown Login</div>
+      <div class="modal-close" onclick="closeModal('m-unknown')">✕</div>
+    </div>
+    <div style="font-size:13px;color:var(--tmu);line-height:1.7;margin-bottom:18px;">
+      If you didn't authorize a login shown in your activity, your account may be compromised. We recommend changing your password immediately.
+    </div>
+    <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:#92400e;">
+      🔐 After submitting, your password will be reset and all other sessions will be terminated.
+    </div>
+    <div class="fg">
+      <label class="fl">Which session looks suspicious?</label>
+      <select class="fc2" id="unknown-session-select">
+        <option value="">Select a session…</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-out" onclick="closeModal('m-unknown')" style="flex:1;">Cancel</button>
+      <button class="btn-danger" onclick="submitUnknownReport()" style="flex:2;">Report &amp; Secure Account</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/core/session.js"></script>
+<script src="js/core/toast.js"></script>
+<script src="js/core/modal.js"></script>
+<script src="js/pages/student.page.js"></script>
+
+</body>
+</html>

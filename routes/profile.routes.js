@@ -99,8 +99,7 @@ router.put('/me', authMiddleware, async (req, res) => {
       'isHOD', 'HoddeptName', 'isClassAdvisor', 'advisorClassName', 'advisorClassId',
       'isTimeTableCoordinator', 'TTdeptName',
       'isWarden', 'isExamCoordinator', 'isPlacementCoord',
-      'isClassRep', 'isAssiClassRep', 'isSportsRep', 'isCulturalRep',
-      'active', 'failedLogins', 'lockedUntil', 'loginCount', 'firstLogin',
+      'isClassRep', 'active', 'failedLogins', 'lockedUntil', 'loginCount', 'firstLogin',
       'lastLogin', 'mustChangePassword', 'password', 'username',
     ];
 

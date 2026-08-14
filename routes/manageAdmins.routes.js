@@ -20,7 +20,8 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
     const exists = await M.ManageAdmin.findOne({ username: username.toLowerCase().trim() });
     if (exists) return res.status(400).json({ error: 'Username already taken' });
     const hashed = await bcrypt.hash(password, 10);
-    const admin  = await M.ManageAdmin.create({ name: name.trim(), username: username.toLowerCase().trim(), password: hashed, email: email || '', permissions: permissions || ['calendar','exam','attendance'], addedBy: req.user.name });
+    const trackId = `TR-ADM${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const admin  = await M.ManageAdmin.create({ trackId, name: name.trim(), username: username.toLowerCase().trim(), password: hashed, email: email || '', permissions: permissions || ['calendar','exam','attendance'], addedBy: req.user.name });
     await logAction(req.user._id, req.user.name, req.user.role, 'Manage Admin Created', name, 'manage', 'info', req.ip);
     const { password: _, ...safe } = admin.toObject();
     res.json(safe);

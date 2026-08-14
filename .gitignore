@@ -1,7 +1,5 @@
 .env
 node_modules/
 tracker/
-public/
-helpers/
-start.js
+docs/
 .opencode/
