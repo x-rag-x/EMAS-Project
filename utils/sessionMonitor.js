@@ -5,7 +5,16 @@ function startSessionMonitor() {
   setInterval(async () => {
     try {
       const now = new Date();
-      const histories = await M.LoginHistory.find({});
+      const histories = await M.LoginHistory.find({
+        history: { $elemMatch: { active: true, current: 'Logged In' } }
+      });
+
+      if (!histories.length) return;
+
+      // Fetch dynamic security settings
+      const secSettings = await M.Settings.findOne({ key: 'security' }).lean();
+      const security = secSettings?.value || {};
+      const globalTimeoutMins = security.sessionTimeoutMins !== undefined ? Number(security.sessionTimeoutMins) : 60;
       
       for (const lh of histories) {
         let updated = false;
@@ -16,23 +25,24 @@ function startSessionMonitor() {
               const lastAct = session.lastActivity || session.loginTime || session.time;
               const elapsedMs = now.getTime() - new Date(lastAct).getTime();
               
-              // Inactivity limits: Admin = 10m, Student = 20m, Teacher = 15m
-              let limitMins = 15;
-              if (lh.role === 'admin') limitMins = 10;
-              else if (lh.role === 'student') limitMins = 20;
-              else if (lh.role === 'teacher') limitMins = 15;
+              // Dynamic limit from settings
+              let limitMins = globalTimeoutMins;
+              if (lh.role === 'admin' && security.adminInactivityMins) limitMins = Number(security.adminInactivityMins);
+              else if (lh.role === 'teacher' && security.teacherInactivityMins) limitMins = Number(security.teacherInactivityMins);
+              else if (lh.role === 'student' && security.studentInactivityMins) limitMins = Number(security.studentInactivityMins);
               
               const limitMs = limitMins * 60 * 1000;
               
               if (elapsedMs < limitMs) {
-                // User is active in the website — add 15 more minutes to expiresAt
+                // User is still active — extend expiresAt by 15 more minutes
                 session.expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
                 updated = true;
               } else {
-                // User is inactive — log out immediately
+                // User is inactive — mark auto logged out
                 session.active = false;
                 session.current = 'Logged Out';
                 session.logoutTime = now;
+                session.logoutMethod = 'auto';
                 updated = true;
                 
                 // Set online = false in UserSchema
@@ -47,9 +57,11 @@ function startSessionMonitor() {
         }
       }
     } catch (err) {
-      console.error('Session monitor error:', err.message);
+      console.error("No Network connected");
+      // console.error('Session monitor error:', err.message);
     }
   }, 10000);
 }
 
 module.exports = { startSessionMonitor };
+

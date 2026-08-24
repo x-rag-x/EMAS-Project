@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { liveSessionMarkLimiter } = require('../utils/rateLimiters');
+const { checkLiveSessionGuard } = require('../middleware/portalGuard');
 
-router.post('/start', authMiddleware, async (req, res) => {
+router.post('/start', authMiddleware, checkLiveSessionGuard, async (req, res) => {
   if (req.user.role !== 'teacher') return res.status(403).json({ error: 'Only teachers can start live sessions' });
   const { classId, subjectId, date } = req.body;
   if (!classId || !subjectId || !date) return res.status(400).json({ error: 'classId, subjectId, date required' });
@@ -20,11 +22,14 @@ router.post('/start', authMiddleware, async (req, res) => {
   res.status(201).json(session);
 });
 
-router.get('/active', authMiddleware, async (req, res) => {
+router.get('/active', authMiddleware, checkLiveSessionGuard, async (req, res) => {
   if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
   try {
     // Find student's classId
-    const student = await M.Student.findOne({ username: req.user.username });
+    let student = null;
+    if (req.user.trackId) student = await M.Student.findOne({ trackId: req.user.trackId });
+    if (!student && req.user.username) student = await M.Student.findOne({ username: req.user.username });
+    if (!student && req.user._id) student = await M.Student.findById(req.user._id);
     if (!student || !student.classId) return res.json({ active: false });
 
     // Find active session for this class
@@ -38,12 +43,15 @@ router.get('/active', authMiddleware, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/mark', authMiddleware, async (req, res) => {
+router.post('/mark', liveSessionMarkLimiter, authMiddleware, checkLiveSessionGuard, async (req, res) => {
   if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
   const { sessionId, passcode } = req.body;
 
   try {
-    const student = await M.Student.findOne({ username: req.user.username });
+    let student = null;
+    if (req.user.trackId) student = await M.Student.findOne({ trackId: req.user.trackId });
+    if (!student && req.user.username) student = await M.Student.findOne({ username: req.user.username });
+    if (!student && req.user._id) student = await M.Student.findById(req.user._id);
     if (!student) return res.status(404).json({ error: 'Student profile not found' });
 
     const session = await M.LiveSession.findById(sessionId);

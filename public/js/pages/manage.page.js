@@ -5,11 +5,13 @@ var calendarData = {};
 var eaStudentList= [];
 var _dmDayType   = 'working';
 var _dmWorking   = true;
+var _hasLocalDraft = false;
 
 // ── Utils ─────────────────────────────────────────────────────────────
 function pad2(n){ return String(n).padStart(2,'0'); }
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(s){ if(!s) return '—'; var d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function normalizeCalDateKey(d){ if(!d) return ''; return String(d).split('T')[0]; }
 function examDates(ex){
   var arr=(ex&&Array.isArray(ex.Dates))?ex.Dates.slice().sort():[];
   return { start: arr[0]||'', end: arr[arr.length-1]||'' };
@@ -17,10 +19,8 @@ function examDates(ex){
 
 // ── Boot ──────────────────────────────────────────────────────────────
 (function() {
-  var stored = sessionStorage.getItem('eams_user');
-  if (!stored) { location.href = 'index.html'; return; }
-  try { currentUser = JSON.parse(stored); } catch(e) { location.href = 'index.html'; return; }
-  if (!currentUser || currentUser.role !== 'admin') { location.href = 'index.html'; return; }
+  currentUser = checkAuth("admin", "managePage");
+  if (!currentUser) return;
 
   // ── Loader message sequence (3 s total) ─────────────
   var LOADER_STEPS = [
@@ -81,6 +81,51 @@ function examDates(ex){
   var nm = currentUser.name || 'Admin', av = nm[0].toUpperCase();
   ['sb-av','topbar-av'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=av; });
   ['sb-name','topbar-name'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=nm; });
+  
+  var backBtn = document.querySelector('.sb-back-btn');
+  if (backBtn) {
+    if (currentUser && currentUser.role === 'teacher') {
+      var roleEl = document.querySelector('.sb-urole');
+      if (roleEl) roleEl.textContent = 'Teacher (Admin)';
+      backBtn.textContent = '← Back to Hub';
+    } else {
+      backBtn.textContent = '← Back to Dashboard';
+    }
+  }
+
+  // ── Dynamic Settings & Tri-State Guard ─────────────────
+  fetch('/api/settings/public')
+    .then(function (r) { return r.json(); })
+    .then(function (pub) {
+      if (pub.institution) {
+        var instShort = pub.institution.institutionShort || 'SIET';
+        document.title = 'EAMS – Manage | ' + instShort;
+        var logoImg = document.getElementById('topbar-logo');
+        if (logoImg && pub.institution.institutionLogoUrl) logoImg.src = pub.institution.institutionLogoUrl;
+      }
+      if (currentUser && currentUser.role !== 'admin') {
+        var pState = pub.pages ? pub.pages.pageManage : 'enabled';
+        if (pState === 'hidden') {
+          window.location.href = 'teacher.html';
+          return;
+        } else if (pState === 'disabled') {
+          alert('Data & Exam Management portal is currently disabled for maintenance.');
+          window.location.href = 'selector.html';
+          return;
+        }
+      }
+      if (pub.models) {
+        if (pub.models.modelExams === false) {
+          var examNav = document.getElementById('nav-exams');
+          if (examNav) examNav.style.display = 'none';
+        }
+        if (pub.models.modelExportSheet === false) {
+          document.querySelectorAll('.btn-export').forEach(function(b){ b.style.display = 'none'; });
+        }
+      }
+    })
+    .catch(function (e) { console.warn('Public settings fetch error', e); });
+
   document.getElementById('tdt-label').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   var now = new Date();
   var mSel = document.getElementById('cal-month-sel');
@@ -92,8 +137,21 @@ function examDates(ex){
   loadYears();
 
   fetchDone = true;
+  var urlParams = new URLSearchParams(window.location.search);
+  var initialTab = urlParams.get('tab') || urlParams.get('page');
+  if (initialTab && ['overview', 'calendar', 'exam', 'years', 'settings'].indexOf(initialTab) !== -1) {
+    nav(initialTab);
+  }
   tryReveal();
 })();
+
+function goBack() {
+  if (currentUser && currentUser.role === 'teacher') {
+    window.location.href = "selector.html";
+  } else {
+    window.location.href = "admin.html";
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -111,23 +169,30 @@ function examDates(ex){
       return setTimeout(() => { doLogout('timeout', 'error'); }, 1000);
       }
 
-      // Sleep until the session should expire
-      setTimeout(checkSessionExpiry, Math.max(remainingTime, 0));
-
-  } catch (err) { console.error(err); }
+      sessionStorage.setItem('eams_expire_time', session.expireTime);
+  } catch (err) {
+      console.warn('Session verification failed:', err);
   }
+  }
+
+  // Poll every 15s to catch server-side invalidation early
+  setInterval(checkSessionExpiry, 15000);
   checkSessionExpiry();
 })();
 
 // ── Sidebar toggle ────────────────────────────────────────────────────
 function toggleSidebar() {
-  var sb = document.querySelector('.sb');
-  var mc = document.querySelector('.mc');
-  var overlay = document.getElementById('sb-overlay');
-  if (window.innerWidth <= 768) {
+  var isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    var sb = document.querySelector('.sb');
+    var ov = document.getElementById('sb-overlay');
+    var btn = document.getElementById('sbtoggle');
     if (sb) sb.classList.toggle('sb-mobile-open');
-    if (overlay) overlay.classList.toggle('visible');
+    if (ov) ov.classList.toggle('visible');
+    if (btn) btn.innerHTML = (sb && sb.classList.contains('sb-mobile-open')) ? '✖' : '☰';
   } else {
+    var sb = document.querySelector('.sb');
+    var mc = document.querySelector('.mc');
     if (sb) sb.classList.toggle('sb-hidden');
     if (mc) mc.classList.toggle('sb-expanded');
   }
@@ -135,6 +200,14 @@ function toggleSidebar() {
 
 // ── Navigation ────────────────────────────────────────────────────────
 function nav(page) {
+  if (['overview', 'calendar', 'exam', 'years', 'settings'].indexOf(page) === -1) page = 'overview';
+
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location);
+    url.searchParams.set('tab', page);
+    window.history.replaceState(null, '', url);
+  }
+
   document.querySelectorAll('.pg').forEach(function(p){ p.classList.remove('act'); });
   var pg = document.getElementById('pg-'+page); if(pg) pg.classList.add('act');
   document.querySelectorAll('.sb-item').forEach(function(b){ b.classList.remove('act'); });
@@ -151,7 +224,7 @@ function loadOverview() {
   var now = new Date(), m = now.getMonth()+1, y = now.getFullYear();
   document.getElementById('ov-month-label').textContent = ['','January','February','March','April','May','June','July','August','September','October','November','December'][m]+' '+y;
   apiCall('GET','/calendar?month='+m+'&year='+y).then(function(days){
-    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ map[d.date]=d; });
+    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ var key=normalizeCalDateKey(d.date); map[key]=d; });
     renderCalGrid(map,m,y,'ov-cal-grid',true);
     var stats={working:0,leave:0,exam:0,total:new Date(y,m,0).getDate()};
     for(var day=1;day<=stats.total;day++){
@@ -202,9 +275,30 @@ function getSatOrdinal(day, month, year) {
   return count;
 }
 function getEffType(doc, dow, day, month, year) {
-  if(doc) return { type: doc.dayType||'working', working: doc.isWorkingDay, timing: doc.timing||{start:'08:30',end:'16:30'} };
+  if(doc) {
+    // Local auto-fill format: has top-level dayType/isWorkingDay
+    if(doc._local || doc.dayType) {
+      return { type: doc.dayType||'working', working: doc.isWorkingDay!==undefined?doc.isWorkingDay:(doc.dayType!=='leave'), timing: doc.timing||{start:'08:30',end:'16:30'} };
+    }
+    // DB format: read from details[] array
+    if(doc.details && doc.details.length > 0) {
+      var yf = (typeof document !== 'undefined' && document.getElementById('cal-year-filter')) ? document.getElementById('cal-year-filter').value : '';
+      var det = null;
+      if (yf) {
+        det = doc.details.find(function(d) { return d.year === yf; });
+      }
+      if (!det) {
+        det = doc.details.find(function(d) { return d.dayType === 'exam'; }) || doc.details.find(function(d) { return d.dayType === 'leave'; }) || doc.details[0];
+      }
+      var dtype = (det && det.dayType) ? det.dayType : 'working';
+      var isWork = (dtype === 'working' || dtype === 'exam' || dtype === 'half-day');
+      var tim = (det && det.timing) ? det.timing : {start:'08:30',end:'16:30'};
+      return { type: dtype, working: isWork, timing: tim };
+    }
+    return { type:'working', working:true, timing:{start:'08:30',end:'16:30'} };
+  }
   if(dow===0) return { type:'leave', working:false, timing:{start:'08:30',end:'16:30'} };
-  if(dow===6){ var sn=getSatOrdinal(day,month,year); var w=sn%2===0; return { type:w?'working':'leave', working:w, timing:{start:'08:30',end:'16:30'} }; }
+  if(dow===6){ var sn=getSatOrdinal(day,month,year); var w=(sn%2===0 || sn===5); return { type:w?'working':'leave', working:w, timing:{start:'08:30',end:'16:30'} }; }
   return { type:'working', working:true, timing:{start:'08:30',end:'16:30'} };
 }
 
@@ -217,18 +311,35 @@ function renderCalGrid(map, month, year, gridId, readonly) {
   for(var i=0;i<offset;i++) cells+='<div class="cal-cell other-month"></div>';
   for(var day=1;day<=lastDay;day++){
     var ds=year+'-'+pad2(month)+'-'+pad2(day);
-    var dow=new Date(ds+'T00:00:00').getDay(), isSun=dow===0, isSat=dow===6;
-    var doc=map[ds], eff=getEffType(doc,dow,day,month,year);
-    var cls='cal-cell '+eff.type+(isSun?' sunday':'')+(isSat?' saturday':'')+(ds===today?' today':'')+(readonly?' readonly':'');
-    var typeLabel=eff.type.charAt(0).toUpperCase()+eff.type.slice(1).replace('-',' ');
-    var typeLabelColor=eff.working?(eff.type==='exam'?'#b45309':'var(--gK)'):'#dc2626';
-    var timingStr=(eff.working&&eff.timing&&eff.timing.start)?'<div style="font-size:7.5px;color:var(--tmu);">'+eff.timing.start+'–'+eff.timing.end+'</div>':'';
-    var yrBadges='';
-    if(doc&&doc.affectedYears&&doc.affectedYears.length>0){
-      yrBadges='<div class="cal-yr-badges">';
-      doc.affectedYears.forEach(function(yr){ yrBadges+='<span class="cal-yr-badge">'+yr+'</span>'; });
-      yrBadges+='</div>';
+    var dow=new Date(year, month-1, day).getDay(), isSun=dow===0, isSat=dow===6;
+    var doc=map[ds];
+
+    var cls, typeLabel, typeLabelColor, timingStr='', yrBadges='';
+
+    if(!doc){
+      // Not Saved State: clean neutral / black style (no green or red)
+      cls='cal-cell not-set' + (ds===today?' today':'') + (readonly?' readonly':'');
+      typeLabel='—';
+      typeLabelColor='var(--tmu)';
+    } else {
+      var eff=getEffType(doc,dow,day,month,year);
+      cls='cal-cell '+eff.type+(isSun?' sunday':'')+(isSat?' saturday':'')+(ds===today?' today':'')+(readonly?' readonly':'');
+      typeLabel=eff.type.charAt(0).toUpperCase()+eff.type.slice(1).replace('-',' ');
+      typeLabelColor=eff.working?(eff.type==='exam'?'#b45309':'var(--gK)'):'#dc2626';
+      timingStr=(eff.working&&eff.timing&&eff.timing.start)?'<div style="font-size:7.5px;color:var(--tmu);">'+eff.timing.start+'–'+eff.timing.end+'</div>':'';
+      
+      var examYears = (doc.details || []).filter(function(d){ return d.dayType === 'exam'; }).map(function(d){ return d.year; });
+      if(examYears.length > 0){
+        yrBadges='<div class="cal-yr-badges">';
+        examYears.forEach(function(yr){ yrBadges+='<span class="cal-yr-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Yr '+yr+'</span>'; });
+        yrBadges+='</div>';
+      } else if(doc.affectedYears&&doc.affectedYears.length>0){
+        yrBadges='<div class="cal-yr-badges">';
+        doc.affectedYears.forEach(function(yr){ yrBadges+='<span class="cal-yr-badge">'+yr+'</span>'; });
+        yrBadges+='</div>';
+      }
     }
+
     var onclick=readonly?'':' onclick="openDayModal(\''+ds+'\')"';
     cells+='<div class="'+cls+'"'+onclick+'>'
       +'<div class="cal-date">'+day+'</div>'
@@ -251,71 +362,250 @@ function nextMonth(){
   document.getElementById('cal-month-sel').value=m; document.getElementById('cal-year-inp').value=y;
   loadCalendar();
 }
+// ── CALENDAR DRAFT ENCRYPTION & SESSIONSTORAGE ────────────────────────
+function getCalDraftStorageKey(m, y) {
+  return 'eams_cal_draft_' + y + '_' + pad2(m);
+}
+
+function encryptCalDraft(data) {
+  try {
+    var str = JSON.stringify(data);
+    var key = 'EAMS_CAL_SECRET_' + (currentUser ? currentUser._id || 'KEY' : 'KEY');
+    var enc = '';
+    for (var i = 0; i < str.length; i++) {
+      enc += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return btoa(unescape(encodeURIComponent(enc)));
+  } catch (e) {
+    try { return btoa(encodeURIComponent(JSON.stringify(data))); } catch (e2) { return ''; }
+  }
+}
+
+function decryptCalDraft(cipher) {
+  if (!cipher) return null;
+  try {
+    var raw = decodeURIComponent(escape(atob(cipher)));
+    var key = 'EAMS_CAL_SECRET_' + (currentUser ? currentUser._id || 'KEY' : 'KEY');
+    var dec = '';
+    for (var i = 0; i < raw.length; i++) {
+      dec += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return JSON.parse(dec);
+  } catch (e) {
+    try {
+      return JSON.parse(decodeURIComponent(atob(cipher)));
+    } catch (e2) {
+      return null;
+    }
+  }
+}
+
+function saveCalDraftToSession(m, y) {
+  var key = getCalDraftStorageKey(m, y);
+  sessionStorage.setItem(key, encryptCalDraft(calendarData));
+  _hasLocalDraft = true;
+  var clrBtn = document.getElementById('clear-draft-btn');
+  if (clrBtn) clrBtn.style.display = '';
+}
+
+function clearCalDraftFromSession(m, y) {
+  var key = getCalDraftStorageKey(m, y);
+  sessionStorage.removeItem(key);
+  _hasLocalDraft = false;
+  var clrBtn = document.getElementById('clear-draft-btn');
+  if (clrBtn) clrBtn.style.display = 'none';
+}
+
 function loadCalendar(){
-  var m=parseInt(document.getElementById('cal-month-sel').value)
-  var y=parseInt(document.getElementById('cal-year-inp').value)
+  var m=parseInt(document.getElementById('cal-month-sel').value);
+  var y=parseInt(document.getElementById('cal-year-inp').value);
   var yf=document.getElementById('cal-year-filter').value;
   
   var mn=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month-label').textContent=mn[m]+' '+y;
   document.getElementById('month-label').textContent=mn[m]+' '+y;
 
+  // Check if encrypted draft exists in sessionStorage for this month/year
+  var draftCipher = sessionStorage.getItem(getCalDraftStorageKey(m, y));
+  var localDraft = decryptCalDraft(draftCipher);
+
+  if (localDraft && Object.keys(localDraft).length > 0) {
+    calendarData = localDraft;
+    _hasLocalDraft = true;
+    var clrBtn = document.getElementById('clear-draft-btn');
+    if (clrBtn) clrBtn.style.display = '';
+
+    var renderMap = {};
+    Object.keys(calendarData).forEach(function(k){ renderMap[k]=calendarData[k]; });
+    if(yf){
+      var fmap={};
+      Object.keys(renderMap).forEach(function(k){ var d=renderMap[k];
+        var hasYear = false;
+        if(d.details && d.details.length > 0) hasYear = d.details.some(function(det){ return det.year === yf; });
+        if(!d.details || d.details.length===0 || hasYear) fmap[k]=d;
+      });
+      renderMap=fmap;
+    }
+    renderCalGrid(renderMap, m, y, 'cal-grid', false);
+    updateCalStats(m, y);
+    var badge = document.getElementById('cal-finalized-badge');
+    if (badge) { badge.textContent = '📝 Local Draft'; badge.style.color = '#b45309'; }
+    return;
+  }
+
+  _hasLocalDraft = false;
+  var clrBtn = document.getElementById('clear-draft-btn');
+  if(clrBtn) clrBtn.style.display = 'none';
+
   document.getElementById('cal-grid').innerHTML='<div style="grid-column:span 7;text-align:center;padding:20px;color:var(--tdi);font-size:16px;">Loading… This may take few seconds.</div>';
   apiCall('GET','/calendar?month='+m+'&year='+y).then(function(days){
-    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ map[d.date]=d; });
+    var map={}; (Array.isArray(days)?days:[]).forEach(function(d){ var key=normalizeCalDateKey(d.date); map[key]=d; });
     calendarData=map;
+    updateFinalizedBadge(days);
     // Apply year filter
     if(yf){
       var fmap={};
       Object.keys(map).forEach(function(k){ var d=map[k];
-        if(!d.affectedYears||d.affectedYears.length===0||d.affectedYears.includes(yf)) fmap[k]=d;
+        var hasYear = false;
+        if(d.details && d.details.length > 0){
+          hasYear = d.details.some(function(det){ return det.year === yf; });
+        }
+        if(!d.details || d.details.length===0 || hasYear) fmap[k]=d;
       });
       map=fmap;
     }
     renderCalGrid(map,m,y,'cal-grid',false);
-    var stats={working:0,leave:0,exam:0,total:new Date(y,m,0).getDate()};
-    for(var day=1;day<=stats.total;day++){
-      var ds=y+'-'+pad2(m)+'-'+pad2(day),doc=calendarData[ds],dow=new Date(ds+'T00:00:00').getDay();
-      var eff=getEffType(doc,dow,day,m,y);
-      if(eff.type==='exam')stats.exam++; else if(!eff.working)stats.leave++; else stats.working++;
-    }
-    document.getElementById('cs-working').textContent=stats.working;
-    document.getElementById('cs-leave').textContent=stats.leave;
-    document.getElementById('cs-exam').textContent=stats.exam;
-    document.getElementById('cs-total').textContent=stats.total;
-  }).catch(function(){ renderCalGrid({},m,y,'cal-grid',false); });
+    updateCalStats(m,y);
+  }).catch(function(){ renderCalGrid({},m,y,'cal-grid',false); updateFinalizedBadge([]); });
+}
+
+function updateCalStats(m,y){
+  var lastDay=new Date(y,m,0).getDate();
+  var stats={working:0,leave:0,exam:0,total:lastDay};
+  for(var day=1;day<=lastDay;day++){
+    var ds=y+'-'+pad2(m)+'-'+pad2(day),doc=calendarData[ds],dow=new Date(y, m-1, day).getDay();
+    var eff=getEffType(doc,dow,day,m,y);
+    if(eff.type==='exam')stats.exam++; else if(!eff.working)stats.leave++; else stats.working++;
+  }
+  document.getElementById('cs-working').textContent=stats.working;
+  document.getElementById('cs-leave').textContent=stats.leave;
+  document.getElementById('cs-exam').textContent=stats.exam;
+  document.getElementById('cs-total').textContent=stats.total;
 }
 
 function generateMonthDefaults(){
   var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
-  dbToast('Generating defaults…','saving');
-  apiCall('POST','/calendar/bulk-generate',{month:m,year:y,overwriteExisting:false}).then(function(r){
-    dbToast('Defaults applied','success',r.generated+' days set');
+  var lastDay=new Date(y,m,0).getDate();
+  calendarData = {};
+  for(var day=1;day<=lastDay;day++){
+    var ds=y+'-'+pad2(m)+'-'+pad2(day);
+    var dow=new Date(y, m-1, day).getDay();
+    var dayType;
+    if(dow===0){ dayType='leave'; }
+    else if(dow===6){ var sn=getSatOrdinal(day,m,y); dayType=(sn%2===0 || sn===5)?'working':'leave'; }
+    else{ dayType='working'; }
+    var isWorking=(dayType==='working');
+    var details=['I','II','III','IV'].map(function(yr){ return {year:yr,dayType:dayType,comments:'',timing:{start:'08:30',end:'16:30'}}; });
+    calendarData[ds]={date:ds,dayType:dayType,isWorkingDay:isWorking,details:details,timing:{start:'08:30',end:'16:30'},_local:true};
+  }
+  
+  // Persist encrypted draft to sessionStorage
+  saveCalDraftToSession(m, y);
+
+  // Re-render
+  var yf=document.getElementById('cal-year-filter').value;
+  var renderMap={};
+  Object.keys(calendarData).forEach(function(k){ renderMap[k]=calendarData[k]; });
+  if(yf){
+    var fmap={};
+    Object.keys(renderMap).forEach(function(k){ var d=renderMap[k];
+      var hasYear = false;
+      if(d.details && d.details.length > 0) hasYear = d.details.some(function(det){ return det.year === yf; });
+      if(!d.details || d.details.length===0 || hasYear) fmap[k]=d;
+    });
+    renderMap=fmap;
+  }
+  renderCalGrid(renderMap,m,y,'cal-grid',false);
+  updateCalStats(m,y);
+  var badge = document.getElementById('cal-finalized-badge');
+  if (badge) { badge.textContent = '📝 Local Draft'; badge.style.color = '#b45309'; }
+  dbToast('Month auto-filled locally and saved to session draft. Click Save Draft or Save & Finalize to push to DB.','success');
+}
+
+function clearCalendarDraft(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  clearCalDraftFromSession(m, y);
+  loadCalendar();
+  showToast('Session draft cleared. Synced with DB.','success');
+}
+
+function deleteCalendarMonth(){
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  var mn=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(!confirm('Are you sure you want to delete all saved days for ' + mn[m] + ' ' + y + ' from the database? This will reset the month to unsaved default state.')) return;
+  
+  clearCalDraftFromSession(m, y);
+  dbToast('Deleting month from DB…','saving');
+  apiCall('DELETE','/calendar/month/clear?month='+m+'&year='+y).then(function(r){
+    dbToast('Month deleted from DB','success', (r.deletedCount||0)+' days removed');
     loadCalendar();
-  }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
+  }).catch(function(err){
+    dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');
+  });
+}
+
+function updateFinalizedBadge(days){
+  var badge=document.getElementById('cal-finalized-badge');
+  if(!badge) return;
+  var arr=Array.isArray(days)?days:[];
+  if(arr.length===0){
+    badge.textContent='Not Saved';
+    badge.style.color='#6b7280';
+    return;
+  }
+  var allFinalized=arr.every(function(d){ return d.isFinalized===true; });
+  if(allFinalized){
+    badge.textContent='✅ Finalized';
+    badge.style.color='var(--gK,#16a34a)';
+  } else {
+    badge.textContent='💾 DB Draft';
+    badge.style.color='#d97706';
+  }
 }
 
 function saveCalendarMonth(finalize){
   var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
   var lastDay=new Date(y,m,0).getDate();
-  var savePromises=[];
+  var daysToSave=[];
   
-  dbToast(finalize?'Finalizing month…':'Saving drafts…','saving');
+  dbToast(finalize?'Finalizing month in DB…':'Saving drafts in DB…','saving');
   
   for(var day=1;day<=lastDay;day++){
     var ds=y+'-'+pad2(m)+'-'+pad2(day);
     var doc=calendarData[ds];
-    if(!doc)continue;
-    
-    var details=doc.details||[];
-    if(details.length===0)continue;
-    savePromises.push(apiCall('POST','/calendar',{date:ds,details:details,isFinalized:!!finalize}));
+    var details;
+    if(doc && doc.details && doc.details.length>0){
+      details=doc.details;
+    } else {
+      var dow=new Date(y, m-1, day).getDay();
+      var dayType;
+      if(dow===0){ dayType='leave'; }
+      else if(dow===6){ var sn=getSatOrdinal(day,m,y); dayType=(sn%2===0 || sn===5)?'working':'leave'; }
+      else{ dayType='working'; }
+      details=['I','II','III','IV'].map(function(yr){ return {year:yr,dayType:dayType,comments:'',timing:{start:'08:30',end:'16:30'}}; });
+    }
+    daysToSave.push({ date: ds, details: details, isFinalized: !!finalize });
   }
-  if(savePromises.length===0){ dbToast('No days to save','warn'); return;}
-  Promise.all(savePromises).then(function(){
-    dbToast(finalize?'Month finalized':'Drafts saved','success',savePromises.length+' days updated');
-    loadCalendar();
-  }).catch(function(){ dbToast('Error saving some days','error'); });
+
+  apiCall('POST', '/calendar/month/save', { month: m, year: y, days: daysToSave, isFinalized: !!finalize })
+    .then(function(r){
+      clearCalDraftFromSession(m, y);
+      dbToast(finalize ? 'Month finalized in DB' : 'Drafts saved in DB', 'success', daysToSave.length + ' days updated');
+      loadCalendar();
+    })
+    .catch(function(err){
+      dbToast('Error: ' + (err && err.message ? err.message : 'Error saving month'), 'error');
+    });
 }
 
 // ── DAY MODAL ─────────────────────────────────────────────────────────
@@ -326,14 +616,38 @@ function openDayModal(dateStr){
   document.getElementById('dm-title').textContent=dows[d.getDay()]+', '+d.getDate()+' '+mns[d.getMonth()]+' '+d.getFullYear();
   document.getElementById('dm-sub').textContent=dateStr;
   document.getElementById('dm-date').value=dateStr;
-  _dmWorking=doc?doc.isWorkingDay:(d.getDay()!==0);
+
+  // Extract data — handle both DB format (details[]) and local format (top-level dayType)
+  var dt='working', isWork=(d.getDay()!==0), timStart='08:30', timEnd='16:30', notes='', ayrs=[];
+  if(doc){
+    if(doc._local || doc.dayType){
+      // Local auto-fill format
+      dt=doc.dayType||'working';
+      isWork=doc.isWorkingDay!==undefined?doc.isWorkingDay:(dt!=='leave');
+      if(doc.timing){ timStart=doc.timing.start||'08:30'; timEnd=doc.timing.end||'16:30'; }
+      notes=(doc.details&&doc.details[0]&&doc.details[0].comments)||'';
+    } else if(doc.details && doc.details.length>0){
+      // DB format
+      var det=doc.details[0];
+      dt=det.dayType||'working';
+      isWork=(dt==='working'||dt==='exam'||dt==='half-day');
+      if(det.timing){ timStart=det.timing.start||'08:30'; timEnd=det.timing.end||'16:30'; }
+      notes=det.comments||'';
+      // Extract affected years from details
+      if(doc.details.length<4){
+        ayrs=doc.details.map(function(dd){ return dd.year; });
+      }
+    }
+  } else {
+    if(d.getDay()===0){ dt='leave'; isWork=false; }
+  }
+
+  _dmWorking=isWork;
   updateDmToggle(_dmWorking);
-  var dt=doc?(doc.dayType||'working'):(d.getDay()===0?'leave':'working');
   selDayType(dt,true);
-  document.getElementById('dm-start').value=(doc&&doc.timing&&doc.timing.start)||'08:30';
-  document.getElementById('dm-end').value=(doc&&doc.timing&&doc.timing.end)||'16:30';
-  document.getElementById('dm-notes').value=(doc&&doc.notes)||'';
-  var ayrs=(doc&&doc.affectedYears)||[];
+  document.getElementById('dm-start').value=timStart;
+  document.getElementById('dm-end').value=timEnd;
+  document.getElementById('dm-notes').value=notes;
   document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ cb.checked=ayrs.includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); });
   var allYrCb=document.getElementById('dm-year-all');
   allYrCb.checked=(ayrs.length===0); document.getElementById('dm-yr-all').classList.toggle('checked',ayrs.length===0);
@@ -351,16 +665,27 @@ function toggleAllYrs(cb){
   document.getElementById('dm-yr-all').classList.toggle('checked',cb.checked);
   if(cb.checked) document.querySelectorAll('.dm-yr-cb').forEach(function(c){ c.checked=false; c.closest('label').classList.remove('checked'); });
 }
-function saveDayModal(finalize){
+function saveDayModal(){
   var dateStr=document.getElementById('dm-date').value,notes=document.getElementById('dm-notes').value.trim();
   var timing={start:document.getElementById('dm-start').value,end:document.getElementById('dm-end').value};
   var yrs=[]; if(!document.getElementById('dm-year-all').checked){ document.querySelectorAll('.dm-yr-cb').forEach(function(cb){ if(cb.checked) yrs.push(cb.value); }); }
   if(yrs.length===0) yrs=['I','II','III','IV'];
   var details=yrs.map(function(y){return {year:y,dayType:_dmDayType,comments:notes,timing:timing};});
-  dbToast('Saving…','saving');
-  apiCall('POST','/calendar',{date:dateStr,details:details,isFinalized:!!finalize})
-    .then(function(r){ dbToast('Day saved','success'); closeModal('day-modal-bg'); loadCalendar(); })
-    .catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
+  var isWorking=(_dmDayType==='working'||_dmDayType==='exam'||_dmDayType==='half-day');
+  // Update local calendarData immediately (overwrites auto-gen)
+  calendarData[dateStr]={date:dateStr,dayType:_dmDayType,isWorkingDay:isWorking,details:details,timing:timing,_local:true};
+  
+  var m=parseInt(document.getElementById('cal-month-sel').value),y=parseInt(document.getElementById('cal-year-inp').value);
+  // Persist encrypted draft to sessionStorage
+  saveCalDraftToSession(m, y);
+
+  // Re-render calendar
+  renderCalGrid(calendarData,m,y,'cal-grid',false);
+  updateCalStats(m,y);
+  var badge = document.getElementById('cal-finalized-badge');
+  if (badge) { badge.textContent = '📝 Local Draft'; badge.style.color = '#b45309'; }
+  closeModal('day-modal-bg');
+  showToast('Day updated in session draft. Click Save Draft or Save & Finalize to push to DB.','success');
 }
 
 // ── EXAMS ─────────────────────────────────────────────────────────────
@@ -408,12 +733,86 @@ function renderExamsTable(exams){
   });
   document.getElementById('exams-tbody').innerHTML=html;
 }
+function populateExamAcYearsAndBatches(selectedAcYear, selectedBatch){
+  var acSel = document.getElementById('em-acyear');
+  if(!acSel) return;
+  var promise = (yearsData && yearsData.length > 0) ? Promise.resolve(yearsData) : apiCall('GET', '/year');
+  promise.then(function(data){
+    yearsData = Array.isArray(data) ? data : [];
+    var html = '<option value="">— Select Academic Year —</option>';
+    yearsData.forEach(function(y){
+      html += '<option value="' + y.academicYear + '"' + (y.isCurrent ? ' data-current="true"' : '') + '>' + y.academicYear + (y.isCurrent ? ' (Current)' : '') + '</option>';
+    });
+    acSel.innerHTML = html;
+
+    var targetAcYear = selectedAcYear;
+    if (!targetAcYear) {
+      var cur = yearsData.find(function(y){ return y.isCurrent; });
+      if (cur) targetAcYear = cur.academicYear;
+    }
+    if (targetAcYear) acSel.value = targetAcYear;
+
+    populateExamBatches(selectedBatch);
+  }).catch(function(){});
+}
+
+function populateExamBatches(selectedBatch){
+  var bSel = document.getElementById('em-batch');
+  if(!bSel) return;
+  var acVal = document.getElementById('em-acyear').value;
+  var yObj = yearsData.find(function(y){ return y.academicYear === acVal; });
+  var batches = (yObj && Array.isArray(yObj.batches)) ? yObj.batches : [];
+  var html = '<option value="">— Select Batch —</option>';
+  batches.forEach(function(b){
+    html += '<option value="' + b.batch + '" data-year="' + (b.currentYear||'') + '" data-sem="' + (b.currentSem||'') + '">' + b.batch + ' (Year ' + b.currentYear + ' • Sem ' + b.currentSem + ')</option>';
+  });
+  bSel.innerHTML = html;
+  if (selectedBatch) {
+    bSel.value = selectedBatch;
+  }
+}
+
+function onEmAcYearChange(){
+  populateExamBatches(null);
+}
+
+function onEmBatchChange(){
+  var bSel = document.getElementById('em-batch');
+  var opt = bSel ? bSel.options[bSel.selectedIndex] : null;
+  if(opt && opt.value){
+    var bYear = opt.getAttribute('data-year');
+    var bSem = opt.getAttribute('data-sem');
+    if(bYear && document.getElementById('em-year')) document.getElementById('em-year').value = bYear;
+    if(bSem && document.getElementById('em-semester')) document.getElementById('em-semester').value = bSem;
+  }
+}
+
+function onEmYearChange(){
+  var yr = document.getElementById('em-year').value;
+  var semSel = document.getElementById('em-semester');
+  if(!semSel || !yr) return;
+  if(yr === 'I') semSel.value = 'I';
+  else if(yr === 'II') semSel.value = 'III';
+  else if(yr === 'III') semSel.value = 'V';
+  else if(yr === 'IV') semSel.value = 'VII';
+}
+
+function onEmSemChange(){
+  var sem = document.getElementById('em-semester').value;
+  var yrSel = document.getElementById('em-year');
+  if(!yrSel || !sem) return;
+  if(['I','II'].includes(sem)) yrSel.value = 'I';
+  else if(['III','IV'].includes(sem)) yrSel.value = 'II';
+  else if(['V','VI'].includes(sem)) yrSel.value = 'III';
+  else if(['VII','VIII'].includes(sem)) yrSel.value = 'IV';
+}
+
 function openExamModal(examId){
   document.getElementById('exam-modal-title').textContent=examId?'Edit Exam':'Add Exam';
   document.getElementById('em-id').value=examId||'';
   document.getElementById('em-delete-btn').style.display=examId?'':'none';
-  ['em-title','em-acyear','em-notes','em-batch'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('em-type').value=''; document.getElementById('em-semester').value='';
+  ['em-title','em-notes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('em-type').value=''; document.getElementById('em-year').value=''; document.getElementById('em-semester').value='';
   document.getElementById('em-dept').value=''; document.getElementById('em-t-start').value='09:00';
   document.getElementById('em-t-end').value='16:00'; document.getElementById('em-status').value='upcoming';
   document.getElementById('em-start').value=''; document.getElementById('em-end').value='';
@@ -423,9 +822,8 @@ function openExamModal(examId){
       var rng=examDates(ex);
       document.getElementById('em-title').value=ex.title||'';
       document.getElementById('em-type').value=ex.examType||'';
-      document.getElementById('em-acyear').value=ex.academicYear||'';
+      document.getElementById('em-year').value=ex.year||(['I','II'].includes(ex.semester)?'I':['III','IV'].includes(ex.semester)?'II':['V','VI'].includes(ex.semester)?'III':'IV');
       document.getElementById('em-semester').value=ex.semester||'';
-      document.getElementById('em-batch').value=ex.batch||'';
       var deptId=''; if(ex.deptName){ var mdept=deptsData.find(function(d){return d.name===ex.deptName;}); if(mdept) deptId=mdept._id; }
       document.getElementById('em-dept').value=deptId;
       document.getElementById('em-start').value=rng.start;
@@ -434,37 +832,76 @@ function openExamModal(examId){
       document.getElementById('em-t-end').value=(ex.timing&&ex.timing.end)||'16:00';
       document.getElementById('em-status').value=ex.status||'upcoming';
       document.getElementById('em-notes').value=ex.notes||'';
+      populateExamAcYearsAndBatches(ex.academicYear, ex.batch);
     }
   }
-  else { var curYr=yearsData.find(function(y){return y.isCurrent;}); if(curYr) document.getElementById('em-acyear').value=curYr.academicYear; }
+  else {
+    populateExamAcYearsAndBatches(null, null);
+  }
   openModal('exam-modal-bg');
-
-  dbToast('Loaded Successfully', 'success');
 }
+
 function saveExam(finalize){
   var id=document.getElementById('em-id').value, title=document.getElementById('em-title').value.trim();
   var type=document.getElementById('em-type').value, semester=document.getElementById('em-semester').value;
+  var year=document.getElementById('em-year').value || (['I','II'].includes(semester)?'I':['III','IV'].includes(semester)?'II':['V','VI'].includes(semester)?'III':'IV');
+  var acYear=document.getElementById('em-acyear').value.trim();
+  var batch=document.getElementById('em-batch').value.trim();
   var start=document.getElementById('em-start').value, end=document.getElementById('em-end').value;
-  if(!title){showToast('Title is required','warn');return;} if(!type){showToast('Exam type required','warn');return;}
+
+  if(!title){showToast('Title is required','warn');return;} 
+  if(!type){showToast('Exam type required','warn');return;}
+  if(!acYear){showToast('Academic Year is required','warn');return;}
+  if(!batch){showToast('Batch is required','warn');return;}
   if(!semester){showToast('Semester is required','warn');return;}
-  if(!start||!end){showToast('Start and end dates required','warn');return;} if(start>end){showToast('Start must be before end','warn');return;}
-  dbToast('Saving…','saving');
+  if(!start||!end){showToast('Start and end dates required','warn');return;} 
+  if(start>end){showToast('Start must be before end','warn');return;}
+
+  dbToast('Saving exam & syncing calendar…','saving');
   var deptEl=document.getElementById('em-dept'), deptId=deptEl.value||null, deptName=deptId?deptEl.options[deptEl.selectedIndex].text:'';
   var Dates=[], cur=new Date(start+'T00:00:00'), endD=new Date(end+'T00:00:00');
   while(cur<=endD){ Dates.push(cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate())); cur.setDate(cur.getDate()+1); }
   
-  apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{title,examType:type,semester,academicYear:document.getElementById('em-acyear').value.trim(),batch:document.getElementById('em-batch').value.trim(),deptId,deptName,Dates,timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},status:document.getElementById('em-status').value,notes:document.getElementById('em-notes').value.trim(),isFinalized:!!finalize})
-    .then(function(r){
-      dbToast('Exam saved','success'); closeModal('exam-modal-bg'); 
-      loadExams(); 
-      loadCalendar(); 
-    }).catch(function(err){ dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error'); });
+  apiCall(id?'PUT':'POST',id?'/exams/'+id:'/exams',{
+    title,
+    examType:type,
+    year,
+    semester,
+    academicYear:acYear,
+    batch:batch,
+    deptId,
+    deptName,
+    Dates,
+    timing:{start:document.getElementById('em-t-start').value,end:document.getElementById('em-t-end').value},
+    status:document.getElementById('em-status').value,
+    notes:document.getElementById('em-notes').value.trim(),
+    isFinalized:!!finalize
+  })
+  .then(function(r){
+    dbToast('Exam saved & calendar updated','success'); 
+    closeModal('exam-modal-bg'); 
+    loadExams(); 
+    if (Dates && Dates.length > 0) {
+      var p = Dates[0].split('-');
+      var emMonth = parseInt(p[1]), emYear = parseInt(p[0]);
+      document.getElementById('cal-month-sel').value = emMonth;
+      document.getElementById('cal-year-inp').value = emYear;
+      clearCalDraftFromSession(emMonth, emYear);
+    }
+    loadCalendar(); 
+  }).catch(function(err){ dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error'); });
 }
+
 function deleteExam(){
   if(!confirm('Delete this exam? Calendar exam entries will also be removed.')) return;
   var id=document.getElementById('em-id').value;
-  dbToast('Deleting…','saving');
-  apiCall('DELETE','/exams/'+id).then(function(r){ dbToast('Exam deleted','success'); closeModal('exam-modal-bg'); loadExams(); loadCalendar(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
+  dbToast('Deleting exam & syncing calendar…','saving');
+  apiCall('DELETE','/exams/'+id).then(function(r){ 
+    dbToast('Exam deleted & calendar synced','success'); 
+    closeModal('exam-modal-bg'); 
+    loadExams(); 
+    loadCalendar(); 
+  }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
 }
 
 // ── EXAM ATTENDANCE ───────────────────────────────────────────────────
@@ -559,25 +996,61 @@ function viewHallAtt(id){
 function quickViewAtt(examId,title){ examSubTab('attendance'); setTimeout(function(){ document.getElementById('ea-exam-sel').value=examId; onExamSelChange(); },100); }
 
 // ── MANAGE ADMINS (SETTINGS) ──────────────────────────────────────────
+var _teachersForAdminList = [];
+
+function loadTeachersForAdminModal(){
+  var sel = document.getElementById('am-teacher-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Loading Teachers… --</option>';
+  apiCall('GET', '/teachers').then(function(data){
+    _teachersForAdminList = Array.isArray(data) ? data : [];
+    var optHtml = '<option value="">-- Choose Teacher to Grant Access --</option>';
+    _teachersForAdminList.forEach(function(t){
+      optHtml += '<option value="' + t._id + '" data-name="' + (t.name||'') + '" data-user="' + (t.username||'') + '" data-email="' + (t.email||'') + '" data-dept="' + (t.dept||t.department||'') + '">' + (t.name||'Teacher') + ' (' + (t.dept||t.department||'Faculty') + ') - @' + (t.username||'') + '</option>';
+    });
+    sel.innerHTML = optHtml;
+  }).catch(function(){
+    sel.innerHTML = '<option value="">-- Could not load teachers --</option>';
+  });
+}
+
+function onAdminTeacherSelect(){
+  var sel = document.getElementById('am-teacher-select');
+  var opt = sel ? sel.options[sel.selectedIndex] : null;
+  var prevCard = document.getElementById('am-teacher-preview');
+  if(opt && opt.value){
+    document.getElementById('am-teacher-id').value = opt.value;
+    document.getElementById('am-prev-name').textContent = opt.getAttribute('data-name') || '';
+    document.getElementById('am-prev-user').textContent = '@' + (opt.getAttribute('data-user') || '');
+    document.getElementById('am-prev-dept').textContent = opt.getAttribute('data-dept') || 'Faculty';
+    document.getElementById('am-prev-email').textContent = opt.getAttribute('data-email') || '—';
+    if(prevCard) prevCard.style.display = 'block';
+  } else {
+    document.getElementById('am-teacher-id').value = '';
+    if(prevCard) prevCard.style.display = 'none';
+  }
+}
+
 function loadManageAdmins(){
   document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:20px;color:var(--tdi);font-size:12px;">Loading…</div>';
   apiCall('GET','/manage-admins').then(function(data){
     var admins=Array.isArray(data)?data:[];
-    if(!admins.length){ document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">No manage admins added yet.</div>'; return; }
+    if(!admins.length){ document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:24px;color:var(--tdi);font-size:12px;">No manage portal admins added yet.</div>'; return; }
     var html='<div style="display:flex;flex-direction:column;gap:10px;">';
     admins.forEach(function(a){
       var permsHtml=(a.permissions||[]).map(function(p){ return '<span class="perm-chip">'+p+'</span>'; }).join('');
-      var statusPill=a.status!=='inactive'?'<span class="bge bgg">Active</span>':'<span class="bge bgr">Inactive</span>';
+      var roleBadge = a.type === 'teacher' ? '<span class="bge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">👨‍🏫 Faculty (' + (a.department || 'Staff') + ')</span>' : '<span class="bge bgp">👤 Custom Admin</span>';
+      var statusPill=a.active!==false?'<span class="bge bgg">Active</span>':'<span class="bge bgr">Inactive</span>';
       html+='<div class="admin-card">'
-        +'<div class="admin-av">'+a.name[0].toUpperCase()+'</div>'
+        +'<div class="admin-av" style="' + (a.type==='teacher'?'background:linear-gradient(135deg,#3b82f6,#1d4ed8);':'') + '">'+(a.name[0]||'A').toUpperCase()+'</div>'
         +'<div class="admin-info">'
-          +'<div class="admin-name">'+a.name+' '+statusPill+'</div>'
+          +'<div class="admin-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+a.name+' '+roleBadge+' '+statusPill+'</div>'
           +'<div class="admin-user">@'+a.username+(a.email?' · '+a.email:'')+'</div>'
           +'<div style="margin-top:4px;">'+permsHtml+'</div>'
         +'</div>'
         +'<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'
-          +'<button class="btn-out btn-xs" onclick="openAdminModal(\''+a._id+'\')">✏️ Edit</button>'
-          +'<div style="font-size:9.5px;color:var(--tdi);">Added by '+a.addedBy+'</div>'
+          +'<button class="btn-out btn-xs" style="color:#dc2626;border-color:#fca5a5;" onclick="deleteManageAdminDirect(\''+a._id+'\',\''+a.name.replace(/'/g,"\\'")+'\')">🗑 Revoke</button>'
+          +'<div style="font-size:9.5px;color:var(--tdi);">'+(a.addedBy ? 'Added by ' + a.addedBy : '')+'</div>'
         +'</div>'
         +'</div>';
     });
@@ -586,34 +1059,52 @@ function loadManageAdmins(){
   }).catch(function(){ document.getElementById('manage-admins-list').innerHTML='<div style="text-align:center;padding:20px;color:#dc2626;font-size:12px;">Failed to load</div>'; });
 }
 
-var _manageAdmins=[];
-function openAdminModal(adminId){
-  document.getElementById('am-title').textContent=adminId?'Edit Admin':'Add Manage Admin';
-  document.getElementById('am-id').value=adminId||'';
-  document.getElementById('am-delete-btn').style.display=adminId?'':'none';
-  ['am-name','am-email','am-username','am-password'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('am-pw-label').textContent=adminId?'Password (leave blank to keep)':'Password *';
-  document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ cb.checked=['calendar','exam','attendance'].includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); });
-  if(adminId){
-    apiCall('GET','/manage-admins').then(function(data){ var admins=Array.isArray(data)?data:[], a=admins.find(function(x){return x._id===adminId;}); if(!a) return; document.getElementById('am-name').value=a.name||''; document.getElementById('am-email').value=a.email||''; document.getElementById('am-username').value=a.username||''; var perms=a.permissions||[]; document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ cb.checked=perms.includes(cb.value); cb.closest('label').classList.toggle('checked',cb.checked); }); }).catch(function(){}); }
+function openAdminModal(){
+  document.getElementById('am-title').textContent='Grant Manage Access';
+  document.getElementById('am-teacher-id').value='';
+  var prevCard = document.getElementById('am-teacher-preview');
+  if(prevCard) prevCard.style.display = 'none';
+  document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ cb.checked=true; cb.closest('label').classList.add('checked'); });
+  loadTeachersForAdminModal();
   openModal('admin-modal-bg');
 }
+
 function saveManageAdmin(){
-  var id=document.getElementById('am-id').value, name=document.getElementById('am-name').value.trim(), username=document.getElementById('am-username').value.trim(), pw=document.getElementById('am-password').value;
-  if(!name){showToast('Name required','warn');return;} if(!username){showToast('Username required','warn');return;} if(!id&&!pw){showToast('Password required','warn');return;}
-  var perms=[]; document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ if(cb.checked) perms.push(cb.value); });
-  var payload={name,username,email:document.getElementById('am-email').value.trim(),permissions:perms};
-  if(pw) payload.password=pw;
-  if(!id&&!payload.password){showToast('Password required','warn');return;}
-  dbToast('Saving…','saving');
-  apiCall(id?'PUT':'POST',id?'/manage-admins/'+id:'/manage-admins',payload)
-    .then(function(r){ dbToast('Saved','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
+  var teacherId=document.getElementById('am-teacher-id').value;
+  if(!teacherId){
+    showToast('Please select a faculty member from the list','warn');
+    return;
+  }
+  var perms=[]; 
+  document.querySelectorAll('#am-perms-wrap input').forEach(function(cb){ if(cb.checked) perms.push(cb.value); });
+
+  dbToast('Granting access…','saving');
+  apiCall('POST','/manage-admins',{ teacherId: teacherId, permissions: perms })
+    .then(function(r){ 
+      dbToast('Manage access granted','success'); 
+      closeModal('admin-modal-bg'); 
+      loadManageAdmins(); 
+    })
+    .catch(function(err){
+      dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');
+    });
 }
+
 function deleteManageAdmin(){
-  if(!confirm('Remove this manage admin?')) return;
   var id=document.getElementById('am-id').value;
+  deleteManageAdminDirect(id, 'this admin');
+}
+
+function deleteManageAdminDirect(id, name){
+  if(!confirm('Remove / revoke manage portal access for ' + name + '?')) return;
   dbToast('Removing…','saving');
-  apiCall('DELETE','/manage-admins/'+id).then(function(r){ dbToast('Removed','success'); closeModal('admin-modal-bg'); loadManageAdmins(); }).catch(function(err){dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');});
+  apiCall('DELETE','/manage-admins/'+id).then(function(r){ 
+    dbToast('Access removed','success'); 
+    closeModal('admin-modal-bg'); 
+    loadManageAdmins(); 
+  }).catch(function(err){
+    dbToast('Error: '+(err&&err.message?err.message:'Server error'),'error');
+  });
 }
 
 // init perm checkboxes toggle behavior

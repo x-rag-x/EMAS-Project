@@ -265,7 +265,11 @@ function bootApp() {
       loader.classList.add('loader-fade');
       setTimeout(function () {
         loader.style.display = 'none';
-        _toastQueue.forEach(function (a) { dbToast(a[0], a[1], a[2]); });
+        var nonSavingToasts = _toastQueue.filter(function (a) { return a[1] !== 'saving'; });
+        if (nonSavingToasts.length) {
+          var last = nonSavingToasts[nonSavingToasts.length - 1];
+          dbToast(last[0], last[1], last[2]);
+        }
         _toastQueue = [];
       }, 360);
     }
@@ -278,7 +282,13 @@ function bootApp() {
   syncAllFromDB(function () {
     fetchCb = function () {
       syncBadgesFromAPI();
-      nav('dash');
+      var urlParams = new URLSearchParams(window.location.search);
+      var initialTab = urlParams.get('tab') || urlParams.get('page');
+      if (initialTab && PAGE_NAMES.indexOf(initialTab) !== -1) {
+        nav(initialTab);
+      } else {
+        nav('dash');
+      }
       populateAdminDropdowns();
     };
     fetchDone = true;
@@ -287,11 +297,18 @@ function bootApp() {
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
-var PAGE_NAMES = ['dash', 'depts', 'struct', 'students', 'teachers', 'reports', 'logs'];
+var PAGE_NAMES = ['dash', 'depts', 'struct', 'students', 'teachers', 'roles', 'reports', 'logs'];
 
 function nav(pageName) {
+  if (PAGE_NAMES.indexOf(pageName) === -1) pageName = 'dash';
 
   window._currentPage = pageName;
+
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location);
+    url.searchParams.set('tab', pageName);
+    window.history.replaceState(null, '', url);
+  }
 
   document.querySelectorAll('.pg').forEach(function (el) { el.classList.remove('act'); });
   var targetPage = document.getElementById('pg-' + pageName);
@@ -308,6 +325,9 @@ function nav(pageName) {
       ensureLoaded(['classes', 'subjects', 'users'], function () {
         renderDepartments();
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
       });
     },
     'struct': function () {
@@ -315,10 +335,13 @@ function nav(pageName) {
       resetStructureState();
       renderDepartmentSelector();
       renderDepartments();
-      ensureLoaded(['classes', 'subjects', 'assignments'], function () {
+      ensureLoaded(['classes', 'subjects', 'assignments', 'users'], function () {
         renderDepartmentSelector();
         renderDepartments();
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
       });
     },
     'students': function () {
@@ -328,11 +351,14 @@ function nav(pageName) {
       document.getElementById('stb').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:36px 16px;color:var(--tdi);"><span style="font-size:38px;display:block;margin-bottom:10px;">📋</span><div style="font-size:14px;font-weight:600;margin-bottom:4px;">Click <strong>Show List</strong> above to view students.</div><div style="font-size:12px;color:var(--tdi);">Select filters and click Show List to begin.</div></td></tr>';
       document.getElementById('scb').textContent = '0 students';
       document.getElementById('load-more-wrap').style.display = 'none';
-      document.getElementById('btn-show-list').disabled = true;
-      document.getElementById('btn-show-list').style.opacity = '.5';
-      document.getElementById('btn-show-list').style.cursor = 'not-allowed';
+      updateShowListEnabled();
       populateStudentFilterDropdowns().then(function () {
+        updateShowListEnabled();
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        updateShowListEnabled();
+        dbToast('Loaded with warnings', 'warn');
       });
     },
     'teachers': function () {
@@ -356,6 +382,9 @@ function nav(pageName) {
       ensureLoaded(['users'], function () {
         _refreshTeacherList();
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
       });
     },
     'reports': function () {
@@ -364,6 +393,9 @@ function nav(pageName) {
       ensureLoaded(['classes'], function () {
         initAdminReports();
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
       });
     },
     'logs': function () {
@@ -378,8 +410,20 @@ function nav(pageName) {
         _loaded.logs = true;
         setLogRole('');
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
       });
     },
+    'roles': function () {
+      dbToast('Fetching Executive Roles, please wait', 'saving');
+      loadExecutiveRolesData().then(function () {
+        dbToast('Fetched Executive Roles successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Loaded with warnings', 'warn');
+      });
+    }
   };
   if (pageInitializers[pageName]) pageInitializers[pageName]();
 }
@@ -1038,6 +1082,9 @@ function initDash() {
     setTimeout(function () {
       renderDeferredDashboard().then(function () {
         dbToast('Fetched data successfully', 'success');
+      }).catch(function (err) {
+        console.error(err);
+        dbToast('Dashboard loaded', 'success');
       });
     }, 50);
   });
@@ -2063,6 +2110,79 @@ function switchStructureTab(tabName) {
 }
 var sst = switchStructureTab;
 
+function _getAllTeachersList() {
+  if (Array.isArray(_teacherData) && _teacherData.length) {
+    return _teacherData;
+  }
+  var usersTeachers = (DB.get('users') || []).filter(function (u) { return u.role === 'teacher'; });
+  if (usersTeachers.length) return usersTeachers;
+  return [];
+}
+
+function _populateClassAdvisorSection(cls, teachers) {
+  var advisorSelect = document.getElementById('cd-advisor-select');
+  var advisorBtn = document.getElementById('cd-advisor-btn');
+  var advisorNameEl = document.getElementById('cd-advisor-name');
+  if (!cls) return;
+
+  var allTeachers = Array.isArray(teachers) && teachers.length ? teachers : _getAllTeachersList();
+  var assignedTeacher = null;
+
+  if (cls.advisorTeacherId) {
+    assignedTeacher = allTeachers.find(function (t) {
+      return String(t._id) === String(cls.advisorTeacherId) ||
+             String(t.shadowId) === String(cls.advisorTeacherId) ||
+             String(t.trackId) === String(cls.advisorTeacherId);
+    });
+  }
+  if (!assignedTeacher && cls.advisorTeacherTrackId) {
+    assignedTeacher = allTeachers.find(function (t) {
+      return String(t.trackId) === String(cls.advisorTeacherTrackId);
+    });
+  }
+  if (!assignedTeacher) {
+    assignedTeacher = allTeachers.find(function (t) {
+      return Array.isArray(t.specials) && t.specials.some(function (s) {
+        return (s.option === 'isClassAdvisor' || s.option === 'ClassAdvisorTrackId') &&
+          (s.key === cls.name || s.key === cls.trackId || s.value === cls.name || s.value === cls.trackId);
+      });
+    });
+  }
+
+  if (advisorNameEl) {
+    if (assignedTeacher || cls.advisorTeacherName) {
+      var advName = (assignedTeacher ? (assignedTeacher.name || assignedTeacher.fullName) : cls.advisorTeacherName) || 'Assigned';
+      advisorNameEl.innerHTML = '<span style="color:var(--gD);font-weight:700;">⭐ ' + advName + '</span>';
+      if (advisorBtn) advisorBtn.textContent = '✏️ Change Advisor';
+    } else {
+      advisorNameEl.textContent = 'Not Assigned';
+      if (advisorBtn) advisorBtn.textContent = '👤 Assign Advisor';
+    }
+  }
+
+  if (advisorSelect) {
+    var deptTeachers = allTeachers.filter(function (t) {
+      var tDeptId = t.deptId ? (typeof t.deptId === 'object' && t.deptId._id ? t.deptId._id : t.deptId) : '';
+      var cDeptId = cls.deptId ? (typeof cls.deptId === 'object' && cls.deptId._id ? cls.deptId._id : cls.deptId) : '';
+      var tDept = (t.dept || t.department || '').toLowerCase().trim();
+      var cDeptName = (cls.deptName || '').toLowerCase().trim();
+      var cDeptCode = (cls.deptCode || '').toLowerCase().trim();
+      return (tDeptId && cDeptId && String(tDeptId) === String(cDeptId)) ||
+             (tDept && (tDept === cDeptName || tDept === cDeptCode));
+    });
+    if (!deptTeachers.length) deptTeachers = allTeachers;
+
+    var selectedId = assignedTeacher ? (assignedTeacher._id || assignedTeacher.shadowId || assignedTeacher.trackId) : (cls.advisorTeacherId || '');
+    advisorSelect.innerHTML = '<option value="">— None (Unassigned) —</option>' + deptTeachers.map(function (t) {
+      var tid = t._id || t.shadowId || t.trackId;
+      var sel = (String(tid) === String(selectedId) || (assignedTeacher && String(t.trackId) === String(assignedTeacher.trackId))) ? ' selected' : '';
+      var tName = t.name || t.fullName || 'Teacher';
+      var tInfo = t.empId || t.employeeNo || t.dept || t.department || 'Faculty';
+      return '<option value="' + tid + '"' + sel + '>' + tName + ' (' + tInfo + ')</option>';
+    }).join('');
+  }
+}
+
 function openCD(classId) {
   var cls = DB.get('classes').find(function (c) { return c._id === classId; });
   if (!cls) return;
@@ -2072,6 +2192,36 @@ function openCD(classId) {
   document.getElementById('cd-sub').textContent = 'Year: ' + cls.year + ' | Sem: ' + cls.sem + ' | Section: ' + cls.section + ' | Hall: ' + (cls.hallNo || '—');
 
   var classAssignments = DB.get('assignments').filter(function (a) { return a.classId === classId; });
+
+  // ── Class Advisor Display & Dropdown Population
+  var advisorSelect = document.getElementById('cd-advisor-select');
+  var advisorBtn = document.getElementById('cd-advisor-btn');
+  var advisorSaveBtn = document.getElementById('cd-advisor-save-btn');
+  var advisorCancelBtn = document.getElementById('cd-advisor-cancel-btn');
+
+  if (advisorSelect) advisorSelect.style.display = 'none';
+  if (advisorSaveBtn) advisorSaveBtn.style.display = 'none';
+  if (advisorCancelBtn) advisorCancelBtn.style.display = 'none';
+  if (advisorBtn) {
+    advisorBtn.style.display = 'inline-block';
+    advisorBtn.textContent = '👤 Assign Advisor';
+  }
+
+  var allTeachers = _getAllTeachersList();
+  _populateClassAdvisorSection(cls, allTeachers);
+
+  if (!allTeachers.length) {
+    apiCall('GET', '/teachers').then(function (list) {
+      if (Array.isArray(list) && list.length) {
+        _teacherData = list;
+        if (currentClassId === classId) {
+          _populateClassAdvisorSection(cls, list);
+        }
+      }
+    }).catch(function (err) {
+      console.warn('[EAMS] Failed to fetch teachers for class modal:', err);
+    });
+  }
 
   document.getElementById('cd-stats').innerHTML =
     '<div style="background:var(--gP);border-radius:11px;padding:14px;text-align:center;">'
@@ -2183,6 +2333,79 @@ function saveEditCls() {
   });
 }
 
+function toggleAssignAdvisor() {
+  var advisorSelect = document.getElementById('cd-advisor-select');
+  var advisorBtn = document.getElementById('cd-advisor-btn');
+  var advisorSaveBtn = document.getElementById('cd-advisor-save-btn');
+  var advisorCancelBtn = document.getElementById('cd-advisor-cancel-btn');
+
+  if (advisorSelect && advisorSelect.options.length <= 1) {
+    var cls = DB.get('classes').find(function (c) { return c._id === currentClassId; });
+    var allTeachers = _getAllTeachersList();
+    if (allTeachers.length && cls) {
+      _populateClassAdvisorSection(cls, allTeachers);
+    } else if (cls) {
+      advisorSelect.innerHTML = '<option value="">Loading teachers…</option>';
+      apiCall('GET', '/teachers').then(function (list) {
+        if (Array.isArray(list)) {
+          _teacherData = list;
+          _populateClassAdvisorSection(cls, list);
+        }
+      });
+    }
+  }
+
+  if (advisorSelect) advisorSelect.style.display = 'inline-block';
+  if (advisorSaveBtn) advisorSaveBtn.style.display = 'inline-block';
+  if (advisorCancelBtn) advisorCancelBtn.style.display = 'inline-block';
+  if (advisorBtn) advisorBtn.style.display = 'none';
+}
+
+function cancelAssignAdvisor() {
+  var advisorSelect = document.getElementById('cd-advisor-select');
+  var advisorBtn = document.getElementById('cd-advisor-btn');
+  var advisorSaveBtn = document.getElementById('cd-advisor-save-btn');
+  var advisorCancelBtn = document.getElementById('cd-advisor-cancel-btn');
+  if (advisorSelect) advisorSelect.style.display = 'none';
+  if (advisorSaveBtn) advisorSaveBtn.style.display = 'none';
+  if (advisorCancelBtn) advisorCancelBtn.style.display = 'none';
+  if (advisorBtn) advisorBtn.style.display = 'inline-block';
+}
+
+function saveClassAdvisor() {
+  if (!currentClassId) return;
+  var cls = DB.get('classes').find(function (c) { return c._id === currentClassId; });
+  if (!cls) return;
+  var selectEl = document.getElementById('cd-advisor-select');
+  var teacherId = selectEl ? selectEl.value : '';
+
+  dbToast('Saving Class Advisor...', 'saving');
+  apiCall('PUT', '/classes/' + currentClassId + '/advisor', { teacherId: teacherId || null })
+    .then(function (res) {
+      if (res && res.class) {
+        cls.advisorTeacherId = res.class.advisorTeacherId;
+        cls.advisorTeacherName = res.class.advisorTeacherName;
+        cls.advisorTeacherTrackId = res.class.advisorTeacherTrackId;
+      } else if (!teacherId) {
+        cls.advisorTeacherId = null;
+        cls.advisorTeacherName = '';
+        cls.advisorTeacherTrackId = '';
+      }
+      return syncUsersWithTeacherDetails().then(function () {
+        return apiCall('GET', '/teachers').then(function (list) {
+          if (Array.isArray(list)) _teacherData = list;
+        });
+      });
+    })
+    .then(function () {
+      openCD(currentClassId);
+      dbToast('Class Advisor saved', 'success');
+    })
+    .catch(function (err) {
+      dbToast(err.message || 'Failed to update advisor', 'error');
+    });
+}
+
 function oasc() {
   var cls = DB.get('classes').find(function (c) { return c._id === currentClassId; });
   if (!cls) return;
@@ -2191,9 +2414,20 @@ function oasc() {
   document.getElementById('as-subj').innerHTML = deptSubjects.map(function (s) {
     return '<option value="' + s._id + '">' + s.name + ' (' + s.code + ')</option>';
   }).join('') || '<option>No subjects</option>';
-  var allTeachers = DB.get('users').filter(function (u) { return u.role === 'teacher'; });
+
+  var allTeachers = _getAllTeachersList();
+  if (!allTeachers.length) {
+    apiCall('GET', '/teachers').then(function (list) {
+      if (Array.isArray(list)) {
+        _teacherData = list;
+        document.getElementById('as-tch').innerHTML = list.map(function (t) {
+          return '<option value="' + t._id + '">' + (t.name || t.fullName) + '</option>';
+        }).join('') || '<option value="">No teachers</option>';
+      }
+    });
+  }
   document.getElementById('as-tch').innerHTML = allTeachers.map(function (t) {
-    return '<option value="' + t._id + '">' + t.name + '</option>';
+    return '<option value="' + t._id + '">' + (t.name || t.fullName) + '</option>';
   }).join('') || '<option value="">No teachers</option>';
   openModal_('m-asgn-subj');
 }
@@ -2523,29 +2757,32 @@ function addSubCtx() {
 // ─── SUBJECT STAFF & HALL ASSIGNMENT MODAL ────────────────────────────────────
 var _saSubjectId = null;
 
-// ─── SUBJECT STAFF & HALL ASSIGNMENT MODAL ────────────────────────────────────
-var _saSubjectId = null;
-
 function openSubjAssignModal(subjectId) {
   _saSubjectId = subjectId;
 
-  // Read subject info from cache (subjects are always synced on login)
-  var subj = DB.get('subjects').find(function (s) { return s._id === subjectId; });
-  if (!subj) { dbToast('Subject not found in DB', 'warn'); return; }
+  // Read subject info from cache or fallback
+  var subj = (DB.get('subjects') || []).find(function (s) { return String(s._id) === String(subjectId); });
+  var subjName = subj ? subj.name : 'Subject';
+  var subInfo = subj ? (subj.code + ' · ' + (subj.credits || 0) + ' Credits · ' + (subj.type || 'Theory') + (subj.deptName ? ' · ' + subj.deptName : '')) : '';
 
   // Set header
-  document.getElementById('sa-ttl').textContent = '\u{1F4CC} ' + subj.name + ' — Assign Staff & Hall';
-  document.getElementById('sa-sub').textContent = subj.code + ' · ' + subj.credits + ' Credits · ' + subj.type + (subj.deptName ? ' · ' + subj.deptName : '');
+  document.getElementById('sa-ttl').textContent = '\u{1F4CC} ' + subjName + ' — Assign Staff & Hall';
+  document.getElementById('sa-sub').textContent = subInfo;
   document.getElementById('sa-warn').style.display = 'none';
 
   // Show modal immediately with loading state
   var tbody = document.getElementById('sa-rows');
-  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--tmu);font-size:13px;">\u23f3 Loading from database…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--tmu);font-size:13px;">\u23f3 Loading classes &amp; teachers from database…</td></tr>';
   openModal_('m-subj-assign');
 
-  // ✅ Fetch existing assignments DIRECTLY from Database - MongoDB
-  apiCall('GET', '/assignments?subjectId=' + encodeURIComponent(subjectId))
-    .then(function (existing) {
+  // Fetch classes, teachers, and existing assignments in parallel to ensure fresh data
+  Promise.all([
+    apiCall('GET', '/classes').then(function (cls) { if (Array.isArray(cls)) DB.set('classes', cls); return cls; }).catch(function () { return DB.get('classes') || []; }),
+    apiCall('GET', '/teachers').then(function (tch) { if (Array.isArray(tch)) DB.set('teachers', tch); return tch; }).catch(function () { return DB.get('teachers') || []; }),
+    apiCall('GET', '/assignments?subjectId=' + encodeURIComponent(subjectId)).catch(function () { return []; })
+  ])
+    .then(function (results) {
+      var existing = results[2];
       tbody.innerHTML = '';
       if (Array.isArray(existing) && existing.length > 0) {
         existing.forEach(function (a) { addAssignRow(a.classId, a.teacherId, a.hallNo); });
@@ -2553,33 +2790,49 @@ function openSubjAssignModal(subjectId) {
         addAssignRow(); // one default empty row
       }
     })
-    .catch(function () {
+    .catch(function (err) {
+      console.error('[EAMS Assign Staff Load Error]:', err);
       tbody.innerHTML = '';
       addAssignRow();
-      showToast('Could not load existing assignments from DB, reloading', 'warn');
-      setTimeout(function () { window.location.reload(); }, 1000);
+      dbToast('Could not load existing assignments from DB', 'warn');
     });
 }
 
 function _buildSaClassOptions(selectedId) {
-  var classes = DB.get('classes');
+  var classes = DB.get('classes') || [];
   return '<option value="">\u2014 Select Section \u2014</option>'
     + classes.map(function (c) {
       var hall = c.hallNo || '';
+      var deptName = c.deptCode || c.deptName || '';
+      var label = c.name + (deptName ? ' — ' + deptName : '');
       return '<option value="' + c._id + '" data-hall="' + hall + '" data-dept="' + (c.deptId || '') + '"'
-        + (c._id === selectedId ? ' selected' : '') + '>' + c.name + '</option>';
+        + (String(c._id) === String(selectedId) ? ' selected' : '') + '>' + label + '</option>';
     }).join('');
 }
 
 function _buildSaTeacherOptions(selectedId, deptId) {
-  var teachers = DB.get('users').filter(function (u) {
-    if (u.role !== 'teacher') return false;
-    if (deptId && u.deptId !== deptId) return false;
-    return true;
-  });
+  var teachers = DB.get('teachers');
+  if (!Array.isArray(teachers) || teachers.length === 0) {
+    teachers = (DB.get('users') || []).filter(function (u) { return u.role === 'teacher'; });
+  }
+  if (!Array.isArray(teachers)) teachers = [];
+
+  // Filter by deptId if matching teachers exist; otherwise show all teachers
+  var listToRender = teachers;
+  if (deptId) {
+    var deptMatches = teachers.filter(function (t) {
+      return String(t.deptId || '') === String(deptId) || String(t.dept || '') === String(deptId);
+    });
+    if (deptMatches.length > 0) {
+      listToRender = deptMatches;
+    }
+  }
+
   return '<option value="">\u2014 Select Staff \u2014</option>'
-    + teachers.map(function (t) {
-      return '<option value="' + t._id + '"' + (t._id === selectedId ? ' selected' : '') + '>' + t.name + '</option>';
+    + listToRender.map(function (t) {
+      var tName = t.fullName || t.name || t.username || 'Teacher';
+      var deptBadge = t.deptCode || t.dept || t.department ? ' (' + (t.deptCode || t.dept || t.department) + ')' : '';
+      return '<option value="' + t._id + '"' + (String(t._id) === String(selectedId) ? ' selected' : '') + '>' + tName + deptBadge + '</option>';
     }).join('');
 }
 
@@ -2589,9 +2842,10 @@ function addAssignRow(classId, teacherId, hallNo) {
   tr.className = 'sa-row';
   tr.style.borderBottom = '1px solid var(--brl)';
   var deptId = '';
+  var cls = null;
   if (classId) {
-    var cls = DB.get('classes').find(function (c) { return c._id === classId; });
-    if (cls) deptId = cls.deptId;
+    cls = (DB.get('classes') || []).find(function (c) { return String(c._id) === String(classId); });
+    if (cls) deptId = cls.deptId || '';
   }
   tr.innerHTML =
     '<td style="padding:8px 10px;">'
@@ -2613,8 +2867,8 @@ function addAssignRow(classId, teacherId, hallNo) {
     + '</td>';
   tbody.appendChild(tr);
   // Auto-fill hall from class default when no hallNo supplied
-  if (!hallNo && classId) {
-    if (cls && cls.hallNo) tr.querySelector('.sa-hall').value = cls.hallNo;
+  if (!hallNo && classId && cls && cls.hallNo) {
+    tr.querySelector('.sa-hall').value = cls.hallNo;
   }
 }
 
@@ -2628,7 +2882,8 @@ function onSaClassChange(sel) {
   var deptId = opt ? (opt.getAttribute('data-dept') || '') : '';
   var tchSel = tr.querySelector('.sa-tch');
   if (tchSel) {
-    tchSel.innerHTML = _buildSaTeacherOptions('', deptId);
+    var curVal = tchSel.value;
+    tchSel.innerHTML = _buildSaTeacherOptions(curVal, deptId);
   }
 }
 
@@ -2675,9 +2930,12 @@ function saveSubjAssignments() {
 }
 
 function apiBulkSaveAssignments(subjectId, assignments) {
-  var subj = DB.get('subjects').find(function (s) { return s._id === subjectId; });
-  var classes = DB.get('classes');
-  var users = DB.get('users');
+  var subj = (DB.get('subjects') || []).find(function (s) { return String(s._id) === String(subjectId); });
+  var classes = DB.get('classes') || [];
+  var teachers = DB.get('teachers') || [];
+  var users = DB.get('users') || [];
+  var allTeachers = teachers.concat(users.filter(function (u) { return u.role === 'teacher'; }));
+
   if (!subj) { dbToast('Subject not found in Database', 'error'); return; }
 
   // Enrich rows with display names before sending to server
@@ -2685,8 +2943,8 @@ function apiBulkSaveAssignments(subjectId, assignments) {
   var rowErr = '';
   for (var i = 0; i < assignments.length; i++) {
     var row = assignments[i];
-    var cls = classes.find(function (c) { return c._id === row.classId; });
-    var teacher = users.find(function (u) { return u._id === row.teacherId; });
+    var cls = classes.find(function (c) { return String(c._id) === String(row.classId); });
+    var teacher = allTeachers.find(function (t) { return String(t._id) === String(row.teacherId); });
     if (!cls || !teacher) { rowErr = 'Row ' + (i + 1) + ': invalid class or teacher'; break; }
     enriched.push({
       subjectId: subjectId,
@@ -2694,7 +2952,7 @@ function apiBulkSaveAssignments(subjectId, assignments) {
       classId: row.classId,
       className: cls.name,
       teacherId: row.teacherId,
-      teacherName: teacher.name,
+      teacherName: teacher.fullName || teacher.name || teacher.username || 'Teacher',
       hallNo: row.hallNo,
       deptName: cls.deptName || subj.deptName || '',
       deptCode: cls.deptCode || subj.deptCode || ''
@@ -2715,11 +2973,9 @@ function apiBulkSaveAssignments(subjectId, assignments) {
       closeModalBg('m-subj-assign');
       addLog('Assignments Bulk Saved', d.count + ' sections → ' + subj.name);
 
-
       apiCall('GET', '/assignments')
         .then(function (allAssignments) {
           if (Array.isArray(allAssignments)) {
-            // Update ONLY the in-memory assignments cache — not a localStorage write
             DB.set('assignments', allAssignments);
           }
           if (structureContext && structureContext.deptId) renderClassSubjectView(structureContext.deptId);
@@ -2730,8 +2986,7 @@ function apiBulkSaveAssignments(subjectId, assignments) {
     })
     .catch(function (err) {
       console.error('Bulk save error:', err);
-      dbToast('Network error, reloading', 'error');
-      setTimeout(function () { window.location.reload(); }, 1000);
+      dbToast('Failed to save assignments', 'error');
     });
 }
 
@@ -2834,6 +3089,7 @@ function onStudentYearChange() {
   if (ctEl) { ctEl.value = ''; }
   if (deptEl) { deptEl.value = ''; }
   _resetClassDropdown();
+  updateShowListEnabled();
 }
 
 function onStudentBatchChange() {
@@ -2842,12 +3098,14 @@ function onStudentBatchChange() {
   if (ctEl) { ctEl.value = ''; }
   if (deptEl) { deptEl.value = ''; }
   _resetClassDropdown();
+  updateShowListEnabled();
 }
 
 function onStudentCourseTypeChange() {
   var deptEl = document.getElementById('sf-dept');
   if (deptEl) { deptEl.value = ''; }
   _resetClassDropdown();
+  updateShowListEnabled();
 }
 
 function onStudentDeptChange() {
@@ -2856,6 +3114,7 @@ function onStudentDeptChange() {
   if (deptId) {
     _fetchClasses();
   }
+  updateShowListEnabled();
 }
 
 function onStudentClassChange() {
@@ -2866,6 +3125,7 @@ function onStudentClassChange() {
   var selectedId = clsEl ? clsEl.value : '';
   if (!selectedId) {
     secEl.innerHTML = '<option value="">All</option>';
+    updateShowListEnabled();
     return;
   }
   var selectedOpt = clsEl.querySelector('option[value="' + selectedId + '"]');
@@ -2878,9 +3138,11 @@ function onStudentClassChange() {
   unique.sort();
   secEl.innerHTML = '<option value="">All</option>'
     + unique.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+  updateShowListEnabled();
 }
 
 function onStudentSectionChange() {
+  updateShowListEnabled();
 }
 
 function updateShowListEnabled() {
@@ -2958,6 +3220,7 @@ function showStudentList() {
       var list = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
       _studentData = list;
       _studentTotal = res && typeof res.total === 'number' ? res.total : list.length;
+      DB.set('students', _studentData);
       _renderStudentTable(_studentData, false);
     })
     .catch(function () {
@@ -2978,6 +3241,7 @@ function loadMoreStudents() {
       var list = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
       _studentData = _studentData.concat(list);
       _studentTotal = res && typeof res.total === 'number' ? res.total : _studentData.length;
+      DB.set('students', _studentData);
       _renderStudentTable(list, true);
       document.getElementById('btn-load-more').disabled = false;
       document.getElementById('btn-load-more').textContent = 'Load More';
@@ -3205,13 +3469,49 @@ function edUpdateBranch() {
     : '<option value="">— Select Course Type First —</option>';
 }
 
+var _currentEditingStudentId = null;
+
 function openStuEdit(studentId) {
-  var student = DB.get('students').find(function (x) { return x._id === studentId; });
+  _currentEditingStudentId = studentId;
+
+  // Search in memory: _studentData, then DB cache
+  var student = (_studentData || []).find(function (x) { return String(x._id) === String(studentId); })
+    || (DB.get('students') || []).find(function (x) { return String(x._id) === String(studentId); });
+
+  if (student) {
+    _populateAndShowStuEditModal(student);
+    return;
+  }
+
+  // If not found in local memory, fetch directly from API
+  dbToast('Loading student…', 'saving');
+  apiCall('GET', '/students/' + encodeURIComponent(studentId))
+    .then(function (fetched) {
+      if (fetched) {
+        _populateAndShowStuEditModal(fetched);
+      } else {
+        dbToast('Student not found in database', 'warn');
+      }
+    })
+    .catch(function () {
+      dbToast('Failed to load student details', 'error');
+    });
+}
+
+function _populateAndShowStuEditModal(student) {
   if (!student) return;
 
-  document.getElementById('edit-subtitle').textContent = student.regNo + ' · ' + (student.className || '');
-  document.getElementById('edit-name').value = student.name || '';
-  document.getElementById('edit-regNo').value = student.regNo || '';
+  var subEl = document.getElementById('edit-subtitle');
+  if (subEl) subEl.textContent = (student.regNo || '') + ' · ' + (student.className || student.deptName || '');
+
+  var nameEl = document.getElementById('edit-name');
+  if (nameEl) nameEl.value = student.name || '';
+
+  var regNoEl = document.getElementById('edit-regNo');
+  if (regNoEl) regNoEl.value = student.regNo || '';
+
+  var trackIdEl = document.getElementById('edit-trackId');
+  if (trackIdEl) trackIdEl.value = student.trackId || '';
 
   // firstName / lastName — use stored values or auto-split from name
   (function () {
@@ -3233,14 +3533,14 @@ function openStuEdit(studentId) {
   if (student.academicYear && yearOptions.indexOf(student.academicYear) === -1) {
     yearOptions.push(student.academicYear);
   }
-  ['edit-year', 'stu-year'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) el.innerHTML = yearOptions.length
+  var editYearEl = document.getElementById('edit-year');
+  if (editYearEl) {
+    editYearEl.innerHTML = yearOptions.length
       ? yearOptions.map(function (y) {
         return '<option' + (y === student.academicYear ? ' selected' : '') + '>' + y + '</option>';
       }).join('')
       : '<option value="">— No current academic year set —</option>';
-  });
+  }
 
   var batchOptions = Array.isArray(YEAR_CONFIG.batches) ? YEAR_CONFIG.batches.slice() : [];
   if (student.batch && batchOptions.indexOf(student.batch) === -1) {
@@ -3255,25 +3555,27 @@ function openStuEdit(studentId) {
       : '<option value="">— No active batches set —</option>';
   }
 
-  document.getElementById('edit-courseType').value = student.courseType || '';
+  var ctEl = document.getElementById('edit-courseType');
+  if (ctEl) ctEl.value = student.courseType || '';
   onEditCourseTypeChange(student.branch || student.course);
   setTimeout(function () {
-    document.getElementById('edit-branch').value = student.branch || student.course || '';
+    var brEl = document.getElementById('edit-branch');
+    if (brEl) brEl.value = student.branch || student.course || '';
   }, 50);
 
-  var depts = DB.get('depts');
-  document.getElementById('edit-dept').innerHTML = '<option value="">— Select —</option>'
-    + depts.map(function (d) {
-      return '<option value="' + d._id + '"' + (d._id === student.deptId ? ' selected' : '') + '>' + d.name + '</option>';
-    }).join('');
+  var depts = Array.isArray(DB.get('depts')) ? DB.get('depts') : [];
+  var editDeptEl = document.getElementById('edit-dept');
+  if (editDeptEl) {
+    editDeptEl.innerHTML = '<option value="">— Select —</option>'
+      + depts.map(function (d) {
+        return '<option value="' + d._id + '"' + (String(d._id) === String(student.deptId) ? ' selected' : '') + '>' + d.name + '</option>';
+      }).join('');
+  }
 
-  var classes = DB.get('classes');
-  document.getElementById('edit-class').innerHTML = '<option value="">— Select —</option>'
-    + classes.map(function (c) {
-      return '<option value="' + c._id + '"' + (c._id === student.classId ? ' selected' : '') + '>' + c.name + '</option>';
-    }).join('');
+  updateEditClassList(student.classId);
 
-  document.getElementById('edit-section').value = student.section || '';
+  var secEl = document.getElementById('edit-section');
+  if (secEl) secEl.value = student.section || '';
 
   // ── login details ──
   var emailEl = document.getElementById('edit-email');
@@ -3320,24 +3622,30 @@ function saveStuEdit() {
   var batch = getFieldValue('edit-batch');
   var trackId = getFieldValue('edit-trackId');
   var branch = getFieldValue('edit-branch');
-  var deptId = document.getElementById('edit-dept').value;
-  var classId = document.getElementById('edit-class').value;
+  var deptId = document.getElementById('edit-dept') ? document.getElementById('edit-dept').value : '';
+  var classId = document.getElementById('edit-class') ? document.getElementById('edit-class').value : '';
   var section = getFieldValue('edit-section');
   var email = document.getElementById('edit-email') ? document.getElementById('edit-email').value.trim() : '';
   var username = getFieldValue('edit-username') || (email ? email.split('@')[0] : '');
   var password = document.getElementById('edit-password') ? document.getElementById('edit-password').value : '';
 
-  if (!name || !regNo || !year || !ct || !branch || !deptId || !classId || !section) {
-    showToast('All fields are required'); return;
+  if (!name || !regNo || !deptId || !classId) {
+    showToast('Name, Register No, Department and Class are required'); return;
   }
 
-  var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
-  var cls = DB.get('classes').find(function (c) { return c._id === classId; });
-  var allStudents = DB.get('students');
-  var matchIndex = allStudents.findIndex(function (s) { return s.regNo === regNo || s.name === name; });
-  if (matchIndex < 0) { showToast('Student not found'); return; }
+  var studentId = _currentEditingStudentId;
+  if (!studentId) {
+    var allStudents = (_studentData || []).concat(DB.get('students') || []);
+    var match = allStudents.find(function (s) { return s.regNo === regNo || s.name === name; });
+    if (match) studentId = match._id;
+  }
+  if (!studentId) { showToast('Student not found'); return; }
 
-  var studentId = allStudents[matchIndex]._id;
+  var depts = Array.isArray(DB.get('depts')) ? DB.get('depts') : [];
+  var classes = Array.isArray(DB.get('classes')) ? DB.get('classes') : [];
+  var dept = depts.find(function (d) { return String(d._id) === String(deptId); });
+  var cls = classes.find(function (c) { return String(c._id) === String(classId); });
+
   dbToast('Saving', 'saving');
   var updatePayload = {
     name: name,
@@ -3363,14 +3671,16 @@ function saveStuEdit() {
 }
 
 function dStuFromEdit() {
-  var regNo = getFieldValue('edit-regNo');
-  var student = DB.get('students').find(function (s) { return s.regNo === regNo; });
-  if (!student) { showToast('Not found', 'warn'); return; }
-  document.getElementById('dc-confirm-id').value = student._id;
-  document.getElementById('dc-confirm-msg').textContent = 'Delete student "' + student.name + '"?';
+  var studentId = _currentEditingStudentId;
+  var allStudents = (_studentData || []).concat(DB.get('students') || []);
+  var student = allStudents.find(function (s) { return String(s._id) === String(studentId); });
+  var sName = student ? student.name : getFieldValue('edit-name');
+  if (!studentId) { showToast('Student not found', 'warn'); return; }
+  document.getElementById('dc-confirm-id').value = studentId;
+  document.getElementById('dc-confirm-msg').textContent = 'Delete student "' + (sName || '') + '"?';
   document.getElementById('dc-confirm-btn').onclick = function () {
-    apiDeleteStudent(student._id, student.name).then(function () {
-      addLog('Student Deleted', '"' + student.name + '"');
+    apiDeleteStudent(studentId, sName).then(function () {
+      addLog('Student Deleted', '"' + sName + '"');
       closeModalBg('m-dc-confirm');
       closeModalBg('m-stu-edit');
       _refreshStudentList();
@@ -3624,7 +3934,41 @@ function onEditEmailInput() {
   }
 }
 
-/** Dept dropdown changed → fill courseType/branch, filter class list */
+/** Update class dropdown based on selected dept and batch for Add Student */
+function updateStuClassList(preserveClassId) {
+  var deptId = document.getElementById('stu-dept') ? document.getElementById('stu-dept').value : '';
+  var batch = document.getElementById('stu-batch') ? document.getElementById('stu-batch').value.trim() : '';
+  var clsEl = document.getElementById('stu-class');
+  if (!clsEl) return;
+
+  var allClasses = Array.isArray(DB.get('classes')) ? DB.get('classes') : [];
+  var filtered = allClasses.filter(function (c) {
+    var matchDept = !deptId || String(c.deptId) === String(deptId);
+    var matchBatch = !batch || String(c.batch || '').trim() === String(batch).trim();
+    return matchDept && matchBatch;
+  });
+
+  if (filtered.length === 0) {
+    clsEl.innerHTML = '<option value="">— ' + (batch ? 'No classes for batch ' + batch : 'Select batch first') + ' —</option>';
+  } else {
+    clsEl.innerHTML = '<option value="">— Select —</option>'
+      + filtered.map(function (c) { return '<option value="' + c._id + '">' + c.name + (c.section ? ' (' + c.section + ')' : '') + '</option>'; }).join('');
+  }
+
+  if (preserveClassId && filtered.some(function (c) { return c._id === preserveClassId; })) {
+    clsEl.value = preserveClassId;
+  } else {
+    clsEl.value = '';
+  }
+
+  onStuClassChange();
+}
+
+function onStuBatchChange() {
+  updateStuClassList();
+}
+
+/** Dept dropdown changed → fill courseType/branch, filter class list by dept & batch */
 function onStuDeptChange() {
   var deptId = document.getElementById('stu-dept') ? document.getElementById('stu-dept').value : '';
   var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
@@ -3632,14 +3976,7 @@ function onStuDeptChange() {
   var brEl = document.getElementById('stu-branch');
   if (ctEl) ctEl.value = dept ? (dept.courseType || '') : '';
   if (brEl) brEl.value = dept ? (dept.branch || '') : '';
-  var clsEl = document.getElementById('stu-class');
-  if (clsEl) {
-    var classes = DB.get('classes').filter(function (c) { return !deptId || c.deptId === deptId; });
-    clsEl.innerHTML = '<option value="">— Select —</option>'
-      + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
-    var secEl = document.getElementById('stu-section');
-    if (secEl) secEl.value = '';
-  }
+  updateStuClassList();
 }
 
 function onStuClassChange() {
@@ -3647,6 +3984,50 @@ function onStuClassChange() {
   var cls = DB.get('classes').find(function (c) { return c._id === classId; });
   var secEl = document.getElementById('stu-section');
   if (secEl) secEl.value = cls && cls.section ? cls.section : '';
+}
+
+/** Update class dropdown based on selected dept and batch for Edit Student */
+function updateEditClassList(preserveClassId) {
+  var deptId = document.getElementById('edit-dept') ? document.getElementById('edit-dept').value : '';
+  var batch = document.getElementById('edit-batch') ? document.getElementById('edit-batch').value.trim() : '';
+  var clsEl = document.getElementById('edit-class');
+  if (!clsEl) return;
+
+  var allClasses = Array.isArray(DB.get('classes')) ? DB.get('classes') : [];
+  var filtered = allClasses.filter(function (c) {
+    var matchDept = !deptId || String(c.deptId) === String(deptId);
+    var matchBatch = !batch || String(c.batch || '').trim() === String(batch).trim();
+    return matchDept && matchBatch;
+  });
+
+  if (filtered.length === 0) {
+    clsEl.innerHTML = '<option value="">— ' + (batch ? 'No classes for batch ' + batch : 'Select batch first') + ' —</option>';
+  } else {
+    clsEl.innerHTML = '<option value="">— Select —</option>'
+      + filtered.map(function (c) { return '<option value="' + c._id + '">' + c.name + (c.section ? ' (' + c.section + ')' : '') + '</option>'; }).join('');
+  }
+
+  if (preserveClassId && filtered.some(function (c) { return c._id === preserveClassId; })) {
+    clsEl.value = preserveClassId;
+  } else {
+    clsEl.value = '';
+  }
+
+  onEditClassChange();
+}
+
+function onEditBatchChange() {
+  updateEditClassList();
+}
+
+function onEditDeptChange() {
+  var deptId = document.getElementById('edit-dept') ? document.getElementById('edit-dept').value : '';
+  var dept = DB.get('depts').find(function (d) { return d._id === deptId; });
+  var ctEl = document.getElementById('edit-courseType');
+  var brEl = document.getElementById('edit-branch');
+  if (ctEl) ctEl.value = dept ? (dept.courseType || '') : '';
+  if (brEl) brEl.value = dept ? (dept.branch || '') : '';
+  updateEditClassList();
 }
 
 function onEditClassChange() {
@@ -3693,12 +4074,15 @@ function onStuRegNoChange() {
   var dept = getDeptByNumber(deptCode);
   if (dept) {
     var deptEl = document.getElementById('stu-dept');
-    if (deptEl) { deptEl.value = dept._id; onStuDeptChange(); }
+    if (deptEl) { deptEl.value = dept._id; }
     var ctEl = document.getElementById('stu-courseType');
     var brEl = document.getElementById('stu-branch');
     if (ctEl) ctEl.value = dept.courseType || '';
     if (brEl) brEl.value = dept.branch || '';
   }
+
+  // Update class dropdown with decoded dept and batch
+  updateStuClassList();
 
   var twoCode = dept
     ? (dept.twoLetterCode || (dept.code ? dept.code.slice(0, 2).toLowerCase() : ''))
@@ -3812,7 +4196,7 @@ function onTchNameInput() {
   document.getElementById('t-ln').value = ln;
 }
 
-var ADMIN_RIGHTS_OPTIONS = ['all', 'controlPage', 'timetablePage', 'managePage', 'bulkPage', 'adderModule', 'deleteModule', 'settingsModule'];
+var ADMIN_RIGHTS_OPTIONS = ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModules', 'deletings', 'bulkPage', 'settingsPage', 'settingsModule', 'reportsModule', 'downloadDatas'];
 var STUDENT_PASSWORD = 'teacher123';
 
 // ─── RESET / CLEAR HELPERS ───────────────────────────────────────────────────
@@ -3842,7 +4226,7 @@ function resetStudentForm() {
   var rnEl = document.getElementById('stu-regNo'); if (rnEl) rnEl.value = '7140';
   var pwEl = document.getElementById('stu-password'); if (pwEl) pwEl.value = '';
   var dpEl = document.getElementById('stu-dept'); if (dpEl) dpEl.value = '';
-  var clEl = document.getElementById('stu-class'); if (clEl) clEl.innerHTML = '<option value="">— Select —</option>';
+  updateStuClassList();
   hideStuEmailPopup();
   _stuEmailVerified = false;
   _stuEmailBeforeNo = '';
@@ -4150,20 +4534,68 @@ function filterTeachersLive(query) {
 }
 
 function openTD(teacherId) {
-  // Look up by trackId first, then fall back to _id or shadowId
-  var teacher;
-  if (teacherId) {
-    teacher = DB.get('users').find(function (u) { return u._id === teacherId; });
-  }
-  if (!teacher) return;
-  currentTeacherId = teacher._id;
+  if (!teacherId) return;
 
-  document.getElementById('td-nm').textContent = teacher.name;
-  document.getElementById('td-dp').textContent = (teacher.desig || '—') + ' · ' + (teacher.dept || '—') + ' · ' + (teacher.empId || '—');
-  document.getElementById('td-edit-nm').value = teacher.name || '';
-  document.getElementById('td-edit-ei').value = teacher.empId || '';
-  document.getElementById('td-edit-us').value = teacher.username || '';
-  document.getElementById('td-edit-pw').value = '';
+  // Look up across _teacherData first, then DB.get('users')
+  var teacher = (_teacherData || []).find(function (t) {
+    return String(t._id) === String(teacherId) ||
+           String(t.trackId) === String(teacherId) ||
+           String(t.shadowId) === String(teacherId) ||
+           String(t.employeeNo) === String(teacherId) ||
+           String(t.empId) === String(teacherId);
+  });
+
+  if (!teacher) {
+    teacher = (DB.get('users') || []).find(function (u) {
+      return (String(u._id) === String(teacherId) ||
+              String(u.trackId) === String(teacherId) ||
+              String(u.shadowId) === String(teacherId) ||
+              String(u.roleDocId) === String(teacherId)) &&
+             (u.role === 'teacher' || !u.role);
+    });
+  }
+
+  if (!teacher) {
+    dbToast('Loading teacher details…', 'saving');
+    apiCall('GET', '/teachers/' + teacherId).then(function (t) {
+      if (t && (t._id || t.trackId)) {
+        if (!_teacherData) _teacherData = [];
+        _teacherData.push(t);
+        openTD(t._id || teacherId);
+      } else {
+        dbToast('Teacher not found', 'warn');
+      }
+    }).catch(function () {
+      dbToast('Could not load teacher details', 'error');
+    });
+    return;
+  }
+
+  currentTeacherId = teacher._id || teacher.roleDocId || teacherId;
+
+  var tName = teacher.name || teacher.fullName || '';
+  var tDesig = teacher.desig || teacher.designation || 'Assistant Professor';
+  var tDept = teacher.dept || teacher.department || '';
+  var tEmpId = teacher.empId || teacher.employeeNo || '';
+  var tUsername = teacher.username || '';
+
+  var nmEl = document.getElementById('td-nm');
+  if (nmEl) nmEl.textContent = tName || 'Teacher Details';
+
+  var dpEl = document.getElementById('td-dp');
+  if (dpEl) dpEl.textContent = (tDesig || '—') + ' · ' + (tDept || '—') + ' · ' + (tEmpId || '—');
+
+  var editNmEl = document.getElementById('td-edit-nm');
+  if (editNmEl) editNmEl.value = tName;
+
+  var editEiEl = document.getElementById('td-edit-ei');
+  if (editEiEl) editEiEl.value = tEmpId;
+
+  var editUsEl = document.getElementById('td-edit-us');
+  if (editUsEl) editUsEl.value = tUsername;
+
+  var editPwEl = document.getElementById('td-edit-pw');
+  if (editPwEl) editPwEl.value = '';
 
   var sp = Array.isArray(teacher.specials) ? teacher.specials : [];
   var KNOWN_SPECIAL_CHECKBOXES = {
@@ -4182,31 +4614,53 @@ function openTD(teacherId) {
     if (el) el.checked = ar.indexOf(r) !== -1;
   });
 
-  var depts = DB.get('depts');
+  var depts = Array.isArray(DB.get('depts')) ? DB.get('depts') : [];
   var teacherDeptId = teacher.deptId ? (typeof teacher.deptId === 'object' && teacher.deptId._id ? teacher.deptId._id : teacher.deptId) : '';
-  document.getElementById('td-edit-dept').innerHTML = '<option value="">— Select —</option>' + depts.map(function (d) {
-    var selected = String(d._id) === String(teacherDeptId) ? ' selected' : '';
-    return '<option value="' + d._id + '"' + selected + '>' + d.name + '</option>';
-  }).join('');
-  document.getElementById('td-edit-dg').value = teacher.desig || '';
+  var deptSelectEl = document.getElementById('td-edit-dept');
+  if (deptSelectEl) {
+    deptSelectEl.innerHTML = '<option value="">— Select —</option>' + depts.map(function (d) {
+      var selected = (String(d._id) === String(teacherDeptId) || (tDept && (d.name === tDept || d.code === tDept))) ? ' selected' : '';
+      return '<option value="' + d._id + '"' + selected + '>' + d.name + '</option>';
+    }).join('');
+  }
 
-  var tid = teacher._id;
-  var assignments = DB.get('assignments').filter(function (a) { return a.teacherId === tid; });
-  document.getElementById('td-asgn').innerHTML = assignments.length
-    ? assignments.map(function (a) {
-      return '<div class="arow">'
-        + '<div class="ainfo">'
-        + '<div class="anm">📚 ' + a.subjectName + '</div>'
-        + '<div class="acls">🏫 ' + a.className + ' · ' + (a.deptName || '') + '</div>'
-        + '</div>'
-        + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'teacher\')">✖</button>'
-        + '</div>';
-    }).join('')
-    : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No assignments.</div>';
+  var desigEl = document.getElementById('td-edit-dg');
+  if (desigEl) {
+    var hasOption = Array.from(desigEl.options).some(function (o) { return o.value === tDesig; });
+    if (!hasOption && tDesig) {
+      var opt = document.createElement('option');
+      opt.value = tDesig;
+      opt.textContent = tDesig;
+      desigEl.appendChild(opt);
+    }
+    desigEl.value = tDesig || 'Assistant Professor';
+  }
 
-  document.getElementById('td-del').onclick = function () {
-    _confirmDeleteTeacher(tid, teacher.name, true);
-  };
+  var tid = teacher._id || teacher.roleDocId || teacherId;
+  var assignments = Array.isArray(DB.get('assignments')) ? DB.get('assignments') : [];
+  var teacherAssignments = assignments.filter(function (a) { return String(a.teacherId) === String(tid) || (teacher.trackId && a.teacherTrackId === teacher.trackId); });
+  
+  var asgnEl = document.getElementById('td-asgn');
+  if (asgnEl) {
+    asgnEl.innerHTML = teacherAssignments.length
+      ? teacherAssignments.map(function (a) {
+        return '<div class="arow">'
+          + '<div class="ainfo">'
+          + '<div class="anm">📚 ' + a.subjectName + '</div>'
+          + '<div class="acls">🏫 ' + a.className + ' · ' + (a.deptName || '') + '</div>'
+          + '</div>'
+          + '<button class="btn bdan bxs" onclick="rmAsgn(\'' + a._id + '\',\'teacher\')">✖</button>'
+          + '</div>';
+      }).join('')
+      : '<div style="text-align:center;padding:18px;color:var(--tdi);font-size:12px;">No assignments.</div>';
+  }
+
+  var delEl = document.getElementById('td-del');
+  if (delEl) {
+    delEl.onclick = function () {
+      _confirmDeleteTeacher(tid, tName, true);
+    };
+  }
 
   openModal_('m-tch-detail');
 }
@@ -4348,13 +4802,13 @@ function savTA() {
   if (!classId || !subjectId) { showToast('Select class and subject', 'warn'); return; }
   var cls = DB.get('classes').find(function (c) { return c._id === classId; });
   var subj = DB.get('subjects').find(function (s) { return s._id === subjectId; });
-  var teacher = DB.get('users').find(function (u) { return u._id === currentTeacherId; });
+  var teacher = (_teacherData || []).find(function (t) { return String(t._id) === String(currentTeacherId) || String(t.trackId) === String(currentTeacherId); }) || (DB.get('users') || []).find(function (u) { return String(u._id) === String(currentTeacherId) || String(u.trackId) === String(currentTeacherId); });
   if (DB.one('assignments', { classId: classId, subjectId: subjectId })) { showToast('Already assigned', 'warn'); return; }
   dbToast('Saving...', 'saving');
   apiCall('POST', '/assignments', {
     classId: classId, className: cls.name,
     subjectId: subjectId, subjectName: subj.name,
-    teacherId: currentTeacherId, teacherName: teacher ? teacher.name : '',
+    teacherId: currentTeacherId, teacherName: teacher ? (teacher.name || teacher.fullName) : '',
     deptName: cls.deptName, deptCode: cls.deptCode
   }).then(function (d) {
     if (!d || d.error) { dbToast('DB Error: ' + (d && d.error ? d.error : 'Unknown'), 'error'); return; }
@@ -4417,11 +4871,8 @@ function populateAdminDropdowns() {
       + depts.map(function (d) { return '<option value="' + d._id + '">' + d.name + '</option>'; }).join('');
   });
 
-  ['stu-class', 'edit-class'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) el.innerHTML = '<option value="">— Select —</option>'
-      + classes.map(function (c) { return '<option value="' + c._id + '">' + c.name + '</option>'; }).join('');
-  });
+  updateStuClassList();
+  updateEditClassList();
 
   ['nc-dept', 'ns-dept'].forEach(function (id) {
     var el = document.getElementById(id);
@@ -4495,9 +4946,17 @@ initDB();
     window.location.href = 'index.html';
     return;
   }
-  if (!currentUser || currentUser.role !== 'admin') {
+  var isFullAdmin = currentUser.role === 'admin';
+  var isTeacherAdmin = currentUser.role === 'teacher' && currentUser.isAdmin && (currentUser.adminRights === 'all' || (Array.isArray(currentUser.adminRights) && currentUser.adminRights.includes('all')));
+  if (!currentUser || (!isFullAdmin && !isTeacherAdmin)) {
     window.location.href = 'index.html';
     return;
+  }
+  if (currentUser.role === 'teacher') {
+    var backBtn = document.getElementById('admin-hub-back-btn');
+    if (backBtn) backBtn.style.display = 'block';
+    var uRoleEl = document.querySelector('.sb-urole');
+    if (uRoleEl) uRoleEl.textContent = 'Teacher (Admin)';
   }
   try {
     bootApp();
@@ -4673,114 +5132,6 @@ function clearActionToastTimers() {
 // ═══════════════════════════════════════════════════════
 //  DB SYNC LAYER — All data fetched from Database - MongoDB
 // ═══════════════════════════════════════════════════════
-
-// DB Update Toast
-var _dbToastTimer = null;
-var _dbToastDuration = 2000;
-var _loaderActive = true;
-var _toastQueue = [];
-
-function dbToast(msg, state, changes) {
-  if (_loaderActive) { _toastQueue.push([msg, state, changes]); return; }
-
-  // state: 'saving' | 'success' | 'error'
-  var el = document.getElementById('db-toast');
-  if (!el) return;
-
-  clearTimeout(_dbToastTimer);
-  el.className = 'show ' + (state || 'saving');
-
-  var icon = state === 'success' ? '✓' : state === 'error' ? '❌' : '';
-  var spinHtml = state === 'saving' ? '<div class="db-spin"></div>' : '';
-  var changesHtml = changes
-    ? '<div style="font-size:10.5px;opacity:.8;margin-top:3px;">' + changes + '</div>'
-    : '';
-
-  var closeBtn = '<span id="db-toast-close" style="position:absolute;top:6px;right:8px;cursor:pointer;font-size:10px;">✖</span>';
-
-  // Progress bar — only rendered when there is a countdown
-  var progressBar = state !== 'saving'
-    ? '<div id="db-toast-bar"></div>'
-    : '';
-
-  el.innerHTML =
-    progressBar +
-    closeBtn +
-    spinHtml +
-    '<div style="display:flex;flex-direction:column;gap:4px;">' +
-
-    '<div style="font-size:13px;font-weight:700;">' +
-    icon + ' ' + msg +
-    '</div>' +
-
-    (changes
-      ? '<div style="font-size:12.5px;font-weight:600;opacity:.95;">' + changes + '</div>'
-      : ''
-    ) +
-
-    '</div>';
-
-  // Kick off bar animation (scaleX 1 → 0 over _dbToastDuration ms)
-  var barEl = document.getElementById('db-toast-bar');
-  var _remainingMs = _dbToastDuration;
-  var _pausedAt = null;
-
-  function startBar(durationMs) {
-    if (!barEl) return;
-    barEl.style.transition = 'none';
-    barEl.style.transform = 'scaleX(1)';
-    barEl.getBoundingClientRect();
-    barEl.style.transition = 'transform ' + durationMs + 'ms linear';
-    barEl.style.transform = 'scaleX(0)';
-  }
-
-  function pauseBar() {
-    if (!barEl) return;
-    var computed = window.getComputedStyle(barEl).transform;
-    barEl.style.transition = 'none';
-    barEl.style.transform = computed;
-    // Derive remaining time from current scaleX value
-    var scaleX = 1;
-    if (computed && computed !== 'none') {
-      var m = computed.match(/matrix\(([^,]+)/);
-      if (m) scaleX = parseFloat(m[1]);
-    }
-    _remainingMs = Math.max(0, Math.round(scaleX * _dbToastDuration));
-  }
-
-  if (state !== 'saving') startBar(_remainingMs);
-
-  // Close button
-  var closeEl = document.getElementById('db-toast-close');
-  if (closeEl) {
-    closeEl.onclick = function () {
-      el.classList.remove('show');
-      clearTimeout(_dbToastTimer);
-    };
-  }
-
-  // Hover: freeze bar + pause countdown
-  el.onmouseenter = function () {
-    clearTimeout(_dbToastTimer);
-    if (state !== 'saving') pauseBar();
-  };
-
-  el.onmouseleave = function () {
-    if (state !== 'saving') {
-      startBar(_remainingMs);
-      _dbToastTimer = setTimeout(function () {
-        el.classList.remove('show');
-      }, _remainingMs);
-    }
-  };
-
-  // Auto hide
-  if (state !== 'saving') {
-    _dbToastTimer = setTimeout(function () {
-      el.classList.remove('show');
-    }, _dbToastDuration);
-  }
-}
 
 // API helper
 function apiCall(method, path, body) {
@@ -5310,6 +5661,369 @@ function confirmClearStorage() {
     openTD(target.getAttribute('data-id'));
   });
 })();
-  
+
 // openModal wrapper for admin page modals
 function openModal(id) { var el = document.getElementById(id); if (el) { el.style.display = 'flex'; el.classList.add('open'); } }
+
+window.addEventListener('load', function() {
+  try {
+    var rawUser = sessionStorage.getItem('eams_user');
+    if (rawUser) {
+      var usr = JSON.parse(rawUser);
+      if (usr) {
+        var nm = usr.name || usr.fullName || usr.username || 'Administrator';
+        var av = nm.charAt(0).toUpperCase();
+        var avEl = document.getElementById('sb-av');
+        var nmEl = document.getElementById('sb-name');
+        var roleEl = document.querySelector('.sb-urole');
+        if (avEl) avEl.textContent = av;
+        if (nmEl) nmEl.textContent = nm;
+        if (usr.role === 'teacher' && usr.isAdmin) {
+          if (roleEl) roleEl.textContent = 'Teacher (Admin)';
+          var hubBtn = document.getElementById('admin-hub-back-btn');
+          if (hubBtn) {
+            hubBtn.style.display = 'flex';
+            hubBtn.textContent = '← Back to Hub';
+          }
+        }
+      }
+    }
+  } catch (err) {}
+
+  fetch('/api/settings/public')
+    .then(function(r){ return r.json(); })
+    .then(function(pub){
+      window._pubSettings = pub;
+      if (pub.institution) {
+        var shortN = pub.institution.institutionShort || 'SIET';
+        document.title = 'EAMS – Admin Dashboard | ' + shortN;
+        var logoEl = document.querySelector('.sb-brand');
+        if (logoEl && pub.institution.institutionName) {
+          logoEl.innerHTML = (pub.institution.institutionShort || 'EAMS') + ' Admin';
+        }
+      }
+      if (pub.models) {
+        if (pub.models.modelExportSheet === false) {
+          document.querySelectorAll('.btn-export').forEach(function(b){ b.style.display = 'none'; });
+        }
+        if (pub.models.modelAddStudent === false) {
+          var addStuBtn = document.getElementById('btn-add-student');
+          if (addStuBtn) addStuBtn.style.display = 'none';
+        }
+      }
+    }).catch(function(e){ console.warn(e); });
+});
+
+// ── EXECUTIVE ROLES MANAGEMENT (Principal, HOD, Sub-Admin) ─────────
+var _executiveRolesData = { principal: null, hods: [], subadmins: [], departments: [], teachers: [] };
+var _currentRoleTab = 'principal';
+
+function switchRoleTab(tabName) {
+  _currentRoleTab = tabName || 'principal';
+
+  // Toggle Tab button states
+  ['principal', 'hod', 'subadmin'].forEach(function (tab) {
+    var btn = document.getElementById('rtab-btn-' + tab);
+    if (btn) {
+      if (tab === _currentRoleTab) btn.classList.add('act');
+      else btn.classList.remove('act');
+    }
+
+    // Toggle Section views
+    var sec = document.getElementById('role-sec-' + tab);
+    if (sec) {
+      sec.style.display = (tab === _currentRoleTab) ? 'block' : 'none';
+    }
+
+    // Toggle Top Action buttons
+    var actBtn = document.getElementById('btn-role-action-' + tab);
+    if (actBtn) {
+      actBtn.style.display = (tab === _currentRoleTab) ? 'inline-flex' : 'none';
+    }
+  });
+}
+
+function loadExecutiveRolesData() {
+  var token = getToken();
+  return fetch('/api/users/executive/roles?_t=' + Date.now(), {
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data && !data.error) {
+        _executiveRolesData = data;
+        renderExecutiveRolesUI();
+        switchRoleTab(_currentRoleTab);
+      }
+    })
+    .catch(function (err) {
+      console.error('[Executive Roles Error]:', err);
+    });
+}
+
+function renderExecutiveRolesUI() {
+  var p = _executiveRolesData.principal;
+  var nameEl = document.getElementById('principal-display-name');
+  var metaEl = document.getElementById('principal-display-meta');
+  var badgeEl = document.getElementById('principal-status-badge');
+
+  if (p) {
+    if (nameEl) nameEl.textContent = p.fullName;
+    if (metaEl) metaEl.textContent = 'Username: @' + p.username + ' · Email: ' + (p.email || '—') + ' · Employee ID: ' + (p.employeeNo || '—');
+    if (badgeEl) {
+      badgeEl.textContent = 'Active (Principal)';
+      badgeEl.className = 'bge bgg';
+    }
+  } else {
+    if (nameEl) nameEl.textContent = 'No Principal Appointed';
+    if (metaEl) metaEl.textContent = 'Click Assign Principal to appoint institutional executive.';
+    if (badgeEl) {
+      badgeEl.textContent = 'Not Appointed';
+      badgeEl.className = 'bge bgr';
+    }
+  }
+
+  // Render HODs Table
+  var hodsTbody = document.getElementById('roles-hods-tbody');
+  if (hodsTbody) {
+    var hods = _executiveRolesData.hods || [];
+    if (!hods.length) {
+      hodsTbody.innerHTML = '<tr><td colspan="6" class="text-center">No departments registered.</td></tr>';
+    } else {
+      hodsTbody.innerHTML = hods.map(function (h) {
+        var hodBadge = h.hodName === 'Not Assigned'
+          ? '<span style="color:#ef4444;font-weight:600;">Not Assigned</span>'
+          : '<strong style="color:var(--td);">' + h.hodName + '</strong>';
+
+        return '' +
+          '<tr>' +
+            '<td><strong>' + h.deptName + '</strong></td>' +
+            '<td><span class="bge bgc">' + (h.deptCode || '—') + '</span></td>' +
+            '<td>' + hodBadge + '</td>' +
+            '<td>' + (h.hodEmpNo || '—') + '</td>' +
+            '<td>' + (h.hodEmail || '—') + '</td>' +
+            '<td>' +
+              '<button class="btn-sm btn-pri" onclick="openAssignHodModal(\'' + h.deptId + '\')">' + (h.hodName === 'Not Assigned' ? 'Appoint HOD' : 'Change HOD') + '</button>' +
+            '</td>' +
+          '</tr>';
+      }).join('');
+    }
+  }
+
+  // Render Sub-Admins Table
+  var subTbody = document.getElementById('roles-subadmins-tbody');
+  if (subTbody) {
+    var subadmins = _executiveRolesData.subadmins || [];
+    if (!subadmins.length) {
+      subTbody.innerHTML = '<tr><td colspan="6" class="text-center">No sub-administrators configured.</td></tr>';
+    } else {
+      subTbody.innerHTML = subadmins.map(function (s) {
+        var rights = Array.isArray(s.adminRights) ? s.adminRights : [];
+        var rightsBadges = rights.map(function (r) {
+          return '<span class="bge bgy" style="font-size:10px;margin-right:3px;">' + r + '</span>';
+        }).join('');
+
+        return '' +
+          '<tr>' +
+            '<td><strong>' + s.fullName + '</strong></td>' +
+            '<td>@' + s.username + '</td>' +
+            '<td>' + (s.department || '—') + '</td>' +
+            '<td><span class="bge bgb">' + s.type + '</span></td>' +
+            '<td>' + (rightsBadges || 'None') + '</td>' +
+            '<td>' +
+              '<button class="btn-sm btn-pri" onclick="openGrantSubAdminModal(\'' + s._id + '\')">Edit Rights</button>' +
+            '</td>' +
+          '</tr>';
+      }).join('');
+    }
+  }
+}
+
+// ── Modals Handlers for Roles ──
+function openAssignPrincipalModal() {
+  var p = _executiveRolesData.principal;
+  var fn = document.getElementById('prin-fullname');
+  var un = document.getElementById('prin-username');
+  var pw = document.getElementById('prin-password');
+  var em = document.getElementById('prin-email');
+  var emp = document.getElementById('prin-empno');
+
+  if (p) {
+    if (fn) fn.value = p.fullName || '';
+    if (un) un.value = p.username || 'principal';
+    if (pw) pw.value = '';
+    if (em) em.value = p.email || '';
+    if (emp) emp.value = p.employeeNo || '';
+  } else {
+    if (fn) fn.value = '';
+    if (un) un.value = 'principal';
+    if (pw) pw.value = '';
+    if (em) em.value = '';
+    if (emp) emp.value = 'PRIN001';
+  }
+  openModalBg('m-assign-principal');
+}
+
+function submitAssignPrincipal() {
+  var fullName = document.getElementById('prin-fullname')?.value?.trim();
+  var username = document.getElementById('prin-username')?.value?.trim();
+  var password = document.getElementById('prin-password')?.value;
+  var email = document.getElementById('prin-email')?.value?.trim();
+  var employeeNo = document.getElementById('prin-empno')?.value?.trim();
+
+  if (!fullName || !username) {
+    showToast('Full Name and Username are required');
+    return;
+  }
+
+  var token = getToken();
+  fetch('/api/users/executive/assign-principal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ fullName: fullName, username: username, password: password, email: email, employeeNo: employeeNo })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast('Error: ' + res.error);
+        return;
+      }
+      showToast(res.message || 'Principal assigned successfully!');
+      closeModalBg('m-assign-principal');
+      loadExecutiveRolesData();
+    })
+    .catch(function (err) {
+      console.error(err);
+      showToast('Failed to assign Principal');
+    });
+}
+
+function openAssignHodModal(deptId) {
+  var deptSelect = document.getElementById('hod-dept-select');
+  var teacherSelect = document.getElementById('hod-teacher-select');
+
+  var depts = _executiveRolesData.departments || [];
+  var teachers = _executiveRolesData.teachers || [];
+
+  if (deptSelect) {
+    deptSelect.innerHTML = '<option value="">Select Department…</option>' +
+      depts.map(function (d) {
+        return '<option value="' + d._id + '"' + (deptId && String(d._id) === String(deptId) ? ' selected' : '') + '>' + d.name + ' (' + d.code + ')</option>';
+      }).join('');
+  }
+
+  if (teacherSelect) {
+    teacherSelect.innerHTML = '<option value="">Select Faculty Member…</option>' +
+      teachers.map(function (t) {
+        return '<option value="' + t._id + '">' + t.fullName + ' (' + (t.department || 'No Dept') + ')</option>';
+      }).join('');
+  }
+
+  openModalBg('m-assign-hod');
+}
+
+function onHodModalDeptChange(deptId) {
+  var dept = (_executiveRolesData.departments || []).find(function (d) { return String(d._id) === String(deptId); });
+  var teacherSelect = document.getElementById('hod-teacher-select');
+  var teachers = _executiveRolesData.teachers || [];
+
+  if (teacherSelect && dept) {
+    // Put teachers in this department first
+    var deptTeachers = teachers.filter(function (t) { return t.department === dept.name; });
+    var otherTeachers = teachers.filter(function (t) { return t.department !== dept.name; });
+
+    teacherSelect.innerHTML = '<option value="">Select Faculty Member…</option>' +
+      '<optgroup label="Faculty in ' + dept.name + '">' +
+      deptTeachers.map(function (t) { return '<option value="' + t._id + '">' + t.fullName + '</option>'; }).join('') +
+      '</optgroup>' +
+      '<optgroup label="Other Departments">' +
+      otherTeachers.map(function (t) { return '<option value="' + t._id + '">' + t.fullName + ' (' + t.department + ')</option>'; }).join('') +
+      '</optgroup>';
+  }
+}
+
+function submitAssignHod() {
+  var deptId = document.getElementById('hod-dept-select')?.value;
+  var teacherId = document.getElementById('hod-teacher-select')?.value;
+
+  if (!deptId || !teacherId) {
+    showToast('Please select both Department and Faculty Member.');
+    return;
+  }
+
+  var token = getToken();
+  fetch('/api/users/executive/assign-hod', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ deptId: deptId, teacherId: teacherId })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast('Error: ' + res.error);
+        return;
+      }
+      showToast(res.message || 'HOD appointed successfully!');
+      closeModalBg('m-assign-hod');
+      loadExecutiveRolesData();
+    })
+    .catch(function (err) {
+      console.error(err);
+      showToast('Failed to appoint HOD');
+    });
+}
+
+function openGrantSubAdminModal(teacherId) {
+  var teacherSelect = document.getElementById('subadmin-teacher-select');
+  var teachers = _executiveRolesData.teachers || [];
+
+  if (teacherSelect) {
+    teacherSelect.innerHTML = '<option value="">Select Faculty Member…</option>' +
+      teachers.map(function (t) {
+        return '<option value="' + t._id + '"' + (teacherId && String(t._id) === String(teacherId) ? ' selected' : '') + '>' + t.fullName + ' (' + (t.department || '—') + ')</option>';
+      }).join('');
+  }
+
+  var subadmin = (_executiveRolesData.subadmins || []).find(function (s) { return String(s._id) === String(teacherId); });
+  var rights = subadmin ? subadmin.adminRights : ['controlPage'];
+
+  document.querySelectorAll('.subadmin-module-chk').forEach(function (chk) {
+    chk.checked = Array.isArray(rights) && rights.includes(chk.value);
+  });
+
+  openModalBg('m-grant-subadmin');
+}
+
+function submitGrantSubAdmin() {
+  var teacherId = document.getElementById('subadmin-teacher-select')?.value;
+  if (!teacherId) {
+    showToast('Please select a Faculty member.');
+    return;
+  }
+
+  var checkedModules = Array.from(document.querySelectorAll('.subadmin-module-chk:checked')).map(function (c) { return c.value; });
+  if (!checkedModules.length) {
+    checkedModules = ['none'];
+  }
+
+  var token = getToken();
+  fetch('/api/users/executive/grant-subadmin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ teacherId: teacherId, adminRights: checkedModules })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast('Error: ' + res.error);
+        return;
+      }
+      showToast(res.message || 'Sub-Admin rights granted successfully!');
+      closeModalBg('m-grant-subadmin');
+      loadExecutiveRolesData();
+    })
+    .catch(function (err) {
+      console.error(err);
+      showToast('Failed to grant Sub-Admin rights');
+    });
+}

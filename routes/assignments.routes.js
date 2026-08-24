@@ -4,6 +4,7 @@ const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
 const { sanitizeToString } = require('../utils/sanitizeQuery');
+const { checkModuleGuard } = require('../middleware/portalGuard');
 
 router.get('/', authMiddleware, async (req, res) => {
   const filter = {};
@@ -15,7 +16,7 @@ router.get('/', authMiddleware, async (req, res) => {
   res.json(await M.Assignment.find(filter).sort({ teacherName: 1 }));
 });
 
-router.post('/', authMiddleware, adminOnly, async (req, res) => {
+router.post('/', authMiddleware, adminOnly, checkModuleGuard('modelAssignments', 'Class Assignments'), async (req, res) => {
   try {
     const existing = await M.Assignment.findOne({ teacherId: req.body.teacherId, classId: req.body.classId, subjectId: req.body.subjectId });
     if (existing) return res.status(409).json({ error: 'Assignment already exists' });
@@ -25,7 +26,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-router.post('/bulk', authMiddleware, adminOnly, async (req, res) => {
+router.post('/bulk', authMiddleware, adminOnly, checkModuleGuard('modelAssignments', 'Class Assignments'), async (req, res) => {
   try {
     const { subjectId, assignments } = req.body;
 

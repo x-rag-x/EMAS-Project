@@ -52,6 +52,47 @@
     <button class="lbn" id="lbn" onclick="doSignIn()"><span id="lbn-txt">Sign In</span></button>
   </div>
 
+  <!-- ── LOCATION PERMISSION GUIDANCE MODAL ── -->
+  <div id="m-loc-guide" class="loc-modal-overlay" onclick="if(event.target===this)closeLocationModal()">
+    <div class="loc-modal-card">
+      <div class="loc-modal-header">
+        <div class="loc-icon-circle">📍</div>
+        <div class="loc-modal-title">Location Permission Required</div>
+        <div class="loc-modal-sub">Mandatory verification for attendance integrity &amp; audit security</div>
+      </div>
+
+      <div class="loc-modal-body">
+        <div class="loc-step-item">
+          <div class="loc-step-num">1</div>
+          <div class="loc-step-txt">
+            <b>Click the button below</b> to trigger the browser's location permission prompt.
+          </div>
+        </div>
+
+        <div class="loc-step-item">
+          <div class="loc-step-num">2</div>
+          <div class="loc-step-txt">
+            When your browser prompts <i>"Know your location"</i>, select:
+            <div class="loc-select-box">
+              👉 <b>"Allow while visiting the site"</b> (or <b>"Allow"</b>)
+            </div>
+          </div>
+        </div>
+
+        <div class="loc-step-item warning-box">
+          <div class="loc-step-num warn">⚠️</div>
+          <div class="loc-step-txt" style="color:#991b1b;">
+            <b>Strict Security Policy:</b> If permission is denied or dismissed, accounts will be <b>locked for 1 hour</b> immediately (Admin is exempt from lockout).
+          </div>
+        </div>
+      </div>
+
+      <div class="loc-modal-actions">
+        <button type="button" class="btn-loc-proceed" id="btn-loc-proceed" onclick="confirmAndRequestLocation()">📍 Allow Location &amp; Sign In</button>
+      </div>
+    </div>
+  </div>
+
   <div id="msg-toast">
     <div id="msg-toast-bar"></div>
     <div id="msg-toast-text"></div>

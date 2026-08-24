@@ -1,3 +1,54 @@
+## 🔹 `v2.3.1` — 24 August 2026 *(Features Implementation)*
+
+### *General Changes & Updates*
+- Implementation of **Selector HTML** file for teacher login. Sub-Admin features and whole admin feature access updated and linked with teacher portal. Teacher with `adminRights` can have access to admin featured pages via `selector.html`.
+- Added personal `defaultAttendanceStatus` (`Present`/`Absent`/`Unmarked`) in teacher profile to pre-fill roster sheets during attendance marking.
+- Each class menu now contains Add Class Advisor option.
+- Logout animations, when logout button is clicked it disable all other buttons clicks and opens a Green layer to prevent further clicks.
+- Added teacher notes/topic for each class.
+
+### *Security Improvement*
+- Centralized rate limiters for sensitive endpoints.
+- Created validatePassword checking minimum 8 characters, uppercase, lowercase, digit, and special character.
+- Added `passwordHistory` field to AdminSchema, TeacherSchema, and StudentSchema. Users are prevented from reusing their last 5 passwords. 
+- Optimised Session monitor. Inactivity session timeout and automatic concurrent session termination.
+- **New Settings Hub (`settings.html`)**: Centralized 9-tab configuration center covering Institution branding, Pages & Portals, Attendance policies, Feature models, Academic config, Security/Auth rules, Broadcast defaults, Change History, and System Utilities with factory reset.
+- **Tri-State Portal Access**: Universal 3-state control (`Enabled`, `Disabled`, `Hidden`) for all portals. Disabled portals display a `🔒 Disabled` badge and reject access with `403 Forbidden`; hidden portals are completely removed from UI and navigation.
+- **Change History & Audit Trail**: Real-time immutable logging tracking every setting modification with before/after diffs, author identity, IP, and timestamps.
+- **Mandatory Location on Sign-In**: Sign is only allowed when geolocation is accepted, id denied immediate blocking. By enabling this users location is identified for security reasons and attendance marking.
+
+### *Leave & Permission Management*
+
+- Implemented the full end-to-end Student Leave & Permission Management workflow across the Admin, Student, and Teacher portals. Students can choose between Full Day Leave and Half Day Permission (FN - Forenoon / Morning, AN - Afternoon, or custom period range). Period attendance auto-marking will smartly flag students.
+
+### *User Grid Management*
+- **Full CRUD & Role-Specific Modal Editing**: Refactored edit modal to align with Admin design standards (`.form-grid`, `.fc2`, `.fl`, `.fg`, `.auto-txt`, `.auto-block`). Full field support across Students (Register No, Department auto-dropdown, Class auto-dropdown, Section, Course Level, Branch, Admission Year, Batch Track ID, Representative flag), Faculty (Employee ID, Department, Designation, Default Attendance Status, Sub-Admin toggle, granular 9-point privilege matrix), and Admins with automatic first/last name splitting.
+- **Enhanced Actions Bar with Labeled Buttons**: Expanded action column to 330px with clear, styled text buttons (`✏️ Edit`, `🔑 Password`, `⚡ Deactivate` / `🟢 Activate`, `🔓 Unlock`, `🗑️ Delete`) styled to match Admin action layouts.
+- **Status Toggling & Safe Soft-Delete**: Instant inline active/inactive status toggle and custom EAMS small confirmation dialog for deletion capturing pre-deletion snapshots in `M.UndoLog` (Recycle Bin) for 10-day recovery.
+- **Attendance Record Audit & Edit**: Complete attendance grid enabling filtering by date range, department, class, and status; in-place attendance status modification (`Present`, `Absent`, `OD`, `Leave`) and period remarks with automatic student attendance counter re-synchronization.
+
+### *Improved Activity Logs Management*
+- **Logs Page**: Removed activity logs navigation and implemeneted a new `logs.html` file.
+- All logs contains a unique `trackId` for tracking and built with AES-256-GCM Encryption.
+- Each log audit is now clickable to open a Detail log information with multiple features.
+- `LoginHistorySchema` updated with `location` and `logoutMethod`. 
+- Extend LogSchema with logTrackId, encryptedPayload, sessionData, changes, attendanceSummary, actingWithAdminRights, module, subType.
+- Login and logout are recorded as one single log entry. When a user logs in, the entry is created. When the user logs out (manual, timeout, or forced), the same log entry is updated with `logoutTime`, `logoutMethod: 'manual'`. 
+- One log per student per day. As subsequent periods are marked throughout the day, the existing daily log is updated (updatedAt: new Date()) with the new period statuses.
+
+### *HOD and Principal Logins v1* 
+- Implemented HoD and Principal login methods to EAMS. Special features with respective to their role have been added. 
+
+- **HOD**: Teacher role based user with isHod field true. Department-scoped oversight & approvals. Department wise stats and operation are controlled and managed. Access to `controller.html` page and `teacher.html`
+
+- **Principal**: Admin role user with adminFlag: 'principal' → College-wide oversight & institutional governance. Access to `controller.html` page. Overall collage level management. 
+
+- `controller.html` - Dashboard, Attendance Overview, Leave Approvals,  Faculty Overview, Student Directory, Period Records & Teaching Notes, Defaulters Report, Attendance Reports & Analytics, Broadcast Hub, Academic Calendar, Timetable View.
+
+### `Total 90 Files changed and updated in v2.3.1`
+
+----------------------------------
+
 ## 🔹 `v2.3` — 14 August 2026 *(Frontend Restructure)*
 
 ### *Changes of Frontend Restructure*
@@ -18,6 +69,8 @@ A complete rotation of code and file restructure. This adds an additional import
 - Admin page loading toasts + dashboard `/counts`
 
 ### `Total 63 Files changed and updated in v2.3`
+
+----------------------------------
 
 ## 🔹 `v2.2.9` — 18 July 2026 *(Performance Improvement Update)*
 

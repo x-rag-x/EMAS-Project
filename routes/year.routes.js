@@ -70,7 +70,24 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
     }
     if (isCurrent) await M.Year.updateMany({}, { $set: { isCurrent: false } });
     const year = await M.Year.create({ academicYear, batches,createdBy: req.user.trackId || req.user.name,isCurrent: isCurrent || false });
-    await logAction(req.user._id, req.user.name, req.user.role, 'Academic Year Created', academicYear, 'year', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Academic Year Created',
+      academicYear,
+      'year',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'manage',
+        subType: 'entry-create',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: null, after: year.toObject ? year.toObject() : year }
+      }
+    );
     res.status(201).json(year);
   } catch (err) {
     if (err.code === 11000) return res.status(400).json({ error: 'Academic year already exists' });
@@ -85,6 +102,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
     const existingYear = await M.Year.findById(req.params.id);
     if (!existingYear) return res.status(404).json({ error: 'Academic year not found' });
     
+    const before = existingYear.toObject();
     const updates = {};
     const historyEntries = [];
     const updatedBy = req.user.trackId || req.user.name;
@@ -121,8 +139,25 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
     
     if (historyEntries.length > 0) updates.$push = { history: { $each: historyEntries } };
     
-    const updatedYear = await M.Year.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
-    await logAction(req.user._id, req.user.name, req.user.role, 'Academic Year Updated', updatedYear.academicYear, 'year', 'info', req.ip);
+    const updatedYear = await M.Year.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Academic Year Updated',
+      updatedYear.academicYear,
+      'year',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'manage',
+        subType: 'field-edit',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before, after: updatedYear.toObject ? updatedYear.toObject() : updatedYear }
+      }
+    );
     res.json(updatedYear);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -141,7 +176,24 @@ router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
     });
     
     await M.Year.findByIdAndDelete(req.params.id);
-    await logAction(req.user._id, req.user.name, req.user.role, 'Academic Year Deleted', year.academicYear, 'year', 'warning', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Academic Year Deleted',
+      year.academicYear,
+      'year',
+      'warning',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'manage',
+        subType: 'entry-delete',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: year, after: null }
+      }
+    );
     res.json({ deleted: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

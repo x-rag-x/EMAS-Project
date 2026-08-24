@@ -28,10 +28,7 @@
     </div>
   </div>
 
-<div id="db-toast">
-  <div id="db-toast-bar">
-  </div>
-</div>
+<div id="db-toast"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -70,7 +67,7 @@
         <div class="sb-urole">Admin</div>
       </div>
     </div>
-    <button class="sb-back-btn" onclick="location.href='admin.html'">← Back to Dashboard</button>
+    <button class="sb-back-btn" onclick="goBack()">← Back to Dashboard</button>
     <button class="sb-logout-btn" onclick="doLogout('manual', 'success', '7000')" title="Logout">
       <div class="logout-sign">
         <svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path></svg>
@@ -164,8 +161,10 @@
         <div class="page-sub">Mark working days, leaves and daily timings.</div>
       </div>
       <div class="page-actions">
-          <button class="btn-pri" onclick="generateMonthDefaults()">⚙️ Auto-Fill</button>
-          <button class="btn-out" onclick="loadCalendar()">🔄 Sync DB</button>
+        <button class="btn-pri btn-sm" onclick="deleteCalendarMonth()" id="delete-month-btn" title="Delete all saved days for this month from database">🗑️ Delete Month (DB)</button>
+        <button class="btn-out btn-sm" onclick="clearCalendarDraft()" id="clear-draft-btn" style="display:none;">🗑️ Clear Draft</button>
+        <button class="btn-pri" onclick="generateMonthDefaults()">⚙️ Auto-Fill</button>
+        <button class="btn-out" onclick="loadCalendar()">🔄 Sync DB</button>
       </div>
     </div>
 
@@ -194,7 +193,7 @@
           </div>
           <div class="fg" style="min-width:110px;">
             <label class="fl">Year</label>
-            <input type="number" class="fc" id="cal-year-inp" value="2025" min="2020" max="2040" onchange="loadCalendar()">
+            <input type="number" class="fc" id="cal-year-inp" min="2020" max="2040" onchange="loadCalendar()">
           </div>
           <div class="fg" style="min-width:130px;">
             <label class="fl">Year Filter</label>
@@ -219,7 +218,11 @@
     <!-- Calendar grid -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-title" id="cal-month-label">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="card-title" style="font-size:14px;" id="cal-month-label">—</div>
+          <span style="font-size:13px;color:var(--tmu);">-</span>
+          <span id="cal-finalized-badge" style="font-size:13px;font-weight:700;"></span>
+        </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
           <span style="background:#f0fdf4;border:1.5px solid #86efac;color:var(--gK);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Working</span>
           <span style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:9px;">● Leave</span>
@@ -554,21 +557,39 @@
         <select class="fc2" id="em-type"><option value="">— Select —</option>
           <option value="Internal 1">Internal 1</option><option value="Internal 2">Internal 2</option>
           <option value="Practicals">Practicals</option><option value="Semester">Semester</option></select></div>
-      <div class="fg"><label class="fl">Academic Year</label><input type="text" class="fc2" id="em-acyear" placeholder="2025-26"></div>
+      <div class="fg"><label class="fl">Academic Year *</label>
+        <select class="fc2" id="em-acyear" onchange="onEmAcYearChange()">
+          <option value="">— Select Academic Year —</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Batch *</label>
+        <select class="fc2" id="em-batch" onchange="onEmBatchChange()">
+          <option value="">— Select Batch —</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Student Year *</label>
+        <select class="fc2" id="em-year" onchange="onEmYearChange()">
+          <option value="">— Select Year —</option>
+          <option value="I">Year I</option>
+          <option value="II">Year II</option>
+          <option value="III">Year III</option>
+          <option value="IV">Year IV</option>
+          <option value="All">All Years</option>
+        </select>
+      </div>
       <div class="fg"><label class="fl">Semester *</label>
-        <select class="fc2" id="em-semester"><option value="">— Select —</option>
+        <select class="fc2" id="em-semester" onchange="onEmSemChange()"><option value="">— Select —</option>
           <option value="I">Semester I</option><option value="II">Semester II</option>
           <option value="III">Semester III</option><option value="IV">Semester IV</option>
           <option value="V">Semester V</option><option value="VI">Semester VI</option>
           <option value="VII">Semester VII</option><option value="VIII">Semester VIII</option></select></div>
-      <div class="fg"><label class="fl">Batch</label><input type="text" class="fc2" id="em-batch" placeholder="e.g. 2023-2027"></div>
       <div class="fg"><label class="fl">Department</label>
         <select class="fc2" id="em-dept"><option value="">All Departments</option></select></div>
       <div class="fg"><label class="fl">Start Date *</label><input type="date" class="fc2" id="em-start"></div>
       <div class="fg"><label class="fl">End Date *</label><input type="date" class="fc2" id="em-end"></div>
       <div class="fg"><label class="fl">Exam Start Time</label><input type="time" class="fc2" id="em-t-start" value="09:00"></div>
       <div class="fg"><label class="fl">Exam End Time</label><input type="time" class="fc2" id="em-t-end" value="16:00"></div>
-      <div class="fg"><label class="fl">Status</label>
+      <div class="fg" style="grid-column:span 2;"><label class="fl">Status</label>
         <select class="fc2" id="em-status"><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option>
           <option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
       <div class="fg" style="grid-column:span 2;"><label class="fl">Notes</label><textarea class="fc2" id="em-notes" rows="2" placeholder="Optional notes…"></textarea></div>
@@ -609,37 +630,55 @@
 </div>
 
 <!-- ════════════════════════════════
-     MODAL: ADD / EDIT MANAGE ADMIN
+     MODAL: GRANT MANAGE ACCESS
 ════════════════════════════════ -->
 <div class="modal-bg" id="admin-modal-bg" onclick="if(event.target===this)closeModal('admin-modal-bg')">
   <div class="modal">
     <div class="modal-hd">
       <div>
-        <div class="modal-title" id="am-title">Add Manage Admin</div>
-        <div class="modal-sub">This user can access the Manage portal.</div>
+        <div class="modal-title" id="am-title">Grant Manage Access</div>
+        <div class="modal-sub">Grant Manage portal access to an existing faculty member.</div>
       </div>
       <div class="modal-close" onclick="closeModal('admin-modal-bg')">✕</div>
     </div>
     <input type="hidden" id="am-id">
-    <div class="fgrid fg2" style="margin-bottom:10px;">
-      <div class="fg"><label class="fl">Full Name *</label><input type="text" class="fc2" id="am-name" placeholder="e.g. Dr. Karthik"></div>
-      <div class="fg"><label class="fl">Email</label><input type="text" class="fc2" id="am-email" placeholder="email@ssiet.ac.in"></div>
-      <div class="fg"><label class="fl">Username *</label><input type="text" class="fc2" id="am-username" placeholder="karthik.cse" autocomplete="off"></div>
-      <div class="fg"><label class="fl" id="am-pw-label">Password *</label><input type="password" class="fc2" id="am-password" placeholder="Min 6 chars" autocomplete="new-password"></div>
+    <input type="hidden" id="am-teacher-id">
+    
+    <div class="fg" style="margin-bottom:14px;" id="am-teacher-sel-wrap">
+      <label class="fl">Select Faculty / Teacher <span style="color:#dc2626;">*</span></label>
+      <select class="fc2" id="am-teacher-select" onchange="onAdminTeacherSelect()">
+        <option value="">-- Choose Faculty Member --</option>
+      </select>
     </div>
-    <div class="fg" style="margin-bottom:12px;">
-      <label class="fl">Permissions</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="am-perms-wrap">
-        <label class="dept-cb-wrap" id="perm-calendar"><input type="checkbox" value="calendar" checked> 📅 Calendar</label>
-        <label class="dept-cb-wrap" id="perm-exam"><input type="checkbox" value="exam" checked> 📝 Exam</label>
-        <label class="dept-cb-wrap" id="perm-attendance"><input type="checkbox" value="attendance" checked> ✅ Attendance</label>
-        <label class="dept-cb-wrap" id="perm-settings"><input type="checkbox" value="settings"> ⚙️ Settings</label>
+
+    <!-- Selected Faculty Preview Card -->
+    <div id="am-teacher-preview" style="display:none;background:var(--bg3);border:1px solid var(--br);border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--tmu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Faculty Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+        <div><span style="color:var(--tmu);">Name:</span> <strong id="am-prev-name" style="color:var(--td);"></strong></div>
+        <div><span style="color:var(--tmu);">Username:</span> <strong id="am-prev-user" style="color:var(--td);"></strong></div>
+        <div><span style="color:var(--tmu);">Department:</span> <span id="am-prev-dept" style="color:var(--td);"></span></div>
+        <div><span style="color:var(--tmu);">Email:</span> <span id="am-prev-email" style="color:var(--td);"></span></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#2563eb;background:#eff6ff;padding:6px 10px;border-radius:6px;border:1px solid #bfdbfe;">
+        🔑 Uses their existing faculty account credentials to log in.
       </div>
     </div>
+
+    <div class="fg" style="margin-bottom:14px;">
+      <label class="fl">Permissions</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="am-perms-wrap">
+        <label class="dept-cb-wrap checked" id="perm-calendar"><input type="checkbox" value="calendar" checked> 📅 Calendar</label>
+        <label class="dept-cb-wrap checked" id="perm-exam"><input type="checkbox" value="exam" checked> 📝 Exam</label>
+        <label class="dept-cb-wrap checked" id="perm-attendance"><input type="checkbox" value="attendance" checked> ✅ Attendance</label>
+        <label class="dept-cb-wrap checked" id="perm-settings"><input type="checkbox" value="settings" checked> ⚙️ Settings</label>
+      </div>
+    </div>
+
     <div class="form-actions">
-      <button class="btn-form-del" id="am-delete-btn" style="display:none;" onclick="deleteManageAdmin()">🗑 Remove</button>
+      <button class="btn-form-del" id="am-delete-btn" style="display:none;" onclick="deleteManageAdmin()">🗑 Revoke Access</button>
       <button class="btn-form-ghost" onclick="closeModal('admin-modal-bg')">Cancel</button>
-      <button class="btn-form-pri" onclick="saveManageAdmin()">💾 Save</button>
+      <button class="btn-form-pri" id="am-save-btn" onclick="saveManageAdmin()">💾 Grant Access</button>
     </div>
   </div>
 </div>

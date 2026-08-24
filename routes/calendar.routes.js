@@ -26,7 +26,7 @@ router.get('/check/:date', authMiddleware, async (req, res) => {
       M.CalendarDay.findOne({ date: dateObj }),
       M.Exam.find({ Dates: date, status: { $in: ['upcoming', 'ongoing'] } })
     ]);
-    const defaults = { details: [{ year: 'I', dayType: dateObj.getDay() === 0 ? 'holiday' : 'working', comments: '', timing: { start: '08:30', end: '16:30' }
+    const defaults = { details: [{ year: 'I', dayType: dateObj.getDay() === 0 ? 'leave' : 'working', comments: '', timing: { start: '08:30', end: '16:30' }
       }]
     };
     res.json({ ...(day ? day.toObject() : defaults), hasExam: exams.length > 0, exams });
@@ -53,6 +53,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
     
     const updateData = { CalendarTrackId: trackId, date: dateObj, month, year, day, details, createdBy: req.user.name};
     if (isFinalized) { updateData.isFinalized = true; updateData.finalizedBy = req.user.name; updateData.finalizedAt = new Date();}
+    else { updateData.isFinalized = false; updateData.finalizedBy = null; updateData.finalizedAt = null; }
     
     const doc = await M.CalendarDay.findOneAndUpdate(
       { date: dateObj },
@@ -64,7 +65,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
           }
         }
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
     await logAction(req.user._id, req.user.name, req.user.role, 'Calendar Day Updated', `${date}`, 'manage', 'info', req.ip);
     res.json(doc);
@@ -79,18 +80,121 @@ router.put('/:date', authMiddleware, adminOnly, async (req, res) => {
     if (!details || !Array.isArray(details)) return res.status(400).json({ error: 'details array required' });
     
     const dateObj = new Date(date + 'T00:00:00');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = String(dateObj.getFullYear());
     const existing = await M.CalendarDay.findOne({ date: dateObj });
     
-    const updateData = { details, day: dateToDow(date) };
+    const updateData = { details, day: dateToDow(date), month, year };
     
     if (isFinalized) { updateData.isFinalized = true; updateData.finalizedBy = req.user.name; updateData.finalizedAt = new Date(); }
+    else { updateData.isFinalized = false; updateData.finalizedBy = null; updateData.finalizedAt = null; }
     
     const doc = await M.CalendarDay.findOneAndUpdate(
       { date: dateObj },
       { $set: updateData, $push: { history: {updatedBy: req.user.name, updatedAt: new Date(), field: 'details', oldValue: existing ? JSON.stringify(existing.details) : '', newValue: JSON.stringify(details) } } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
     res.json(doc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/calendar/month/save  — save all days for a month in bulk (admin only)
+router.post('/month/save', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const month = parseInt(req.body.month);
+    const year = parseInt(req.body.year);
+    const isFinalized = req.body.isFinalized === true;
+    const days = req.body.days;
+    if (!month || !year || !Array.isArray(days)) {
+      return res.status(400).json({ error: 'month, year, and days array required' });
+    }
+    const mm = String(month).padStart(2, '0');
+    const yyyy = String(year);
+    const ops = [];
+    const now = new Date();
+
+    for (const d of days) {
+      if (!d.date) continue;
+      const dateObj = new Date(d.date + 'T00:00:00');
+      const day = dateToDow(d.date);
+      const details = d.details || [{ year: 'I', dayType: 'working', comments: '', timing: { start: '08:30', end: '16:30' } }];
+      const trackId = `TR-CAL${yyyy}${mm}${String(dateObj.getDate()).padStart(2, '0')}-${Date.now()}-${dateObj.getDate()}`;
+      
+      const updateData = {
+        date: dateObj,
+        month: mm,
+        year: yyyy,
+        day,
+        details,
+        createdBy: req.user.name,
+        isFinalized: isFinalized,
+        finalizedBy: isFinalized ? req.user.name : null,
+        finalizedAt: isFinalized ? now : null
+      };
+
+      ops.push({
+        updateOne: {
+          filter: { date: dateObj },
+          update: {
+            $set: updateData,
+            $setOnInsert: { CalendarTrackId: trackId }
+          },
+          upsert: true
+        }
+      });
+    }
+
+    if (ops.length > 0) {
+      await M.CalendarDay.bulkWrite(ops);
+    }
+    const savedDates = days.map(d => d.date).filter(Boolean);
+    const datesText = savedDates.length > 0 ? ` [${savedDates.join(', ')}]` : '';
+    const logDetails = `${yyyy}-${mm} (${savedDates.length} days)${datesText}`;
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      isFinalized ? 'Calendar Month Finalized' : 'Calendar Days Updated',
+      logDetails,
+      'manage',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'manage',
+        subType: isFinalized ? 'action' : 'field-edit',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights
+      }
+    );
+    res.json({ ok: true, count: ops.length, isFinalized, dates: savedDates });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/calendar/month/clear  — delete all saved days for a specific month and year (admin only)
+router.delete('/month/clear', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const month = parseInt(req.query.month) || (req.body && parseInt(req.body.month));
+    const year = parseInt(req.query.year) || (req.body && parseInt(req.body.year));
+    if (!month || !year) return res.status(400).json({ error: 'month and year required' });
+    const mm = String(month).padStart(2, '0');
+    const yyyy = String(year);
+    const result = await M.CalendarDay.deleteMany({ month: mm, year: yyyy });
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Calendar Month Cleared',
+      `${yyyy}-${mm} (${result.deletedCount || 0} days removed)`,
+      'manage',
+      'warning',
+      req.ip,
+      req.user.sessionId,
+      { module: 'manage', subType: 'action', trackId: req.user.trackId }
+    );
+    res.json({ ok: true, deletedCount: result.deletedCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -139,10 +243,10 @@ router.post('/bulk-generate', authMiddleware, adminOnly, async (req, res) => {
       let dayType;
       
       if (dow === 0) { 
-        dayType = 'holiday'; 
+        dayType = 'leave'; 
       } else if (dow === 6) {
         const sn = satOrdinal(dateStr);
-        dayType = sn % 2 === 0 ? 'working' : 'holiday';
+        dayType = (sn % 2 === 0 || sn === 5) ? 'working' : 'leave';
       } else { 
         dayType = 'working'; 
       }
@@ -166,6 +270,18 @@ router.post('/bulk-generate', authMiddleware, adminOnly, async (req, res) => {
       generated++;
     }
     if (ops.length) await M.CalendarDay.bulkWrite(ops);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Calendar Days Auto-Generated',
+      `${yyyy}-${mm} (${generated} days generated, ${skipped} skipped)`,
+      'manage',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      { module: 'manage', subType: 'action', trackId: req.user.trackId }
+    );
     res.json({ generated, skipped, month, year });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

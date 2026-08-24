@@ -64,6 +64,8 @@
             class="sbi-ic">👨‍🎓</span>Students<span class="sb-badge" id="stud-count">0</span></button>
         <button class="sb-item" data-page="teachers" onclick="nav('teachers')"><span
             class="sbi-ic">👩‍🏫</span>Teachers<span class="sb-badge" id="teach-count">0</span></button>
+        <button class="sb-item" data-page="roles" onclick="nav('roles')"><span
+            class="sbi-ic">👥</span>Executive Access</button>
 
         <button class="sb-item" onclick="window.location.href='timetable.html'"><span
             class="sbi-ic">🗓️</span>Timetable</button>
@@ -75,13 +77,15 @@
             class="sbi-ic">📈</span>Analytics</button>
         <button class="sb-item" onclick="window.location.href='bulk.html'"><span class="sbi-ic">📤</span>Bulk
           Upload</button>
-        <button class="sb-item" data-page="logs" onclick="nav('logs')"><span class="sbi-ic">📋</span>Activity
+        <button class="sb-item" onclick="window.location.href='logs.html'"><span class="sbi-ic">📋</span>Activity
           Logs</button>
 
 
         <div class="sb-section-label">System</div>
         <button class="sb-item" onclick="window.location.href='control.html'"><span
             class="sbi-ic">&#9881;&#65039;</span>Control Panel</button>
+        <button class="sb-item" onclick="window.location.href='settings.html'"><span
+            class="sbi-ic">⚙️</span>Settings Page</button>
       </div>
 
       <div class="sb-bottom">
@@ -92,6 +96,7 @@
             <div class="sb-urole">Admin</div>
           </div>
         </div>
+        <button class="sb-back-btn" id="admin-hub-back-btn" onclick="location.href='selector.html'" style="display:none;margin-bottom:8px;">← Back to Hub</button>
         <button class="sb-logout-btn" onclick="doLogout()" title="Logout">
           <div class="logout-sign">
             <svg viewBox="0 0 512 512">
@@ -530,8 +535,8 @@
                   style="width:100%;padding:8px 13px 8px 35px;border:1.5px solid var(--br);border-radius:9px;background:#fff;font-size:12.5px;font-family:'Poppins',sans-serif;outline:none;color:var(--td);"
                   placeholder="Search name / reg no…" id="sf-q" oninput="filterStudentsLive(this.value)">
               </div>
-              <button class="btn-pri" id="btn-show-list" onclick="showStudentList()" disabled
-                style="opacity:.5;cursor:not-allowed;flex-shrink:0;">📋 Show List</button>
+              <button class="btn-pri" id="btn-show-list" onclick="showStudentList()"
+                style="cursor:pointer;flex-shrink:0;">📋 Show List</button>
             </div>
           </div>
         </div>
@@ -649,6 +654,104 @@
               </thead>
               <tbody id="ttbl-body"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EXECUTIVE ROLES & SPECIAL ACCESS PAGE ── -->
+      <div class="pg" id="pg-roles">
+        <div class="page-wrap">
+          <div class="page-hd">
+            <div>
+              <div class="page-title">Executive Roles &amp; Access</div>
+              <div class="page-sub">Assign and manage College Principal, Department HODs, and Faculty Sub-Administrators.</div>
+            </div>
+            <div class="page-actions" id="roles-header-actions">
+              <button class="btn-pri" id="btn-role-action-principal" onclick="openAssignPrincipalModal()">+ Assign Principal</button>
+              <button class="btn-pri" id="btn-role-action-hod" style="display:none;" onclick="openAssignHodModal()">+ Assign HOD</button>
+              <button class="btn-pri" id="btn-role-action-subadmin" style="display:none;" onclick="openGrantSubAdminModal()">+ Grant Sub-Admin</button>
+            </div>
+          </div>
+
+          <!-- Role Tabs Navigation -->
+          <div class="tabs" style="margin-bottom:18px;">
+            <button class="tab act" id="rtab-btn-principal" onclick="switchRoleTab('principal')">🏫 Principal</button>
+            <button class="tab" id="rtab-btn-hod" onclick="switchRoleTab('hod')">🏛️ Department HODs</button>
+            <button class="tab" id="rtab-btn-subadmin" onclick="switchRoleTab('subadmin')">⚡ Sub-Administrators</button>
+          </div>
+
+          <!-- 1. Principal Section -->
+          <div id="role-sec-principal">
+            <div class="card">
+              <div class="card-hd">
+                <div class="card-title">🏫 College Principal (Institutional Executive)</div>
+                <span class="bge bgg" id="principal-status-badge">Active</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:12px 0;" id="principal-details-card">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <div style="width:50px;height:50px;border-radius:14px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;">🏫</div>
+                  <div>
+                    <div style="font-size:16px;font-weight:700;color:var(--td);" id="principal-display-name">Dr. Principal</div>
+                    <div style="font-size:12px;color:var(--tmu);" id="principal-display-meta">Username: @principal · Jurisdiction: College-wide (All Departments)</div>
+                  </div>
+                </div>
+                <button class="btn-pri" onclick="openAssignPrincipalModal()">Edit / Reassign Principal</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Department HODs Section -->
+          <div id="role-sec-hod" style="display:none;">
+            <div class="card">
+              <div class="card-hd">
+                <div class="card-title">🏛️ Department Heads (HODs)</div>
+                <button class="btn-sm btn-pri" onclick="openAssignHodModal()">+ Assign HOD</button>
+              </div>
+              <div class="tw">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>Department</th>
+                      <th>Code</th>
+                      <th>Head of Department (HOD)</th>
+                      <th>Emp ID</th>
+                      <th>Email</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roles-hods-tbody">
+                    <tr><td colspan="6" class="text-center">Loading department HODs…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Sub-Administrators Section -->
+          <div id="role-sec-subadmin" style="display:none;">
+            <div class="card">
+              <div class="card-hd">
+                <div class="card-title">⚡ Sub-Administrators &amp; Special Privileges</div>
+                <button class="btn-sm btn-pri" onclick="openGrantSubAdminModal()">+ Grant Sub-Admin</button>
+              </div>
+              <div class="tw">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Username</th>
+                      <th>Department</th>
+                      <th>Role Type</th>
+                      <th>Granted Modules</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roles-subadmins-tbody">
+                    <tr><td colspan="6" class="text-center">Loading sub-administrators…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -775,60 +878,6 @@
           </div>
         </div>
       </div>
-
-      <!-- ── LOGS PAGE ── -->
-      <div class="pg" id="pg-logs">
-        <div class="page-wrap">
-
-          <!-- ── Header ── -->
-          <div class="page-hd">
-            <div>
-              <div class="page-title">Activity Logs</div>
-              <div class="page-sub">Full audit trail of every action across all roles.</div>
-            </div>
-            <div class="page-actions">
-              <button class="btn-pri" onclick="elogs()">⬇️ Export CSV</button>
-              <button class="btn-out" onclick="clrl()">🗑️ Clear All</button>
-            </div>
-          </div>
-
-          <!-- ── Stat Cards ── -->
-          <div id="log-stat-cards"
-            style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
-
-          <!-- ── Filters ── -->
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-body-p">
-              <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="log-role-tabs">
-                <button id="lrt-all" class="log-role-pill act-pill" onclick="setLogRole('')">🗂️ All</button>
-                <button id="lrt-admin" class="log-role-pill" onclick="setLogRole('admin')">👑 Admin</button>
-                <button id="lrt-teacher" class="log-role-pill" onclick="setLogRole('teacher')">👩‍🏫 Teacher</button>
-                <button id="lrt-student" class="log-role-pill" onclick="setLogRole('student')">🎓 Student</button>
-                <button id="lrt-system" class="log-role-pill" onclick="setLogRole('system')">🤖 System</button>
-              </div>
-              <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;">
-                <div class="fg" style="margin:0;position:relative;">
-                  <label class="fl">Search</label>
-                  <span style="position:absolute;left:11px;bottom:9px;color:var(--tdi);font-size:13px;">🔍</span>
-                  <input class="fc" id="lsq" placeholder="User name, action, details…" oninput="rl()"
-                    style="padding-left:34px;">
-                </div>
-                <div class="fg" style="margin:0;"><label class="fl">From</label><input type="date" class="fc" id="lfd"
-                    onchange="rl()"></div>
-                <div class="fg" style="margin:0;"><label class="fl">To</label><input type="date" class="fc" id="ltd"
-                    onchange="rl()"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── Log Entries ── -->
-          <div id="fll"></div>
-          <div id="load-more-logs-wrap" style="text-align:center;padding:16px 0;display:none;">
-            <button class="btn" onclick="loadMoreLogs()" id="btn-load-more-logs">Load More</button>
-          </div>
-
-        </div><!-- /page-wrap -->
-      </div><!-- /pg-logs -->
 
       <!-- ══════════════════════════ MODALS ══════════════════════════ -->
 
@@ -1106,6 +1155,22 @@
           </div>
           <div id="cd-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
           </div>
+          <!-- Class Advisor Row -->
+          <div style="background:linear-gradient(135deg,rgba(46,125,50,.07),rgba(46,125,50,.02));border:1.5px solid rgba(46,125,50,.18);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:9px;background:var(--gLt);color:var(--gD);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;">⭐</div>
+              <div>
+                <div style="font-size:10.5px;font-weight:700;color:var(--tdi);text-transform:uppercase;letter-spacing:.5px;">Class Advisor</div>
+                <div id="cd-advisor-name" style="font-size:13.5px;font-weight:700;color:var(--td);margin-top:1px;">Not Assigned</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <select id="cd-advisor-select" class="fci" style="font-size:12px;padding:5px 9px;border-radius:8px;max-width:220px;display:none;"></select>
+              <button class="btn-out bsm" id="cd-advisor-btn" onclick="toggleAssignAdvisor()">👤 Assign Advisor</button>
+              <button class="btn-pri bsm" id="cd-advisor-save-btn" style="display:none;" onclick="saveClassAdvisor()">💾 Save</button>
+              <button class="btn-form-ghost bsm" id="cd-advisor-cancel-btn" style="display:none;" onclick="cancelAssignAdvisor()">Cancel</button>
+            </div>
+          </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <strong style="font-size:13px;color:var(--td);">📌 Subject Assignments</strong>
             <button class="btn-out" onclick="oasc()">+ Assign Subject</button>
@@ -1301,7 +1366,7 @@
               <select class="fc2" id="stu-year"></select>
             </div>
             <div class="fg"><label class="fl">Batch<span style="color:var(--red);">*</span></label>
-              <select class="fc2" id="stu-batch">
+              <select class="fc2" id="stu-batch" onchange="onStuBatchChange()">
                 <option value="">— Select —</option>
               </select>
             </div>
@@ -1401,7 +1466,7 @@
           <!-- Row 3: Department, Course Type, Branch -->
           <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
             <div class="fg"><label class="fl">Department</label><select class="fc2" id="edit-dept"
-                onchange="onStuDeptChange()">
+                onchange="onEditDeptChange()">
                 <option value="">— Select —</option>
               </select></div>
             <div class="fg"><label class="fl">Course Type <span class="auto-txt">(auto)</span></label>
@@ -1421,7 +1486,7 @@
               <select class="fc2" id="edit-year"></select>
             </div>
             <div class="fg"><label class="fl">Batch<span style="color:var(--red);">*</span></label>
-              <select class="fc2" id="edit-batch"></select>
+              <select class="fc2" id="edit-batch" onchange="onEditBatchChange()"></select>
             </div>
           </div>
 
@@ -1566,11 +1631,13 @@
                 <label class="chk-box"><input type="checkbox" id="t-managePage"> Manage Page</label>
                 <label class="chk-box"><input type="checkbox" id="t-bulkPage"> Bulk Page</label>
               </div>
-              <label class="fl">Modules</label>
+              <label class="fl" style="margin-top:8px;">Modules & Actions</label>
               <div style="display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;">
-                <label class="chk-box"><input type="checkbox" id="t-adderModule"> Adder Module</label>
-                <label class="chk-box"><input type="checkbox" id="t-deleteModule"> Delete Module</label>
+                <label class="chk-box"><input type="checkbox" id="t-adderModules"> Adder Modules</label>
+                <label class="chk-box"><input type="checkbox" id="t-deletings"> Delete Rights</label>
                 <label class="chk-box"><input type="checkbox" id="t-settingsModule"> Settings Module</label>
+                <label class="chk-box"><input type="checkbox" id="t-reportsModule"> Reports Module</label>
+                <label class="chk-box"><input type="checkbox" id="t-downloadDatas"> Download & Exports</label>
               </div>
             </div>
           </div>
@@ -1654,14 +1721,18 @@
                     type="checkbox" id="td-ar-bulkPage"> Bulk Page</label>
               </div>
               <div style="font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;margin-bottom:4px;">
-                Modules</div>
+                Modules & Actions</div>
               <div style="display:flex;flex-wrap:wrap;gap:10px 18px;">
                 <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input
-                    type="checkbox" id="td-ar-adderModule"> Adder Module</label>
+                    type="checkbox" id="td-ar-adderModules"> Adder Modules</label>
                 <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input
-                    type="checkbox" id="td-ar-deleteModule"> Delete Module</label>
+                    type="checkbox" id="td-ar-deletings"> Delete Rights</label>
                 <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input
                     type="checkbox" id="td-ar-settingsModule"> Settings Module</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input
+                    type="checkbox" id="td-ar-reportsModule"> Reports Module</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input
+                    type="checkbox" id="td-ar-downloadDatas"> Download & Exports</label>
               </div>
             </div>
             <div style="display:flex;justify-content:flex-end;margin-top:10px;"><button class="btn-form-pri"
@@ -1986,6 +2057,103 @@
           <div class="form-actions">
             <button class="btn-form-ghost" onclick="closeModalBg('m-special-pw')">Cancel</button>
             <button class="btn-form-pri" onclick="verifySpecialPw()">Verify →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: ASSIGN / EDIT PRINCIPAL ── -->
+      <div class="modal-bg" id="m-assign-principal">
+        <div class="modal modal-md">
+          <div class="modal-hd">
+            <div class="modal-title">🏫 Assign College Principal</div>
+            <div class="modal-close" onclick="closeModalBg('m-assign-principal')">✖</div>
+          </div>
+          <div class="modal-body">
+            <div class="fg" style="margin-bottom:12px;">
+              <label class="fl">Principal Full Name *</label>
+              <input type="text" id="prin-fullname" class="fc" placeholder="e.g. Dr. K. Principal">
+            </div>
+            <div class="fg" style="margin-bottom:12px;">
+              <label class="fl">Username *</label>
+              <input type="text" id="prin-username" class="fc" placeholder="e.g. principal" value="principal">
+            </div>
+            <div class="fg" style="margin-bottom:12px;">
+              <label class="fl">Password (Leave blank to keep unchanged)</label>
+              <input type="password" id="prin-password" class="fc" placeholder="Enter password (minimum 8 chars)">
+            </div>
+            <div class="fg" style="margin-bottom:12px;">
+              <label class="fl">Official Email</label>
+              <input type="email" id="prin-email" class="fc" placeholder="principal@srishakthi.ac.in">
+            </div>
+            <div class="fg">
+              <label class="fl">Employee ID</label>
+              <input type="text" id="prin-empno" class="fc" placeholder="PRIN001">
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:16px;">
+            <button class="btn-form-ghost" onclick="closeModalBg('m-assign-principal')">Cancel</button>
+            <button class="btn-form-pri" onclick="submitAssignPrincipal()">💾 Save Principal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: ASSIGN DEPARTMENT HOD ── -->
+      <div class="modal-bg" id="m-assign-hod">
+        <div class="modal modal-md">
+          <div class="modal-hd">
+            <div class="modal-title">🏛️ Assign Department Head (HOD)</div>
+            <div class="modal-close" onclick="closeModalBg('m-assign-hod')">✖</div>
+          </div>
+          <div class="modal-body">
+            <div class="fg" style="margin-bottom:14px;">
+              <label class="fl">Select Department *</label>
+              <select id="hod-dept-select" class="fc" onchange="onHodModalDeptChange(this.value)">
+                <option value="">Select Department…</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Select Faculty Member to Appoint as HOD *</label>
+              <select id="hod-teacher-select" class="fc">
+                <option value="">Select Faculty Member…</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:16px;">
+            <button class="btn-form-ghost" onclick="closeModalBg('m-assign-hod')">Cancel</button>
+            <button class="btn-form-pri" onclick="submitAssignHod()">💾 Appoint as HOD</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: GRANT SUB-ADMIN PRIVILEGES ── -->
+      <div class="modal-bg" id="m-grant-subadmin">
+        <div class="modal modal-md">
+          <div class="modal-hd">
+            <div class="modal-title">⚡ Grant Sub-Admin Rights</div>
+            <div class="modal-close" onclick="closeModalBg('m-grant-subadmin')">✖</div>
+          </div>
+          <div class="modal-body">
+            <div class="fg" style="margin-bottom:14px;">
+              <label class="fl">Select Faculty Member *</label>
+              <select id="subadmin-teacher-select" class="fc">
+                <option value="">Select Faculty…</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl" style="margin-bottom:8px;">Select Allowed Admin Modules</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="controlPage"> 🎛️ Control Panel</label>
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="timetablePage"> 🗓️ Timetable Hub</label>
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="managePage"> 📋 Academic Data</label>
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="bulkPage"> 📦 Bulk Operations</label>
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="settingsPage"> ⚙️ Settings View</label>
+                <label class="checkbx-btn"><input type="checkbox" class="subadmin-module-chk" value="reportsModule"> 📈 Reports Module</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:16px;">
+            <button class="btn-form-ghost" onclick="closeModalBg('m-grant-subadmin')">Cancel</button>
+            <button class="btn-form-pri" onclick="submitGrantSubAdmin()">💾 Save Sub-Admin Rights</button>
           </div>
         </div>
       </div>

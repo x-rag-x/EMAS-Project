@@ -11,6 +11,9 @@ const ClassSchema = new mongoose.Schema({
   sem:      { type: String, required: true },
   section:  { type: String, required: true },
   hallNo:   { type: String, required: true },
+  advisorTeacherId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', default: null },
+  advisorTeacherName:    { type: String, default: '' },
+  advisorTeacherTrackId: { type: String, default: '' },
 }, { timestamps: true });
 
 ClassSchema.index({ deptId: 1 });

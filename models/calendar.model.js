@@ -10,7 +10,7 @@ const CalendarDaySchema = new mongoose.Schema({
     required: true },
   details: [{
     year     : { type: String, enum: ['I', 'II', 'III', 'IV'] },
-    dayType  : { type: String, enum: ['working','holiday','exam','half-day'], default: 'working'},
+    dayType  : { type: String, enum: ['working','leave','exam','half-day'], default: 'working'},
     comments : { type: String, default: '', trim: true },
     timing   : { start : { type: String, default: '08:30' }, end: { type: String, default: '16:30' }},
   }],

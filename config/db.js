@@ -5,9 +5,11 @@ const cfg = require('./index');
 const bcrypt = require('bcryptjs');
 const M = require('../models');
 const { startSessionMonitor } = require('../utils/sessionMonitor');
-
+const { logAction } = require('../utils/logAction');
 
 const { migrateDateFields } = require('../utils/dbMigrator');
+
+const { DEFAULT_SETTINGS_LIST } = require('./defaultSettings');
 
 mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
   .then(async() => {
@@ -21,157 +23,70 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
   })
   .catch(err => { console.error('   3/5: MongoDB error:', err.message); process.exit(1); });
 
-  async function seedSettings() {  
+async function seedSettings() {  
+  console.log(`> Checking settings...`);
+  let seeded = 0;
+  for (const d of DEFAULT_SETTINGS_LIST) {
+    const exists = await M.Settings.findOne({ key: d.key });
+    if (!exists) {
+      await M.Settings.create({ card: d.card, key: d.key, value: d.value, updatedBy: 'system' });
+      seeded++;
+    } else {
+      // Ensure card matches latest enum & fill any missing keys in value
+      const updatedVal = { ...d.value, ...(exists.value || {}) };
+      await M.Settings.findOneAndUpdate({ key: d.key }, { $set: { card: d.card, value: updatedVal } });
+    }
+  }
 
-    // ── Settings defaults — 5 card-grouped keys + 3 internal keys ──────────────
-    // card enum: 'Institution Details' | 'Settings' | 'Academic Settings' | 'Password Policy' 
-    const defaults = [
-      // ── card: Institution Details ────────────────────────────────────────────
-      {
-        card: 'Institution Details',
-        key:  'institution',
-        value: {
-          institutionName:    '',
-          institutionShort:   '',
-          institutionAddress: '',
-          institutionEmail:   '',
-          institutionPhone:   '',
-        }
-      },
-  
-      // ── card: Settings ───────────────────────────────────────────────────────
-      {
-        card: 'Settings',
-        key:  'settings',
-        value: {
-          // Pages
-          pageStudents:     true,
-          pageTeachers:     true,
-          pageManage:       true,
-          pageBulk:         true,
-          // Models
-          modelBackup:      true,
-          modelUndo:        true,
-          modelMaintenance: true,
-          modelAdder:       true,
-          modelAddStudent:  true,
-          modelExportSheet: true,
-          moduleDelUseAdminPass: true,
-          modelProduction:    cfg.NODE_ENV === 'production' ? true : false,
-          // Attendance
-          markAttendance:   true,
-          liveSessions:     true,
-          forwardToRep:     true,
-        }
-      },
-  
-      // ── card: Academic Settings ──────────────────────────────────────────────
-      {
-        card: 'Academic Settings',
-        key:  'academic',
-        value: {
-          academicYear:  '2026-27',
-          minAttendance: 75,
-          workingDays:   6,
-          errorsCount:   20,
-        }
-      },
-  
-      // ── card: Password Policy ────────────────────────────────────────────────
-      {
-        card: 'Password Policy',
-        key:  'security',
-        value: {
-          forcePasswordChange:   true,
-          requireStrongPassword: true,
-          sessionTimeout:        true,
-          sessionTimeoutMins:    60,
-          maxLoginAttempts:      3,
-        }
-      },
-  
-      // ── card: System Utilities ───────────────────────────────────────────────
-      {
-        card: 'System Utilities',
-        key:  'advanced',
-        value: {
-          debugMode:         false,
-          multiAdminSession: false,
-          autoSeedData:      false,
-        }
-      },
-  
-      // ── Internal / operational keys ──────────────────────────────────────────
-      {
-        card: 'System Utilities',
-        key:  'maintenance',
-        value: {
-          active:        false,
-          message:       'System under maintenance. Please try again later.',
-          affectedRoles: [],
-          endTime:       null,
-          startedAt:     null,
-        }
+    // ── One-time migration: Convert legacy boolean pages & models to grouped cards ──
+    const legacySettings = await M.Settings.findOne({ key: 'settings' });
+    if (legacySettings && legacySettings.value) {
+      const leg = legacySettings.value;
+      
+      // Migrate Pages
+      const pagesDoc = await M.Settings.findOne({ key: 'pages' });
+      if (pagesDoc) {
+        const toTri = (val) => (typeof val === 'string' ? val : (val === false ? 'disabled' : 'enabled'));
+        const pVal = {
+          pageStudents:  toTri(leg.pageStudents || pagesDoc.value?.pageStudents),
+          pageTeachers:  toTri(leg.pageTeachers || pagesDoc.value?.pageTeachers),
+          pageManage:    toTri(leg.pageManage || pagesDoc.value?.pageManage),
+          pageBulk:      toTri(leg.pageBulk || pagesDoc.value?.pageBulk),
+          pageTimeTable: toTri(leg.pageTimeTable || pagesDoc.value?.pageTimeTable || 'enabled'),
+          pageSelector:  toTri(leg.pageSelector || pagesDoc.value?.pageSelector || 'enabled'),
+        };
+        await M.Settings.findOneAndUpdate({ key: 'pages' }, { $set: { value: pVal } });
       }
-    ];
-  
-    console.log(`> Checking settings...`)
-    let seeded = 0;
-    for (const d of defaults) {
-      const exists = await M.Settings.findOne({ key: d.key });
-      if (!exists) {
-        await M.Settings.create({ card: d.card, key: d.key, value: d.value, updatedBy: 'system' });
-        seeded++;
-      } else if (!exists.card) {
-        // Back-fill missing card field on old records
-        await M.Settings.findOneAndUpdate({ key: d.key }, { $set: { card: d.card } });
+
+      // Migrate Attendance
+      const attDoc = await M.Settings.findOne({ key: 'attendance' });
+      if (attDoc) {
+        const aVal = {
+          ...attDoc.value,
+          markAttendance: leg.markAttendance !== undefined ? leg.markAttendance : attDoc.value.markAttendance,
+          liveSessions: leg.liveSessions !== undefined ? leg.liveSessions : attDoc.value.liveSessions,
+          forwardToRep: leg.forwardToRep !== undefined ? leg.forwardToRep : attDoc.value.forwardToRep,
+        };
+        await M.Settings.findOneAndUpdate({ key: 'attendance' }, { $set: { value: aVal } });
+      }
+
+      // Migrate Models
+      const modDoc = await M.Settings.findOne({ key: 'models' });
+      if (modDoc) {
+        const mVal = {
+          ...modDoc.value,
+          modelBackup: leg.modelBackup !== undefined ? leg.modelBackup : modDoc.value.modelBackup,
+          modelUndo: leg.modelUndo !== undefined ? leg.modelUndo : modDoc.value.modelUndo,
+          modelAddStudent: leg.modelAddStudent !== undefined ? leg.modelAddStudent : modDoc.value.modelAddStudent,
+          modelExportSheet: leg.modelExportSheet !== undefined ? leg.modelExportSheet : modDoc.value.modelExportSheet,
+          moduleDelUseAdminPass: leg.moduleDelUseAdminPass !== undefined ? leg.moduleDelUseAdminPass : modDoc.value.moduleDelUseAdminPass,
+        };
+        await M.Settings.findOneAndUpdate({ key: 'models' }, { $set: { value: mVal } });
       }
     }
+
     if (seeded > 0) console.log(`   5/5: Default settings not found, ${seeded} setting(s) added successfully`);
     else console.log(`   5/5: Default Settings Found`);
-  
-    // ── One-time migration: flatten old per-field rows → grouped object ────────
-    // Old server stored e.g. key:'institutionName', key:'pageStudents' individually.
-    // Detect and merge them into the new grouped key, then delete the old rows.
-    const migrationMap = [
-      {
-        groupKey: 'institution', card: 'Institution Details',
-        oldKeys: ['institutionName','institutionShort','institutionAddress','institutionEmail','institutionPhone'],
-      },
-      {
-        groupKey: 'settings', card: 'Settings',
-        oldKeys: ['pageStudents','pageTeachers','pageManage','pageBulk','errorsCount',
-                  'modelBackup','modelUndo','modelMaintenance','modelAdder','modelAddStudent','modelExportSheet',
-                  'markAttendance','liveSessions','forwardToRep'],
-      },
-      {
-        groupKey: 'academic', card: 'Academic Settings',
-        oldKeys: ['academicYear','minAttendance','workingDays','errorsCount'],
-      },
-      {
-        groupKey: 'security', card: 'Password Policy',
-        oldKeys: ['forcePasswordChange','requireStrongPassword','sessionTimeout','sessionTimeoutMins','maxLoginAttempts'],
-      },
-      {
-        groupKey: 'advanced', card: 'System Utilities',
-        oldKeys: ['debugMode','multiAdminSession','autoSeedData'],
-      },
-    ];
-    for (const { groupKey, card, oldKeys } of migrationMap) {
-      const oldRows = await M.Settings.find({ key: { $in: oldKeys } });
-      if (oldRows.length === 0) continue;
-      // Merge old scalar rows into the grouped object
-      const existing = await M.Settings.findOne({ key: groupKey });
-      const merged = existing ? { ...existing.value } : {};
-      for (const row of oldRows) merged[row.key] = row.value;
-      await M.Settings.findOneAndUpdate(
-        { key: groupKey },
-        { $set: { card, value: merged, updatedBy: 'migration' } },
-        { upsert: true }
-      );
-      await M.Settings.deleteMany({ key: { $in: oldKeys } });
-      console.log(`🔄 Migrated ${oldRows.length} old key(s) → ${groupKey}`);
-    }
   
     // Patch old maintenance record missing affectedRoles / endTime
     await M.Settings.findOneAndUpdate(
@@ -180,13 +95,13 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
     );
   
     // Log server start
-    await M.Log.create({
-      userName: 'SYSTEM', role: 'system',
-      action: 'Server Started',
-      details: 'EAMS server started successfully.',
-      category: 'system', severity: 'info', ip: 'localhost',
-      time: new Date()
-    });
+    await logAction(
+      null, 'SYSTEM', 'system',
+      'Server Started',
+      'EAMS server started successfully.',
+      'system', 'info', '127.0.0.1', '',
+      { module: 'system', subType: 'action', trackId: 'TR-SYS-001' }
+    );
 
     console.log(`EAMS ready for Access...`)
     startSessionMonitor();
@@ -200,7 +115,7 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
     }
     else {
       const hash = await bcrypt.hash(cfg.ADMIN_PASSWORD, cfg.BCRYPT_ROUNDS);
-      await M.Admin.create({ fullName: 'Administrator', firstName: 'Admin', lastName: '', username: 'admin', password: hash, trackId: 'TR-ADMIN001', isAdmin: true, adminRights: 'all', mustChangePassword: true });
+      await M.Admin.create({ fullName: 'Administrator', firstName: 'Admin', lastName: '', username: 'admin', password: hash, trackId: 'TR-ADMIN001', isAdmin: true, adminRights: 'all', adminFlag: 'superadmin', mustChangePassword: true });
       // Shadow entry in User for session tracking
       const userExists = await M.User.findOne({ username: 'admin' });
       if (!userExists) await M.User.create({ username: 'admin', role: 'admin', trackId: 'TR-ADMIN001', status: 'active' });
@@ -218,13 +133,13 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
         const dept = await M.Department.findOne();
         await M.Student.create({fullName: 'Test Student', password: hash, username: 'student', trackId: 'TRSTD001', regNo: '2022A7PS0203P', deptId: dept ? dept._id : undefined});
         await M.User.create({ username: 'student', role: 'student', trackId: 'TR-STD001', status: 'active' });
-        await M.Log.create({
-          userName: 'SYSTEM', role: 'system',
-          action: 'Student Created',
-          details: 'Test Student created successfully.',
-          category: 'system', severity: 'info', ip: 'localhost',
-          time: new Date()
-        });
+        await logAction(
+          null, 'SYSTEM', 'system',
+          'Student Created',
+          'Test Student created successfully.',
+          'system', 'info', '127.0.0.1', '',
+          { module: 'system', subType: 'entry-create', trackId: 'TR-STD001' }
+        );
         console.log(`Test Student Created successfully`);
       }
     }
@@ -240,13 +155,13 @@ mongoose.connect(cfg.MONGO_URI, { dbName: cfg.DB_NAME })
         const dept = await M.Department.findOne();
         await M.Teacher.create({fullName: 'Test Teacher', password: hash, username: 'teacher', trackId: 'TRTEC001', empId: 'EMP001', deptId: dept ? dept._id : undefined});
         await M.User.create({ username: 'teacher', role: 'teacher', trackId: 'TR-TEC001', status: 'active' });
-        await M.Log.create({
-          userName: 'SYSTEM', role: 'system',
-          action: 'Teacher Created',
-          details: 'Test Teacher created successfully.',
-          category: 'system', severity: 'info', ip: 'localhost',
-          time: new Date()
-        });
+        await logAction(
+          null, 'SYSTEM', 'system',
+          'Teacher Created',
+          'Test Teacher created successfully.',
+          'system', 'info', '127.0.0.1', '',
+          { module: 'system', subType: 'entry-create', trackId: 'TR-TEC001' }
+        );
         console.log(`Test Teacher Created successfully`);
       }
     }

@@ -13,6 +13,8 @@ const ClassAttendanceSchema = new mongoose.Schema({
         teacherTrackId: { type: String, required: true },
         markedBy:       { type: String, required: true },
         markedAt:       { type: Date, required: true },
+        topic:          { type: String, default: '', trim: true },
+        notes:          { type: String, default: '', trim: true },
         records: [{
             studentTrackId: { type: String, required: true },
             status:         { type: String, enum: ['P', 'AB'], required: true },

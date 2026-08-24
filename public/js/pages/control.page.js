@@ -3,37 +3,68 @@ var TOKEN = getToken();
 var currentUser = null;
 var currentAction = null;
 
+// ---- Nav Constants ----
+var PAGE_NAMES = [
+  "overview",
+  "usergrid",
+  "broadcasts",
+  "data",
+  "backup",
+  "undo",
+  "maintenance",
+];
+
 // ---- Guard ----
 (function () {
-  currentUser = checkAuth("admin");
+  currentUser = checkAuth("admin", "controlPage");
   if (!currentUser) return;
+  applyControlTabRestrictions();
   refreshExportCount();
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var tabParam = urlParams.get('tab') || urlParams.get('page');
+  if (tabParam && PAGE_NAMES.indexOf(tabParam) !== -1) {
+    nav(tabParam);
+  } else {
+    nav('overview');
+  }
 })();
+
+function applyControlTabRestrictions() {
+  var backBtn = document.querySelector('.sb-back-btn');
+  if (backBtn) {
+    if (currentUser && currentUser.role === 'teacher') {
+      backBtn.textContent = '← Back to Hub';
+    } else {
+      backBtn.textContent = '← Back to Dashboard';
+    }
+  }
+}
 
 // ---- Clock ----
 function updateClock() {
   var now = new Date();
-  document.getElementById("top-time").textContent = now.toLocaleTimeString(
-    "en-IN",
-    { hour: "2-digit", minute: "2-digit", second: "2-digit" },
-  );
+  var clockEl = document.getElementById("top-time");
+  if (clockEl) {
+    clockEl.textContent = now.toLocaleTimeString(
+      "en-IN",
+      { hour: "2-digit", minute: "2-digit", second: "2-digit" },
+    );
+  }
 }
 updateClock();
 setInterval(updateClock, 1000);
 
 // ---- Nav ----
-var PAGE_NAMES = [
-  "overview",
-  "usergrid",
-  "data",
-  "backup",
-  "undo",
-  "maintenance",
-  "settings",
-  "security",
-  "advanced",
-];
 function nav(page) {
+  if (PAGE_NAMES.indexOf(page) === -1) page = 'overview';
+
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location);
+    url.searchParams.set('tab', page);
+    window.history.replaceState(null, '', url);
+  }
+
   document.querySelectorAll(".pg").forEach(function (el) {
     el.classList.remove("act");
   });
@@ -45,16 +76,22 @@ function nav(page) {
   var idx = PAGE_NAMES.indexOf(page);
   var items = document.querySelectorAll(".sb-item");
   if (idx >= 0 && items[idx]) items[idx].classList.add("act");
+
   if (page === "overview") {
     loadOverview();
     loadHealth();
+  }
+  if (page === "usergrid") {
+    ugInit();
+  }
+  if (page === "broadcasts") {
+    loadActiveBroadcastStatus();
+    loadBroadcastHistory();
   }
   if (page === "data") refreshExportCount();
   if (page === "backup") loadBackupPage();
   if (page === "undo") loadUndoPage();
   if (page === "maintenance") loadMaintenance();
-  if (page === "settings") loadAllSettings();
-  if (page === "security") loadAllSettings();
 }
 
 // ---- Overview ----
@@ -2028,251 +2065,1321 @@ function loadBackups() {
   /* legacy no-op */
 }
 
-// -- User Grid --------------------------------------------
-var _ugRole = "student";
-var _ugData = null;
+// -- User Grid & Identity Console Controller ------------------------------
+var _ugState = {
+  role: "student",
+  page: 1,
+  limit: 50,
+  search: "",
+  dept: "",
+  class: "",
+  status: "",
+  date: "",
+  sortBy: "name",
+  sortDir: "asc",
+  selectedIds: new Set(),
+  data: [],
+  total: 0,
+  pages: 1,
+  stats: { total: 0, active: 0, inactive: 0, locked: 0 },
+  departments: [],
+  classes: [],
+  yearConfigs: [],
+  searchTimer: null,
+  isInitialized: false,
+};
+
+function ugInit() {
+  if (!_ugState.isInitialized) {
+    _ugState.isInitialized = true;
+    ugLoadFilterOptions();
+  }
+  ugLoadData();
+}
+
+function ugLoadFilterOptions() {
+  var tok = getToken();
+  var h = { Authorization: "Bearer " + tok };
+
+  // Load Academic Years directly from yearconfig (/api/year)
+  fetch("/api/year", { headers: h })
+    .then(function (r) { return r.json(); })
+    .then(function (years) {
+      var yrEl = document.getElementById("ug-e-stu-year");
+      if (Array.isArray(years) && years.length > 0) {
+        _ugState.yearConfigs = years;
+        if (yrEl) {
+          var opts = '<option value="">— Select Academic Year —</option>' +
+            years.map(function (y) {
+              var isCur = y.isCurrent ? " (Current)" : "";
+              return '<option value="' + escapeHtml(y.academicYear) + '"' + (y.isCurrent ? ' selected' : '') + '>' + escapeHtml(y.academicYear + isCur) + '</option>';
+            }).join("");
+          yrEl.innerHTML = opts;
+          var cur = years.find(function (y) { return y.isCurrent; });
+          if (cur) {
+            populateUGBatches(cur.academicYear);
+          }
+        }
+      } else {
+        // Fallback generator
+        var currentYear = new Date().getFullYear();
+        if (yrEl) {
+          var yrHtml = '<option value="">— Select Academic Year —</option>';
+          for (var y = currentYear + 1; y >= currentYear - 6; y--) {
+            var acStr = y + "-" + (y + 1);
+            yrHtml += '<option value="' + acStr + '">' + acStr + '</option>';
+          }
+          yrEl.innerHTML = yrHtml;
+        }
+      }
+    })
+    .catch(function () {
+      var currentYear = new Date().getFullYear();
+      var yrEl = document.getElementById("ug-e-stu-year");
+      if (yrEl) {
+        var yrHtml = '<option value="">— Select Academic Year —</option>';
+        for (var y = currentYear + 1; y >= currentYear - 6; y--) {
+          var acStr = y + "-" + (y + 1);
+          yrHtml += '<option value="' + acStr + '">' + acStr + '</option>';
+        }
+        yrEl.innerHTML = yrHtml;
+      }
+    });
+
+  // Load departments for filter and modal dropdowns (supports both /api/depts and /api/departments)
+  fetch("/api/depts", { headers: h })
+    .then(function (r) {
+      if (!r.ok) return fetch("/api/departments", { headers: h }).then(function (res) { return res.json(); });
+      return r.json();
+    })
+    .then(function (depts) {
+      if (Array.isArray(depts)) {
+        _ugState.departments = depts;
+        var deptFilter = document.getElementById("ug-dept-filter");
+        var stuDeptModal = document.getElementById("ug-e-stu-dept");
+        var tchDeptModal = document.getElementById("ug-e-tch-dept");
+        var admDeptModal = document.getElementById("ug-e-adm-dept");
+
+        var filterOpts = '<option value="">All Departments</option>' +
+          depts.map(function (d) {
+            var val = d.code || d.name;
+            var label = (d.code ? d.code + ' - ' : '') + d.name;
+            return '<option value="' + escapeHtml(val) + '">' + escapeHtml(label) + '</option>';
+          }).join("");
+
+        var modalOpts = '<option value="">— Select Department —</option>' +
+          depts.map(function (d) {
+            var val = d.code || d.name;
+            var label = (d.code ? d.code + ' - ' : '') + d.name;
+            return '<option value="' + escapeHtml(val) + '" data-id="' + (d._id || '') + '" data-code="' + (d.code || '') + '">' + escapeHtml(label) + '</option>';
+          }).join("");
+
+        if (deptFilter) deptFilter.innerHTML = filterOpts;
+        if (stuDeptModal) stuDeptModal.innerHTML = modalOpts;
+        if (tchDeptModal) tchDeptModal.innerHTML = modalOpts;
+        if (admDeptModal) admDeptModal.innerHTML = modalOpts;
+      }
+    })
+    .catch(function () {});
+
+  // Load classes for filter and modal dropdowns
+  fetch("/api/classes", { headers: h })
+    .then(function (r) { return r.json(); })
+    .then(function (classes) {
+      if (Array.isArray(classes)) {
+        _ugState.classes = classes;
+        var classFilter = document.getElementById("ug-class-filter");
+
+        var filterOpts = '<option value="">All Classes</option>' +
+          classes.map(function (c) {
+            var val = c.classTrackId || c.name || c._id;
+            var label = c.name || c.classTrackId;
+            return '<option value="' + escapeHtml(val) + '">' + escapeHtml(label) + '</option>';
+          }).join("");
+
+        if (classFilter) classFilter.innerHTML = filterOpts;
+        updateUGStuClassList();
+      }
+    })
+    .catch(function () {});
+}
+
+function populateUGBatches(acYear, selectedBatch) {
+  var batchEl = document.getElementById("ug-e-stu-batch");
+  if (!batchEl) return;
+
+  var yearConfigs = _ugState.yearConfigs || [];
+  var matchedYear = yearConfigs.find(function (y) { return y.academicYear === acYear; });
+
+  var batchList = [];
+  if (matchedYear && Array.isArray(matchedYear.batches) && matchedYear.batches.length > 0) {
+    batchList = matchedYear.batches.map(function (b) { return b.batch || b.batchTrackId; });
+  }
+
+  var startYear = parseInt((acYear || "").split("-")[0], 10) || new Date().getFullYear();
+  if (batchList.length === 0) {
+    batchList = [
+      startYear + "-" + (startYear + 4),
+      startYear + "-" + (startYear + 2),
+      startYear + "-" + (startYear + 3),
+      startYear + "-" + (startYear + 5)
+    ];
+  }
+
+  var opts = '<option value="">— Select Batch —</option>';
+  batchList.forEach(function (b) {
+    var isSel = (b === selectedBatch);
+    opts += '<option value="' + escapeHtml(b) + '" ' + (isSel ? 'selected' : '') + '>' + escapeHtml(b) + '</option>';
+  });
+  if (selectedBatch && !batchList.includes(selectedBatch)) {
+    opts += '<option value="' + escapeHtml(selectedBatch) + '" selected>' + escapeHtml(selectedBatch) + '</option>';
+  }
+  batchEl.innerHTML = opts;
+}
+
+function onUGStuYearChange() {
+  var yrEl = document.getElementById("ug-e-stu-year");
+  var val = yrEl ? yrEl.value : "";
+  populateUGBatches(val);
+  updateUGStuClassList();
+}
+
+function onUGStuBatchChange() {
+  updateUGStuClassList();
+}
+
+function onUGStuDeptChange() {
+  var deptSelect = document.getElementById("ug-e-stu-dept");
+  var val = deptSelect ? deptSelect.value : "";
+  var depts = _ugState.departments || [];
+  var dept = depts.find(function (d) {
+    return d.code === val || d.name === val || d._id === val || (d.code && d.code.toLowerCase() === val.toLowerCase());
+  });
+
+  var ctEl = document.getElementById("ug-e-stu-course-type");
+  var brEl = document.getElementById("ug-e-stu-branch");
+  var dIdEl = document.getElementById("ug-e-deptid");
+  var dCodeEl = document.getElementById("ug-e-deptcode");
+
+  if (dept) {
+    if (ctEl) ctEl.value = dept.courseType || "UG";
+    if (brEl) brEl.value = dept.branch || dept.code || "";
+    if (dIdEl) dIdEl.value = dept._id || "";
+    if (dCodeEl) dCodeEl.value = dept.code || "";
+  } else {
+    if (ctEl) ctEl.value = "UG";
+    if (brEl) brEl.value = "";
+    if (dIdEl) dIdEl.value = "";
+    if (dCodeEl) dCodeEl.value = "";
+  }
+  updateUGStuClassList();
+}
+
+function onUGStuClassChange() {
+  var classSelect = document.getElementById("ug-e-stu-class");
+  if (!classSelect) return;
+  var classVal = classSelect.value;
+  var classes = _ugState.classes || [];
+  var cls = classes.find(function (c) {
+    return c._id === classVal || c.classTrackId === classVal || c.name === classVal;
+  });
+
+  var secEl = document.getElementById("ug-e-stu-section");
+  var cIdEl = document.getElementById("ug-e-classid");
+
+  if (cls) {
+    if (cIdEl) cIdEl.value = cls._id || "";
+    if (secEl) {
+      if (cls.section) {
+        secEl.value = cls.section;
+      } else {
+        var m = cls.name ? cls.name.match(/-([A-Z])$/i) : null;
+        secEl.value = m ? m[1].toUpperCase() : "A";
+      }
+    }
+  }
+}
+
+function onUGStuRegNoChange() {
+  var regInput = document.getElementById("ug-e-stu-regno");
+  if (!regInput) return;
+  var regNo = regInput.value.replace(/\D/g, "");
+  regInput.value = regNo;
+  if (regNo.length < 12) return;
+
+  var yr = regNo.substring(4, 6);
+  var deptNum = regNo.substring(6, 9);
+  var acYear = '20' + yr + '-' + (parseInt(yr, 10) + 1);
+  var batch = '20' + yr + '-' + (parseInt(yr, 10) + 4);
+
+  var yrEl = document.getElementById("ug-e-stu-year");
+  if (yrEl) {
+    yrEl.value = acYear;
+    populateUGBatches(acYear, batch);
+  }
+
+  var depts = _ugState.departments || [];
+  var dept = depts.find(function (d) {
+    return (d.deptNumber && String(d.deptNumber) === deptNum) ||
+      (d.code && d.code.endsWith(deptNum)) ||
+      (d.deptCode && d.deptCode.endsWith(deptNum));
+  });
+
+  if (dept) {
+    var deptEl = document.getElementById("ug-e-stu-dept");
+    if (deptEl) {
+      deptEl.value = dept.code || dept.name;
+      onUGStuDeptChange();
+    }
+  } else {
+    updateUGStuClassList();
+  }
+}
+
+function updateUGStuClassList(preserveClassVal) {
+  var stuClassModal = document.getElementById("ug-e-stu-class");
+  if (!stuClassModal) return;
+
+  var deptVal = document.getElementById("ug-e-stu-dept") ? document.getElementById("ug-e-stu-dept").value : "";
+  var batchVal = document.getElementById("ug-e-stu-batch") ? document.getElementById("ug-e-stu-batch").value : "";
+  var classes = _ugState.classes || [];
+
+  var filtered = classes.filter(function (c) {
+    var matchDept = !deptVal || (c.department && c.department.toLowerCase() === deptVal.toLowerCase()) ||
+      (c.deptCode && c.deptCode.toLowerCase() === deptVal.toLowerCase()) ||
+      (c.deptId && String(c.deptId) === deptVal);
+    var matchBatch = !batchVal || (c.batch && String(c.batch).trim() === batchVal.trim()) ||
+      (c.batchTrackId && String(c.batchTrackId).trim() === batchVal.trim());
+    return matchDept && matchBatch;
+  });
+
+  if (filtered.length === 0 && (deptVal || batchVal)) {
+    filtered = classes.filter(function (c) {
+      return !deptVal || (c.department && c.department.toLowerCase() === deptVal.toLowerCase()) ||
+        (c.deptCode && c.deptCode.toLowerCase() === deptVal.toLowerCase()) ||
+        (c.deptId && String(c.deptId) === deptVal);
+    });
+  }
+  if (filtered.length === 0) filtered = classes;
+
+  var opts = '<option value="">— Select Class —</option>' +
+    filtered.map(function (c) {
+      var val = c.classTrackId || c.name || c._id;
+      var label = (c.name || c.classTrackId) + (c.section ? ' (' + c.section + ')' : '');
+      var isSel = preserveClassVal && (preserveClassVal === val || preserveClassVal === c.name || preserveClassVal === c._id || preserveClassVal === c.classTrackId);
+      return '<option value="' + escapeHtml(val) + '" data-id="' + (c._id || '') + '" ' + (isSel ? 'selected' : '') + '>' + escapeHtml(label) + '</option>';
+    }).join("");
+
+  stuClassModal.innerHTML = opts;
+
+  if (preserveClassVal) {
+    var matched = filtered.find(function (c) {
+      return preserveClassVal === c.classTrackId || preserveClassVal === c.name || preserveClassVal === c._id;
+    });
+    if (matched) {
+      stuClassModal.value = matched.classTrackId || matched.name || matched._id;
+    }
+  }
+
+  onUGStuClassChange();
+}
+
+function ugToggleAdminPrivs(checked) {
+  var wrap = document.getElementById("ug-tch-privs-wrap");
+  if (wrap) {
+    wrap.style.display = checked ? "flex" : "none";
+  }
+}
+
 function ugSetRole(role, btn) {
-  _ugRole = role;
+  _ugState.role = role;
+  _ugState.page = 1;
+  _ugState.selectedIds.clear();
+  ugUpdateBulkBar();
 
   document.querySelectorAll(".ug-tab").forEach(function (b) {
     b.classList.remove("act");
   });
-
-  if (btn) btn.classList.add("act");
-
-  document.getElementById("ug-class-filter").style.display =
-    role === "student" || role === "attendance" ? "" : "none";
-
-  ugApplyFilters();
-}
-function ugApplyFilters() {
-  var tok = getToken();
-
-  var path =
-    (window.location.origin || "") +
-    "/api/" +
-    (_ugRole === "attendance"
-      ? "attendance"
-      : _ugRole === "admin"
-        ? "users?role=admin"
-        : _ugRole + "s");
+  if (btn) {
+    btn.classList.add("act");
+  } else {
+    var defaultBtn = document.getElementById("ugt-" + role);
+    if (defaultBtn) defaultBtn.classList.add("act");
+  }
 
   var clsFilter = document.getElementById("ug-class-filter");
-
+  var dateFilter = document.getElementById("ug-date-filter");
   var deptFilter = document.getElementById("ug-dept-filter");
+  var statusFilter = document.getElementById("ug-status-filter");
 
-  var search = document.getElementById("ug-search").value.toLowerCase();
+  if (clsFilter) clsFilter.style.display = (role === "student" || role === "attendance") ? "" : "none";
+  if (dateFilter) dateFilter.style.display = (role === "attendance") ? "" : "none";
+  if (deptFilter) deptFilter.style.display = (role !== "admin") ? "" : "none";
+  if (statusFilter) statusFilter.style.display = (role !== "attendance") ? "" : "none";
 
-  fetch(path, { headers: { Authorization: "Bearer " + tok } })
+  ugLoadData();
+}
+
+function ugOnFilterChange() {
+  _ugState.page = 1;
+  _ugState.dept = document.getElementById("ug-dept-filter") ? document.getElementById("ug-dept-filter").value : "";
+  _ugState.class = document.getElementById("ug-class-filter") ? document.getElementById("ug-class-filter").value : "";
+  _ugState.status = document.getElementById("ug-status-filter") ? document.getElementById("ug-status-filter").value : "";
+  _ugState.date = document.getElementById("ug-date-filter") ? document.getElementById("ug-date-filter").value : "";
+  ugLoadData();
+}
+
+function ugDebouncedSearch() {
+  clearTimeout(_ugState.searchTimer);
+  _ugState.searchTimer = setTimeout(function () {
+    var searchEl = document.getElementById("ug-search");
+    _ugState.search = searchEl ? searchEl.value.trim() : "";
+    _ugState.page = 1;
+    ugLoadData();
+  }, 300);
+}
+
+function ugOnLimitChange() {
+  var limitEl = document.getElementById("ug-limit-select");
+  var val = limitEl ? limitEl.value : "50";
+  _ugState.limit = (val === "all") ? 0 : parseInt(val, 10);
+  _ugState.page = 1;
+  ugLoadData();
+}
+
+function ugSortBy(col) {
+  if (_ugState.sortBy === col) {
+    _ugState.sortDir = _ugState.sortDir === "asc" ? "desc" : "asc";
+  } else {
+    _ugState.sortBy = col;
+    _ugState.sortDir = "asc";
+  }
+  ugLoadData();
+}
+
+function ugChangePage(delta) {
+  var newPage = _ugState.page + delta;
+  if (newPage >= 1 && newPage <= _ugState.pages) {
+    _ugState.page = newPage;
+    ugLoadData();
+  }
+}
+
+function ugGoToPage(p) {
+  if (p >= 1 && p <= _ugState.pages) {
+    _ugState.page = p;
+    ugLoadData();
+  }
+}
+
+function ugRefresh() {
+  ugLoadData();
+  showToast("Refreshing User Grid data…", "info");
+}
+
+function ugLoadData() {
+  var tok = getToken();
+  var loadingEl = document.getElementById("ug-loading");
+  var emptyEl = document.getElementById("ug-empty");
+
+  if (loadingEl) loadingEl.style.display = "block";
+  if (emptyEl) emptyEl.style.display = "none";
+
+  var role = _ugState.role;
+  var url = "";
+
+  if (role === "attendance") {
+    var params = [];
+    if (_ugState.date) params.push("date=" + encodeURIComponent(_ugState.date));
+    if (_ugState.class) params.push("classId=" + encodeURIComponent(_ugState.class));
+    if (_ugState.search) params.push("search=" + encodeURIComponent(_ugState.search));
+    params.push("page=" + _ugState.page);
+    params.push("limit=" + _ugState.limit);
+    url = "/api/attendance" + (params.length ? "?" + params.join("&") : "");
+  } else {
+    var uParams = [];
+    uParams.push("role=" + encodeURIComponent(role));
+    if (_ugState.dept) uParams.push("department=" + encodeURIComponent(_ugState.dept));
+    if (_ugState.class && role === "student") uParams.push("class=" + encodeURIComponent(_ugState.class));
+    if (_ugState.status) uParams.push("status=" + encodeURIComponent(_ugState.status));
+    if (_ugState.search) uParams.push("search=" + encodeURIComponent(_ugState.search));
+    uParams.push("page=" + _ugState.page);
+    uParams.push("limit=" + _ugState.limit);
+    uParams.push("sortBy=" + encodeURIComponent(_ugState.sortBy));
+    uParams.push("sortDir=" + encodeURIComponent(_ugState.sortDir));
+    url = "/api/users?" + uParams.join("&");
+  }
+
+  fetch(url, { headers: { Authorization: "Bearer " + tok } })
     .then(function (r) {
+      if (!r.ok) throw new Error("HTTP error " + r.status);
       return r.json();
     })
+    .then(function (res) {
+      if (loadingEl) loadingEl.style.display = "none";
 
-    .then(function (data) {
-      _ugData = data;
-
-      if (_ugRole === "student" || _ugRole === "teacher") {
-        var classes = [
-          ...new Set(
-            data.map(function (d) {
-              return d.class || d.department || "";
-            }),
-          ),
-        ]
-          .filter(Boolean)
-          .sort();
-
-        if (clsFilter)
-          clsFilter.innerHTML =
-            '<option value="">All ' +
-            (_ugRole === "student" ? "Classes" : "Classes/Depts") +
-            "</option>" +
-            classes
-              .map(function (c) {
-                return '<option value="' + c + '">' + c + "</option>";
-              })
-              .join("");
+      if (role === "attendance") {
+        var records = Array.isArray(res) ? res : (res.records || []);
+        _ugState.data = records;
+        _ugState.total = records.length;
+        _ugState.pages = 1;
+        _ugState.stats = {
+          total: records.length,
+          active: records.filter(function (r) { return r.status === "present"; }).length,
+          inactive: records.filter(function (r) { return r.status === "absent"; }).length,
+          locked: records.filter(function (r) { return r.status === "od" || r.status === "leave"; }).length,
+        };
+      } else {
+        _ugState.data = res.users || [];
+        _ugState.total = res.total || 0;
+        _ugState.pages = res.pages || 1;
+        _ugState.stats = res.stats || { total: _ugState.total, active: 0, inactive: 0, locked: 0 };
       }
 
-      renderUGTable(data);
-
-      document.getElementById("ug-status").textContent =
-        data.length + " record(s)";
+      ugUpdateStats();
+      renderUGTable();
+      ugUpdatePagination();
     })
-    .catch(function () {
-      showToast("Error loading " + _ugRole + " data", "danger");
+    .catch(function (err) {
+      if (loadingEl) loadingEl.style.display = "none";
+      showToast("Error loading " + role + " data: " + (err.message || ""), "danger");
     });
 }
-function renderUGTable(data) {
-  var clsF = document.getElementById("ug-class-filter");
 
-  var deptF = document.getElementById("ug-dept-filter");
+function ugUpdateStats() {
+  var s = _ugState.stats;
+  var role = _ugState.role;
+  var tEl = document.getElementById("ugs-total");
+  var aEl = document.getElementById("ugs-active");
+  var iEl = document.getElementById("ugs-inactive");
+  var lEl = document.getElementById("ugs-locked");
 
-  var search = document.getElementById("ug-search").value.toLowerCase();
+  if (tEl) tEl.textContent = s.total;
+  if (aEl) aEl.textContent = s.active;
+  if (iEl) iEl.textContent = s.inactive;
+  if (lEl) lEl.textContent = s.locked;
 
-  var filtered = data;
+  var aCardLbl = document.querySelector(".ug-stat-card.active-card .ug-stat-lbl");
+  var iCardLbl = document.querySelector(".ug-stat-card.inactive-card .ug-stat-lbl");
+  var lCardLbl = document.querySelector(".ug-stat-card.locked-card .ug-stat-lbl");
 
-  if (clsF && clsF.value)
-    filtered = filtered.filter(function (d) {
-      return (d.class || d.department || "") === clsF.value;
-    });
+  if (role === "attendance") {
+    if (aCardLbl) aCardLbl.textContent = "Present Records";
+    if (iCardLbl) iCardLbl.textContent = "Absent Records";
+    if (lCardLbl) lCardLbl.textContent = "OD / Approved Leave";
+  } else {
+    if (aCardLbl) aCardLbl.textContent = "Active Accounts";
+    if (iCardLbl) iCardLbl.textContent = "Inactive";
+    if (lCardLbl) lCardLbl.textContent = "Locked (Brute-Force)";
+  }
+}
 
-  if (deptF && deptF.value)
-    filtered = filtered.filter(function (d) {
-      return (d.department || d.dept || "") === deptF.value;
-    });
+function ugSortIndicator(col) {
+  if (_ugState.sortBy === col) {
+    return _ugState.sortDir === "asc" ? ' <span style="font-size:11px;color:var(--gD);font-weight:800;">▲</span>' : ' <span style="font-size:11px;color:var(--gD);font-weight:800;">▼</span>';
+  }
+  return ' <span style="font-size:10px;color:var(--tdi);opacity:0.35;">↕</span>';
+}
 
-  if (search)
-    filtered = filtered.filter(function (d) {
-      return (
-        (d.name + " " + d.regNo + " " + d.username + " " + d.regdNo)
-          .toLowerCase()
-          .indexOf(search) >= 0
-      );
-    });
-
+function renderUGTable() {
   var thead = document.getElementById("ug-thead");
-
   var tbody = document.getElementById("ug-tbody");
-
   var empty = document.getElementById("ug-empty");
+  var data = _ugState.data;
+  var role = _ugState.role;
 
   if (!thead || !tbody) return;
 
-  if (_ugRole === "attendance") {
-    thead.innerHTML =
-      "<tr><th>Student</th><th>Date</th><th>Status</th><th>Class</th><th>Actions</th></tr>";
+  if (!data || data.length === 0) {
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    if (empty) empty.style.display = "block";
+    return;
+  }
+  if (empty) empty.style.display = "none";
 
-    tbody.innerHTML = filtered
-      .map(function (a) {
-        return (
-          "<tr><td>" +
-          (a.studentName || "") +
-          "</td><td>" +
-          (a.date ? new Date(a.date).toLocaleDateString() : "") +
-          "</td><td>" +
-          (a.status || "") +
-          "</td><td>" +
-          (a.class || "") +
-          '</td><td><button class="btn btn-sm btn-danger" onclick="deleteAttendance(\'' +
-          a._id +
-          "')\">Delete</button></td></tr>"
-        );
-      })
-      .join("");
+  var allSelected = data.length > 0 && data.every(function (r) { return _ugState.selectedIds.has(r._id); });
+  var selectAllTh = '<th style="width:36px;text-align:center;"><input type="checkbox" onchange="ugToggleSelectAll(this)" ' + (allSelected ? 'checked' : '') + '></th>';
+
+  if (role === "attendance") {
+    thead.innerHTML = '<tr>' +
+      selectAllTh +
+      '<th class="sortable" onclick="ugSortBy(\'studentName\')">Student Name' + ugSortIndicator('studentName') + '</th>' +
+      '<th class="sortable" onclick="ugSortBy(\'date\')">Date / Period' + ugSortIndicator('date') + '</th>' +
+      '<th>Class &amp; Dept</th>' +
+      '<th>Subject</th>' +
+      '<th class="sortable" onclick="ugSortBy(\'status\')">Status' + ugSortIndicator('status') + '</th>' +
+      '<th>Remarks</th>' +
+      '<th style="width:170px;text-align:center;">Actions</th>' +
+    '</tr>';
+
+    tbody.innerHTML = data.map(function (rec) {
+      var isChecked = _ugState.selectedIds.has(rec._id);
+      var badgeCls = (rec.status === "present") ? "badge-active" : ((rec.status === "absent") ? "badge-locked" : "badge-inactive");
+      var statusLbl = (rec.status === "present") ? "🟢 Present" : ((rec.status === "absent") ? "🔴 Absent" : ((rec.status === "od") ? "🟡 On Duty" : "🟣 Leave"));
+
+      return '<tr class="' + (isChecked ? 'ug-row-selected' : '') + '">' +
+        '<td style="text-align:center;"><input type="checkbox" onchange="ugToggleRowSelect(\'' + rec._id + '\')" ' + (isChecked ? 'checked' : '') + '></td>' +
+        '<td><div style="font-weight:700;color:var(--td);">' + escapeHtml(rec.studentName || 'Student') + '</div><div style="font-size:11px;color:var(--tmu);font-family:\'JetBrains Mono\',monospace;">' + escapeHtml(rec.regNo || '') + '</div></td>' +
+        '<td><div style="font-weight:600;">' + escapeHtml(rec.date || '') + '</div><div style="font-size:11px;color:var(--tmu);">Period ' + (rec.periodNumber || 1) + '</div></td>' +
+        '<td><span style="font-weight:600;">' + escapeHtml(rec.className || '') + '</span> <span style="font-size:11px;color:var(--tmu);">(' + escapeHtml(rec.department || '') + ')</span></td>' +
+        '<td>' + escapeHtml(rec.subjectName || rec.subjectCode || '—') + '</td>' +
+        '<td><span class="badge ' + badgeCls + '">' + statusLbl + '</span></td>' +
+        '<td style="font-size:11.5px;color:var(--tmu);">' + escapeHtml(rec.remarks || '—') + '</td>' +
+        '<td style="text-align:center;width:170px;">' +
+          '<div class="ug-actions-cell">' +
+            '<button class="ug-action-btn edit" onclick="openUGAttEdit(\'' + rec._id + '\')" title="Edit Attendance">✏️ Edit</button>' +
+            '<button class="ug-action-btn del" onclick="openUGDeleteModal(\'' + rec._id + '\')" title="Delete Entry">🗑️ Delete</button>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
   } else {
-    var cols =
-      _ugRole === "admin"
-        ? ["Username", "Name", "Role", "Actions"]
-        : [
-            "Reg No",
-            "Name",
-            _ugRole === "student" ? "Class" : "Department",
-            _ugRole === "student" ? "Year" : "Subjects",
-            "Actions",
-          ];
+    var idColTitle = (role === "student") ? ("Reg. Number" + ugSortIndicator('registerNo')) : (role === "teacher" ? ("Emp ID" + ugSortIndicator('employeeNo')) : ("Admin ID" + ugSortIndicator('employeeNo')));
+    var idColField = (role === "student") ? 'registerNo' : 'employeeNo';
+    var extraColTitle = (role === "student") ? "Class &amp; Dept" : (role === "teacher" ? "Dept &amp; Designation" : "Department &amp; Access");
 
-    thead.innerHTML =
-      "<tr>" +
-      cols
-        .map(function (c) {
-          return "<th>" + c + "</th>";
-        })
-        .join("") +
-      "</tr>";
+    thead.innerHTML = '<tr>' +
+      selectAllTh +
+      '<th class="sortable" onclick="ugSortBy(\'name\')">User / Name' + ugSortIndicator('name') + '</th>' +
+      '<th class="sortable" onclick="ugSortBy(\'' + idColField + '\')">' + idColTitle + '</th>' +
+      '<th class="sortable" onclick="ugSortBy(\'username\')">Username' + ugSortIndicator('username') + '</th>' +
+      '<th>' + extraColTitle + '</th>' +
+      '<th class="sortable" onclick="ugSortBy(\'status\')">Status' + ugSortIndicator('status') + '</th>' +
+      '<th style="width:330px;text-align:center;">Actions</th>' +
+    '</tr>';
 
-    tbody.innerHTML = filtered
-      .map(function (d) {
-        var actions =
-          '<button class="btn btn-sm btn-out" onclick="ugEditUser(\'' +
-          (d._id || d.id) +
-          "')\">Edit</button>";
+    tbody.innerHTML = data.map(function (u) {
+      var isChecked = _ugState.selectedIds.has(u._id);
+      var badgeCls = (u.status === "active") ? "badge-active" : ((u.status === "locked") ? "badge-locked" : "badge-inactive");
+      var badgeLbl = (u.status === "active") ? "🟢 Active" : ((u.status === "locked") ? "🔴 Locked" : "⚪ Inactive");
 
-        actions +=
-          " <button class=\"btn btn-sm btn-danger\" onclick=\"if(confirm('Delete?'))ugDeleteUser('" +
-          (d._id || d.id) +
-          "')\">Delete</button>";
+      var idDisplay = "";
+      var subInfo = "";
+      if (role === "student") {
+        idDisplay = '<div style="font-weight:700;font-family:\'JetBrains Mono\',monospace;color:var(--gD);">' + escapeHtml(u.registerNo || '—') + '</div>';
+        subInfo = '<div style="font-weight:600;">' + escapeHtml(u.class || '—') + (u.section ? ' (' + u.section + ')' : '') + (u.isRep ? ' ⭐ Rep' : '') + '</div>' +
+          '<div style="font-size:11px;color:var(--tmu);">' + escapeHtml(u.department || '') + '</div>';
+      } else if (role === "teacher") {
+        idDisplay = '<div style="font-weight:700;font-family:\'JetBrains Mono\',monospace;color:var(--gD);">' + escapeHtml(u.employeeNo || '—') + '</div>';
+        subInfo = '<div style="font-weight:600;">' + escapeHtml(u.department || '') + '</div>' +
+          '<div style="font-size:11px;color:var(--tmu);">' + escapeHtml(u.designation || 'Faculty') + '</div>';
+      } else {
+        idDisplay = '<div style="font-weight:700;font-family:\'JetBrains Mono\',monospace;color:var(--gD);">' + escapeHtml(u.employeeNo || u.role || '—') + '</div>';
+        subInfo = '<div style="font-weight:600;">' + escapeHtml(u.department || 'Administration') + '</div>';
+      }
 
-        if (_ugRole === "student")
-          actions +=
-            ' <button class="btn btn-sm btn-out" onclick="window.open(\'student.html?id=' +
-            (d._id || d.id) +
-            "','_blank')\">View</button>";
+      var statusBtn = "";
+      if (u.status === "locked") {
+        statusBtn = '<button class="ug-action-btn unlock" onclick="ugUnlockAccount(\'' + u._id + '\')" title="Unlock Brute-Force Locked Account">🔓 Unlock</button>';
+      } else if (u.status === "active") {
+        statusBtn = '<button class="ug-action-btn status deact" onclick="ugToggleStatus(\'' + u._id + '\',\'' + u.status + '\')" title="Deactivate Account">⚡ Deactivate</button>';
+      } else {
+        statusBtn = '<button class="ug-action-btn status" onclick="ugToggleStatus(\'' + u._id + '\',\'' + u.status + '\')" title="Activate Account">🟢 Activate</button>';
+      }
 
-        if (_ugRole === "teacher")
-          actions +=
-            ' <button class="btn btn-sm btn-out" onclick="window.open(\'teacher.html?id=' +
-            (d._id || d.id) +
-            "','_blank')\">View</button>";
+      return '<tr class="' + (isChecked ? 'ug-row-selected' : '') + '">' +
+        '<td style="text-align:center;"><input type="checkbox" onchange="ugToggleRowSelect(\'' + u._id + '\')" ' + (isChecked ? 'checked' : '') + '></td>' +
+        '<td>' +
+          '<div style="font-weight:700;color:var(--td);">' + escapeHtml(u.name || u.fullName || u.username) + '</div>' +
+          '<div style="font-size:11px;color:var(--tmu);">' + escapeHtml(u.email || 'No email registered') + '</div>' +
+        '</td>' +
+        '<td>' + idDisplay + '</td>' +
+        '<td><code style="font-size:12px;background:var(--gLt);padding:2px 6px;border-radius:4px;color:var(--gD);">@' + escapeHtml(u.username) + '</code></td>' +
+        '<td>' + subInfo + '</td>' +
+        '<td><span class="badge ' + badgeCls + '">' + badgeLbl + '</span>' + (u.failedLogins > 0 ? ' <span style="font-size:10px;color:#dc2626;">(' + u.failedLogins + ' fails)</span>' : '') + '</td>' +
+        '<td style="text-align:center;width:330px;">' +
+          '<div class="ug-actions-cell">' +
+            '<button class="ug-action-btn edit" onclick="openUGEdit(\'' + u._id + '\')" title="Edit Profile">✏️ Edit</button>' +
+            '<button class="ug-action-btn pw" onclick="openUGPasswordReset(\'' + u._id + '\')" title="Reset Password">🔑 Password</button>' +
+            statusBtn +
+            '<button class="ug-action-btn del" onclick="openUGDeleteModal(\'' + u._id + '\')" title="Delete User">🗑️ Delete</button>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
+  }
+}
 
-        if (_ugRole === "admin")
-          return (
-            "<tr><td>" +
-            (d.username || "") +
-            "</td><td>" +
-            (d.name || "") +
-            "</td><td>" +
-            (d.role || "") +
-            "</td><td>" +
-            actions +
-            "</td></tr>"
-          );
+function ugUpdatePagination() {
+  var infoEl = document.getElementById("ug-page-info");
+  var prevBtn = document.getElementById("ug-prev-btn");
+  var nextBtn = document.getElementById("ug-next-btn");
+  var numsEl = document.getElementById("ug-page-numbers");
 
-        return (
-          "<tr><td>" +
-          (d.regNo || d.regdNo || "") +
-          "</td><td>" +
-          (d.name || "") +
-          "</td><td>" +
-          (d.class || d.department || "") +
-          "</td><td>" +
-          (d.year || d.department || "") +
-          "</td><td>" +
-          actions +
-          "</td></tr>"
-        );
-      })
-      .join("");
+  var page = _ugState.page;
+  var pages = _ugState.pages;
+  var total = _ugState.total;
+  var limit = _ugState.limit;
+
+  if (infoEl) {
+    if (limit === 0 || limit >= total) {
+      infoEl.textContent = 'Showing all ' + total + ' record(s)';
+    } else {
+      var start = (page - 1) * limit + 1;
+      var end = Math.min(page * limit, total);
+      infoEl.textContent = 'Showing ' + (total === 0 ? 0 : start) + '–' + end + ' of ' + total + ' record(s)';
+    }
   }
 
-  if (empty) empty.style.display = filtered.length ? "none" : "block";
+  if (prevBtn) prevBtn.disabled = (page <= 1);
+  if (nextBtn) nextBtn.disabled = (page >= pages);
+
+  if (numsEl) {
+    var html = "";
+    var maxDisplay = 5;
+    var startPage = Math.max(1, page - 2);
+    var endPage = Math.min(pages, startPage + maxDisplay - 1);
+    if (endPage - startPage < maxDisplay - 1) {
+      startPage = Math.max(1, endPage - maxDisplay + 1);
+    }
+
+    for (var p = startPage; p <= endPage; p++) {
+      html += '<button class="ug-page-btn ' + (p === page ? 'active' : '') + '" onclick="ugGoToPage(' + p + ')">' + p + '</button>';
+    }
+    numsEl.innerHTML = html;
+  }
 }
-function ugRefresh() {
-  ugApplyFilters();
+
+function ugToggleSelectAll(chk) {
+  var isChecked = chk.checked;
+  var data = _ugState.data;
+  if (isChecked) {
+    data.forEach(function (r) { _ugState.selectedIds.add(r._id); });
+  } else {
+    _ugState.selectedIds.clear();
+  }
+  ugUpdateBulkBar();
+  renderUGTable();
 }
-function ugSaveAll() {
-  showToast("Save all not yet implemented", "warning");
+
+function ugToggleRowSelect(id) {
+  if (_ugState.selectedIds.has(id)) {
+    _ugState.selectedIds.delete(id);
+  } else {
+    _ugState.selectedIds.add(id);
+  }
+  ugUpdateBulkBar();
+  renderUGTable();
 }
-function ugCloseEdit() {
-  document.getElementById("ug-edit-modal").style.display = "none";
+
+function ugClearSelection() {
+  _ugState.selectedIds.clear();
+  ugUpdateBulkBar();
+  renderUGTable();
 }
-function ugSaveEdit() {
-  showToast("Save not yet implemented", "warning");
-  ugCloseEdit();
+
+function ugUpdateBulkBar() {
+  var bar = document.getElementById("ug-bulk-bar");
+  var countEl = document.getElementById("ug-bulk-count");
+  var count = _ugState.selectedIds.size;
+
+  if (bar) {
+    if (count > 0) {
+      bar.style.display = "flex";
+      if (countEl) countEl.textContent = count + " item(s) selected";
+    } else {
+      bar.style.display = "none";
+    }
+  }
 }
-function ugEditUser(id) {
-  showToast("Edit mode — feature in development", "info");
+
+function ugBulkAction(action) {
+  var selected = Array.from(_ugState.selectedIds);
+  if (selected.length === 0) {
+    showToast("⚠️ No items selected", "warning");
+    return;
+  }
+
+  if (action === "delete") {
+    if (!confirm("Are you sure you want to delete/deactivate " + selected.length + " selected user(s)?")) return;
+  }
+
+  var tok = getToken();
+  showToast("Executing bulk " + action + " on " + selected.length + " items…", "info");
+
+  fetch("/api/users/bulk-action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+    body: JSON.stringify({ userIds: selected, action: action })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ " + (res.message || "Bulk action completed successfully"));
+      _ugState.selectedIds.clear();
+      ugUpdateBulkBar();
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Bulk action failed: " + (err.message || ""), "danger");
+    });
 }
-function ugDeleteUser(id) {
+
+function onUGFullNameInput() {
+  var fullName = document.getElementById("ug-e-fullname") ? document.getElementById("ug-e-fullname").value.trim() : "";
+  var firstEl = document.getElementById("ug-e-firstname");
+  var lastEl = document.getElementById("ug-e-lastname");
+  if (fullName) {
+    var parts = fullName.split(/\s+/);
+    if (firstEl && !firstEl.dataset.userModified) {
+      firstEl.value = parts[0] || "";
+    }
+    if (lastEl && !lastEl.dataset.userModified) {
+      lastEl.value = parts.slice(1).join(" ") || "";
+    }
+  }
+}
+
+function openUGEdit(id) {
+  var user = _ugState.data.find(function (u) { return u._id === id; });
+  if (!user) return;
+
+  document.getElementById("ug-e-id").value = user._id;
+  document.getElementById("ug-e-role").value = user.role;
+  document.getElementById("ug-e-fullname").value = user.name || user.fullName || "";
+  document.getElementById("ug-e-firstname").value = user.firstName || "";
+  document.getElementById("ug-e-lastname").value = user.lastName || "";
+  document.getElementById("ug-e-username").value = user.username || "";
+  document.getElementById("ug-e-email").value = user.email || "";
+  document.getElementById("ug-e-status").value = user.status || "active";
+  document.getElementById("ug-e-must-change-pw").checked = !!user.mustChangePassword;
+
+  // Auto-split fallback if first/last are empty
+  if (!user.firstName && !user.lastName && (user.name || user.fullName)) {
+    var parts = (user.name || user.fullName).trim().split(/\s+/);
+    document.getElementById("ug-e-firstname").value = parts[0] || "";
+    document.getElementById("ug-e-lastname").value = parts.slice(1).join(" ") || "";
+  }
+
+  document.getElementById("ug-fields-student").style.display = (user.role === "student") ? "block" : "none";
+  document.getElementById("ug-fields-teacher").style.display = (user.role === "teacher") ? "block" : "none";
+  document.getElementById("ug-fields-admin").style.display = (user.role === "admin") ? "block" : "none";
+
+  if (user.role === "student") {
+    document.getElementById("ug-e-stu-regno").value = user.registerNo || "";
+    document.getElementById("ug-e-stu-trackid").value = user.trackId || user.studentTrackId || user.registerNo || "";
+    document.getElementById("ug-e-stu-dept").value = user.department || "";
+    document.getElementById("ug-e-stu-course-type").value = user.courseType || "UG";
+    document.getElementById("ug-e-stu-branch").value = user.branch || "";
+
+    var acYear = user.academicYear || user.admissionYear || "";
+    if (acYear && !acYear.includes("-")) {
+      acYear = acYear + "-" + (parseInt(acYear, 10) + 1);
+    }
+    var yrEl = document.getElementById("ug-e-stu-year");
+    if (yrEl) yrEl.value = acYear;
+
+    var batch = user.batch || user.batchTrackId || "";
+    populateUGBatches(acYear, batch);
+    updateUGStuClassList(user.class || "");
+
+    var secEl = document.getElementById("ug-e-stu-section");
+    if (secEl && user.section) secEl.value = user.section;
+
+    document.getElementById("ug-e-stu-is-rep").checked = !!user.isRep;
+  } else if (user.role === "teacher") {
+    document.getElementById("ug-e-tch-empno").value = user.employeeNo || "";
+    document.getElementById("ug-e-tch-dept").value = user.department || "";
+    document.getElementById("ug-e-tch-desig").value = user.designation || "Assistant Professor";
+    document.getElementById("ug-e-tch-def-att").value = user.defaultAttendanceStatus || "Present";
+
+    var rights = Array.isArray(user.adminRights) ? user.adminRights : (user.adminRights ? [user.adminRights] : []);
+    var isAll = rights.includes("all") || user.adminRights === "all";
+    var hasAdmin = isAll || rights.some(function (r) { return r && r !== "none"; }) || !!user.isAdmin;
+    
+    document.getElementById("ug-e-tch-is-admin").checked = hasAdmin;
+    ugToggleAdminPrivs(hasAdmin);
+
+    document.getElementById("ug-e-right-control").checked = isAll || rights.includes("controlPage");
+    document.getElementById("ug-e-right-manage").checked = isAll || rights.includes("managePage");
+    document.getElementById("ug-e-right-timetable").checked = isAll || rights.includes("timetablePage");
+    document.getElementById("ug-e-right-bulk").checked = isAll || rights.includes("bulkPage");
+    document.getElementById("ug-e-right-settings").checked = isAll || rights.includes("settingsPage");
+    document.getElementById("ug-e-right-reports").checked = isAll || rights.includes("reportsModule");
+    document.getElementById("ug-e-right-download").checked = isAll || rights.includes("downloadDatas");
+    document.getElementById("ug-e-right-adders").checked = isAll || rights.includes("adderModules");
+    document.getElementById("ug-e-right-deletings").checked = isAll || rights.includes("deletings");
+  } else if (user.role === "admin") {
+    document.getElementById("ug-e-adm-dept").value = user.department || "Administration";
+    document.getElementById("ug-e-adm-empno").value = user.employeeNo || "";
+  }
+
+  document.getElementById("ug-edit-modal-title").textContent = "Edit " + capitalize(user.role) + ": " + (user.name || user.fullName || user.username);
+  document.getElementById("ug-edit-modal").classList.add("open");
+}
+
+function ugCloseEditModal() {
+  document.getElementById("ug-edit-modal").classList.remove("open");
+}
+
+function ugSubmitEdit() {
+  var id = document.getElementById("ug-e-id").value;
+  var role = document.getElementById("ug-e-role").value;
   var tok = getToken();
 
-  var path =
-    "/api/" + (_ugRole === "admin" ? "users/" + id : _ugRole + "s/" + id);
+  var fullName = document.getElementById("ug-e-fullname").value.trim();
+  var firstName = document.getElementById("ug-e-firstname").value.trim();
+  var lastName = document.getElementById("ug-e-lastname").value.trim();
+  var username = document.getElementById("ug-e-username").value.trim();
+  var email = document.getElementById("ug-e-email").value.trim();
+  var status = document.getElementById("ug-e-status").value;
+  var mustChangePw = document.getElementById("ug-e-must-change-pw").checked;
 
-  fetch(path, { method: "DELETE", headers: { Authorization: "Bearer " + tok } })
-    .then(function (r) {
-      if (r.ok) {
-        showToast("Deleted successfully");
-        ugApplyFilters();
-      } else {
-        r.json().then(function (d) {
-          showToast(d.error || "Delete failed", "danger");
-        });
+  if (!fullName || !username) {
+    showToast("⚠️ Full Name and Username are required", "warning");
+    return;
+  }
+
+  var payload = {
+    fullName: fullName,
+    name: fullName,
+    firstName: firstName,
+    lastName: lastName,
+    username: username,
+    email: email,
+    status: status,
+    mustChangePassword: mustChangePw
+  };
+
+  if (role === "student") {
+    payload.registerNo = document.getElementById("ug-e-stu-regno").value.trim();
+    payload.department = document.getElementById("ug-e-stu-dept").value.trim();
+    payload.class = document.getElementById("ug-e-stu-class").value.trim();
+    payload.section = document.getElementById("ug-e-stu-section").value.trim();
+    payload.courseType = document.getElementById("ug-e-stu-course-type").value;
+    payload.branch = document.getElementById("ug-e-stu-branch").value;
+    payload.academicYear = document.getElementById("ug-e-stu-year").value;
+    payload.admissionYear = document.getElementById("ug-e-stu-year").value;
+    payload.batch = document.getElementById("ug-e-stu-batch").value;
+    payload.batchTrackId = document.getElementById("ug-e-stu-batch").value;
+    payload.isRep = document.getElementById("ug-e-stu-is-rep").checked;
+  } else if (role === "teacher") {
+    payload.employeeNo = document.getElementById("ug-e-tch-empno").value.trim();
+    payload.department = document.getElementById("ug-e-tch-dept").value.trim();
+    payload.designation = document.getElementById("ug-e-tch-desig").value.trim();
+    payload.defaultAttendanceStatus = document.getElementById("ug-e-tch-def-att").value;
+
+    var isAdmin = document.getElementById("ug-e-tch-is-admin").checked;
+    payload.isAdmin = isAdmin;
+    if (isAdmin) {
+      var rights = [];
+      if (document.getElementById("ug-e-right-control").checked) rights.push("controlPage");
+      if (document.getElementById("ug-e-right-manage").checked) rights.push("managePage");
+      if (document.getElementById("ug-e-right-timetable").checked) rights.push("timetablePage");
+      if (document.getElementById("ug-e-right-bulk").checked) rights.push("bulkPage");
+      if (document.getElementById("ug-e-right-settings").checked) rights.push("settingsPage");
+      if (document.getElementById("ug-e-right-reports").checked) rights.push("reportsModule");
+      if (document.getElementById("ug-e-right-download").checked) rights.push("downloadDatas");
+      if (document.getElementById("ug-e-right-adders").checked) rights.push("adderModules");
+      if (document.getElementById("ug-e-right-deletings").checked) rights.push("deletings");
+      payload.adminRights = rights.length ? rights : ["none"];
+    } else {
+      payload.adminRights = ["none"];
+    }
+  } else if (role === "admin") {
+    payload.department = document.getElementById("ug-e-adm-dept").value.trim();
+    payload.employeeNo = document.getElementById("ug-e-adm-empno").value.trim();
+    payload.adminRights = ["all"];
+    payload.isAdmin = true;
+  }
+
+  showToast("Saving user changes to DB…", "info");
+
+  fetch("/api/users/" + id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
       }
+      showToast("✅ User details updated successfully");
+      ugCloseEditModal();
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Failed to update user: " + (err.message || ""), "danger");
+    });
+}
+
+function ugExportCSV() {
+  var data = _ugState.data || [];
+  if (data.length === 0) {
+    showToast("⚠️ No data available to export", "warning");
+    return;
+  }
+
+  var role = _ugState.role;
+  var csvRows = [];
+
+  if (role === "student") {
+    csvRows.push([
+      "Register Number", "Track ID", "Full Name", "First Name", "Last Name",
+      "Username", "Email", "Department", "Course Level", "Branch",
+      "Academic Year", "Batch", "Class", "Section", "Class Rep",
+      "Status", "Failed Logins", "Last Active", "Created At"
+    ]);
+    data.forEach(function (u) {
+      csvRows.push([
+        u.registerNo || "",
+        u.trackId || u.studentTrackId || "",
+        u.name || u.fullName || "",
+        u.firstName || "",
+        u.lastName || "",
+        u.username || "",
+        u.email || "",
+        u.department || "",
+        u.courseType || "UG",
+        u.branch || "",
+        u.academicYear || u.admissionYear || "",
+        u.batch || u.batchTrackId || "",
+        u.class || "",
+        u.section || "",
+        u.isRep ? "Yes" : "No",
+        u.status || "active",
+        u.failedLogins || 0,
+        u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
+        u.createdAt ? new Date(u.createdAt).toISOString() : ""
+      ]);
+    });
+  } else if (role === "teacher") {
+    csvRows.push([
+      "Employee Number", "Track ID", "Full Name", "First Name", "Last Name",
+      "Username", "Email", "Department", "Designation",
+      "Default Attendance Status", "Is Admin", "Admin Rights",
+      "Status", "Failed Logins", "Last Active", "Created At"
+    ]);
+    data.forEach(function (u) {
+      var rights = Array.isArray(u.adminRights) ? u.adminRights.join("; ") : (u.adminRights || "");
+      csvRows.push([
+        u.employeeNo || "",
+        u.trackId || "",
+        u.name || u.fullName || "",
+        u.firstName || "",
+        u.lastName || "",
+        u.username || "",
+        u.email || "",
+        u.department || "",
+        u.designation || "Faculty",
+        u.defaultAttendanceStatus || "Present",
+        u.isAdmin ? "Yes" : "No",
+        rights,
+        u.status || "active",
+        u.failedLogins || 0,
+        u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
+        u.createdAt ? new Date(u.createdAt).toISOString() : ""
+      ]);
+    });
+  } else if (role === "admin") {
+    csvRows.push([
+      "Employee Number / ID", "Track ID", "Full Name", "Username",
+      "Email", "Department", "Role", "Admin Rights",
+      "Status", "Failed Logins", "Last Active", "Created At"
+    ]);
+    data.forEach(function (u) {
+      csvRows.push([
+        u.employeeNo || "",
+        u.trackId || "",
+        u.name || u.fullName || "",
+        u.username || "",
+        u.email || "",
+        u.department || "Administration",
+        u.role || "admin",
+        "all",
+        u.status || "active",
+        u.failedLogins || 0,
+        u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
+        u.createdAt ? new Date(u.createdAt).toISOString() : ""
+      ]);
+    });
+  } else if (role === "attendance") {
+    csvRows.push([
+      "Date", "Period", "Student Name", "Register Number",
+      "Student Track ID", "Class", "Department",
+      "Subject Code", "Subject Name", "Status", "Remarks"
+    ]);
+    data.forEach(function (r) {
+      csvRows.push([
+        r.date || "",
+        r.periodNumber || 1,
+        r.studentName || "",
+        r.regNo || "",
+        r.studentTrackId || "",
+        r.className || "",
+        r.department || "",
+        r.subjectCode || "",
+        r.subjectName || "",
+        r.status || "",
+        (r.remarks || "").replace(/,/g, " ")
+      ]);
+    });
+  }
+
+  var csvContent = "data:text/csv;charset=utf-8,\uFEFF" + csvRows.map(function (e) {
+    return e.map(function (cell) {
+      return '"' + String(cell === undefined || cell === null ? "" : cell).replace(/"/g, '""') + '"';
+    }).join(",");
+  }).join("\n");
+
+  var encodedUri = encodeURI(csvContent);
+  var link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "eams_" + role + "_full_export_" + (new Date().toISOString().slice(0, 10)) + ".csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("📥 Exported " + data.length + " " + role + " records with all fields to CSV");
+}
+
+function openUGPasswordReset(id) {
+  var user = _ugState.data.find(function (u) { return u._id === id; });
+  if (!user) return;
+
+  document.getElementById("ug-pw-user-id").value = user._id;
+  document.getElementById("ug-pw-new").value = "";
+  document.getElementById("ug-pw-conf").value = "";
+  document.getElementById("ug-pw-force-change").checked = true;
+
+  var desc = document.getElementById("ug-pw-user-desc");
+  if (desc) {
+    desc.textContent = "Setting a new password for @" + user.username + " (" + (user.name || user.fullName) + ") will terminate all active sessions.";
+  }
+
+  document.getElementById("ug-pw-modal").classList.add("open");
+}
+
+function ugClosePwModal() {
+  document.getElementById("ug-pw-modal").classList.remove("open");
+}
+
+function ugSubmitPasswordReset() {
+  var id = document.getElementById("ug-pw-user-id").value;
+  var nw = document.getElementById("ug-pw-new").value.trim();
+  var conf = document.getElementById("ug-pw-conf").value.trim();
+  var forceChange = document.getElementById("ug-pw-force-change").checked;
+
+  if (!nw || !conf) {
+    showToast("⚠️ Please enter and confirm the new password", "warning");
+    return;
+  }
+  if (nw.length < 8) {
+    showToast("⚠️ Password must be at least 8 characters long", "warning");
+    return;
+  }
+  if (nw !== conf) {
+    showToast("⚠️ Passwords do not match", "warning");
+    return;
+  }
+
+  var tok = getToken();
+  showToast("Updating password…", "info");
+
+  fetch("/api/users/" + id + "/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+    body: JSON.stringify({ newPassword: nw, requireChangeOnLogin: forceChange })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ Password reset successfully");
+      ugClosePwModal();
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Password reset failed: " + (err.message || ""), "danger");
+    });
+}
+
+function ugUnlockAccount(id) {
+  var tok = getToken();
+  showToast("Unlocking account…", "info");
+
+  fetch("/api/users/" + id + "/unlock", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + tok }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ Account unlocked successfully");
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Failed to unlock account", "danger");
+    });
+}
+
+function ugToggleStatus(id, currentStatus) {
+  var newStatus = (currentStatus === "active") ? "inactive" : "active";
+  var tok = getToken();
+
+  showToast((newStatus === "active" ? "Activating" : "Deactivating") + " account…", "info");
+
+  fetch("/api/users/" + id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+    body: JSON.stringify({ status: newStatus })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ Account set to " + newStatus);
+      ugLoadData();
     })
     .catch(function () {
-      showToast("Network error", "danger");
+      showToast("❌ Failed to toggle account status", "danger");
     });
+}
+
+function openUGDeleteModal(id) {
+  var rec = _ugState.data.find(function (u) { return u._id === id; });
+  var role = _ugState.role;
+  var delIdInput = document.getElementById("ug-del-id");
+  var delRoleInput = document.getElementById("ug-del-role");
+  var titleEl = document.getElementById("ug-del-title");
+  var msgEl = document.getElementById("ug-del-msg");
+
+  if (delIdInput) delIdInput.value = id;
+  if (delRoleInput) delRoleInput.value = role;
+
+  if (role === "attendance") {
+    if (titleEl) titleEl.textContent = "Delete Attendance Entry?";
+    if (msgEl) msgEl.textContent = "Are you sure you want to permanently delete this attendance record for " + (rec ? rec.studentName : "this student") + "?";
+  } else {
+    var name = rec ? (rec.name || rec.fullName || rec.username) : "this user";
+    if (titleEl) titleEl.textContent = "Delete User: " + name + "?";
+    if (msgEl) msgEl.textContent = "Permanently remove @" + (rec ? rec.username : "") + " and associated profile? A snapshot will be saved in the Undo log.";
+  }
+
+  var modal = document.getElementById("ug-del-modal");
+  if (modal) modal.classList.add("open");
+}
+
+function ugCloseDeleteModal() {
+  var modal = document.getElementById("ug-del-modal");
+  if (modal) modal.classList.remove("open");
+}
+
+function ugConfirmDeleteRecord() {
+  var id = document.getElementById("ug-del-id").value;
+  var role = document.getElementById("ug-del-role").value || _ugState.role;
+  if (!id) return;
+
+  var tok = getToken();
+  var url = (role === "attendance") ? ("/api/attendance/" + id) : ("/api/users/" + id);
+
+  showToast("Deleting record…", "info");
+
+  fetch(url, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + tok }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ Record removed / snapshot saved to Undo Log");
+      ugCloseDeleteModal();
+      _ugState.selectedIds.delete(id);
+      ugUpdateBulkBar();
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Delete failed: " + (err.message || ""), "danger");
+    });
+}
+
+function openUGAttEdit(id) {
+  var rec = _ugState.data.find(function (r) { return r._id === id; });
+  if (!rec) return;
+
+  document.getElementById("ug-att-rec-id").value = rec._id;
+  document.getElementById("ug-att-student-trackid").value = rec.studentTrackId || "";
+  document.getElementById("ug-att-student-name").textContent = rec.studentName + " (" + (rec.regNo || rec.studentTrackId) + ")";
+  document.getElementById("ug-att-meta").textContent = (rec.className || "") + " · " + (rec.subjectName || "") + " · " + (rec.date || "") + " (Period " + (rec.periodNumber || 1) + ")";
+  document.getElementById("ug-att-status").value = rec.status || "present";
+  document.getElementById("ug-att-remarks").value = rec.remarks || "";
+
+  document.getElementById("ug-att-modal").classList.add("open");
+}
+
+function ugCloseAttModal() {
+  document.getElementById("ug-att-modal").classList.remove("open");
+}
+
+function ugSubmitAttEdit() {
+  var id = document.getElementById("ug-att-rec-id").value;
+  var statusVal = document.getElementById("ug-att-status").value;
+  var remarksVal = document.getElementById("ug-att-remarks").value.trim();
+  var studentTrackId = document.getElementById("ug-att-student-trackid").value;
+  var tok = getToken();
+
+  showToast("Updating attendance record…", "info");
+
+  fetch("/api/attendance/" + id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+    body: JSON.stringify({ status: statusVal, remarks: remarksVal, studentTrackId: studentTrackId })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.error) {
+        showToast("❌ " + res.error, "danger");
+        return;
+      }
+      showToast("✅ Attendance record updated successfully");
+      ugCloseAttModal();
+      ugLoadData();
+    })
+    .catch(function (err) {
+      showToast("❌ Failed to update attendance: " + (err.message || ""), "danger");
+    });
+}
+
+function formatTimeAgo(date) {
+  if (!date || isNaN(date.getTime())) return "Never";
+  var seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return "Just now";
+  var minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return minutes + "m ago";
+  var hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + "h ago";
+  var days = Math.floor(hours / 24);
+  if (days < 30) return days + "d ago";
+  return date.toLocaleDateString();
+}
+
+function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // -- Modals / Clear Storage ------------------------------
@@ -2562,5 +3669,220 @@ function toggleClearAll(el) {
 
 // -- Navigation helpers ------------------------------
 function goBack() {
-  window.location.href = "admin.html";
+  if (currentUser && currentUser.role === 'teacher') {
+    window.location.href = "selector.html";
+  } else {
+    window.location.href = "admin.html";
+  }
 }
+
+// ════════════════════════════════════════════════════════
+//  BROADCASTS & LIVE ANNOUNCEMENTS
+// ════════════════════════════════════════════════════════
+function toggleForceAllRoles(chk) {
+  var tChk = document.getElementById('bc-role-teachers');
+  var sChk = document.getElementById('bc-role-students');
+  if (chk.checked) {
+    if (tChk) tChk.disabled = true;
+    if (sChk) sChk.disabled = true;
+  } else {
+    if (tChk) tChk.disabled = false;
+    if (sChk) sChk.disabled = false;
+  }
+}
+
+function loadActiveBroadcastStatus() {
+  fetch('/api/settings/public')
+    .then(function (r) { return r.json(); })
+    .then(function (pub) {
+      if (pub.broadcast && pub.broadcast.defaultPopupDurationSec) {
+        var durEl = document.getElementById('bc-duration');
+        if (durEl && !durEl.dataset.userEdited) durEl.value = pub.broadcast.defaultPopupDurationSec;
+      }
+      if (pub.institution) {
+        document.title = 'EAMS – Control Center | ' + (pub.institution.institutionShort || 'SIET');
+      }
+    }).catch(function () {});
+
+  apiCall('GET', '/settings/broadcast')
+    .then(function (bcast) {
+      var banner = document.getElementById('bc-active-banner');
+      var titleEl = document.getElementById('bc-active-title');
+      var textEl = document.getElementById('bc-active-text');
+      var iconEl = document.getElementById('bc-active-icon');
+
+      if (!banner) return;
+      if (bcast && bcast.systemBannerActive && bcast.systemBannerMessage) {
+        banner.style.display = 'flex';
+        if (textEl) textEl.textContent = bcast.systemBannerMessage;
+        var lvl = bcast.systemBannerLevel || 'info';
+        if (titleEl) titleEl.textContent = 'Active Banner (' + lvl.toUpperCase() + ')';
+        if (iconEl) {
+          if (lvl === 'warning') iconEl.textContent = '⚠️';
+          else if (lvl === 'urgent') iconEl.textContent = '🚨';
+          else if (lvl === 'success') iconEl.textContent = '✅';
+          else iconEl.textContent = '📢';
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    })
+    .catch(function () {});
+}
+
+function sendBroadcast() {
+  var msg = document.getElementById('bc-msg').value.trim();
+  if (!msg) {
+    showToast('⚠️ Announcement message is required');
+    return;
+  }
+
+  var isForcedAll = document.getElementById('bc-role-all').checked;
+  var targetRoles = [];
+  if (isForcedAll) {
+    targetRoles = ['all'];
+  } else {
+    if (document.getElementById('bc-role-teachers').checked) targetRoles.push('teacher');
+    if (document.getElementById('bc-role-students').checked) targetRoles.push('student');
+  }
+
+  if (targetRoles.length === 0) {
+    showToast('⚠️ Please select at least one target audience');
+    return;
+  }
+
+  var level = document.getElementById('bc-level').value;
+  var duration = parseInt(document.getElementById('bc-duration').value, 10) || 10;
+  var sendBtn = document.getElementById('bc-send-btn');
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.textContent = '🚀 Dispatching Broadcast…';
+  }
+
+  var payload = {
+    message: msg,
+    level: level,
+    targetRoles: targetRoles,
+    isForcedAll: isForcedAll,
+    popupDurationSec: duration
+  };
+
+  fetch('/api/system/broadcast/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getToken()
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '🚀 Dispatch Broadcast Now';
+      }
+
+      if (res && res.error) {
+        showToast('❌ Dispatch failed: ' + res.error);
+        return;
+      }
+
+      showToast('✅ Broadcast successfully dispatched to ' + (res.sentCount || 0) + ' recipient(s)');
+
+      // Update Summary
+      var sentEl = document.getElementById('bc-stat-sent');
+      var failedEl = document.getElementById('bc-stat-failed');
+      var listEl = document.getElementById('bc-recipient-ids');
+      var listBox = document.getElementById('bc-recipient-list-box');
+
+      if (sentEl) sentEl.textContent = res.sentCount || 0;
+      if (failedEl) failedEl.textContent = res.failedCount || 0;
+
+      if (listEl && res.sentUserIds && res.sentUserIds.length > 0) {
+        listEl.textContent = res.sentUserIds.slice(0, 80).join(', ') + (res.sentUserIds.length > 80 ? ' … and ' + (res.sentUserIds.length - 80) + ' more' : '');
+        if (listBox) listBox.style.display = 'block';
+      }
+
+      document.getElementById('bc-msg').value = '';
+      loadActiveBroadcastStatus();
+      loadBroadcastHistory();
+    })
+    .catch(function (err) {
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '🚀 Dispatch Broadcast Now';
+      }
+      showToast('❌ Network error: ' + (err.message || ''));
+    });
+}
+
+function clearActiveBroadcast() {
+  fetch('/api/system/broadcast/clear', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getToken()
+    }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res && res.success) {
+        showToast('✅ Broadcast banner deactivated');
+        var banner = document.getElementById('bc-active-banner');
+        if (banner) banner.style.display = 'none';
+      } else {
+        showToast('❌ ' + (res.error || 'Deactivation failed'));
+      }
+    })
+    .catch(function (err) {
+      showToast('❌ ' + (err.message || 'Network error'));
+    });
+}
+
+function loadBroadcastHistory() {
+  var tbody = document.getElementById('bc-history-tbody');
+  if (!tbody) return;
+
+  fetch('/api/system/broadcast/history', {
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (list) {
+      if (!Array.isArray(list) || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--tmu);">📭 No broadcasts dispatched yet.</td></tr>';
+        return;
+      }
+
+      var html = list.map(function (item) {
+        var lvlBadge = '<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;font-family:\'JetBrains Mono\',monospace;';
+        if (item.level === 'urgent') lvlBadge += 'background:#fef2f2;color:#dc2626;">🚨 URGENT</span>';
+        else if (item.level === 'warning') lvlBadge += 'background:#fffbeb;color:#d97706;">⚠️ WARN</span>';
+        else if (item.level === 'success') lvlBadge += 'background:#f0fdf4;color:#16a34a;">✅ SUCCESS</span>';
+        else if (item.level === 'message') lvlBadge += 'background:#f5f3ff;color:#7c3aed;">💬 INBOX</span>';
+        else lvlBadge += 'background:#eff6ff;color:#2563eb;">ℹ️ INFO</span>';
+
+        var audienceStr = (item.isForcedAll || (item.targetRoles && item.targetRoles.includes('all'))) ? '🌐 All Users' : (item.targetRoles || []).join(', ');
+        var sentStr = '<span style="color:#16a34a;font-weight:600;">' + (item.sentCount || 0) + ' sent</span>';
+        if (item.failedCount > 0) sentStr += ' / <span style="color:#dc2626;font-weight:600;">' + item.failedCount + ' fail</span>';
+
+        var authorName = item.dispatchedBy?.name || item.dispatchedBy?.username || 'Admin';
+        var timeStr = new Date(item.dispatchedAt).toLocaleString('en-IN', {
+          dateStyle: 'medium', timeStyle: 'short'
+        });
+
+        return '<tr style="border-bottom:1px solid var(--brl);">' +
+          '<td style="padding:10px 14px;">' + lvlBadge + '</td>' +
+          '<td style="padding:10px 14px;max-width:320px;font-size:12.5px;color:var(--td);word-break:break-word;">' + escapeHtml(item.message) + '</td>' +
+          '<td style="padding:10px 14px;font-size:12px;color:var(--tmu);">' + escapeHtml(audienceStr) + '</td>' +
+          '<td style="padding:10px 14px;font-size:12px;">' + sentStr + '</td>' +
+          '<td style="padding:10px 14px;font-size:12px;color:var(--td);">' + escapeHtml(authorName) + '</td>' +
+          '<td style="padding:10px 14px;font-size:11px;font-family:\'JetBrains Mono\',monospace;color:var(--tmu);">' + escapeHtml(timeStr) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      tbody.innerHTML = html;
+    })
+    .catch(function (err) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#dc2626;">❌ Error loading history: ' + escapeHtml(err.message || '') + '</td></tr>';
+    });
+}

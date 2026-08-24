@@ -47,7 +47,18 @@ router.post('/:id', authMiddleware, adminOnly, async (req, res) => {
       });
     } else return res.status(400).json({ error: 'Cannot restore collection: ' + entry.collectionName });
     await M.UndoLog.findByIdAndDelete(req.params.id);
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Undo Restore', entry.label, 'data', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Undo Restore',
+      entry.label,
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      { module: 'control', subType: 'action', trackId: req.user.trackId }
+    );
     res.json({ restored: true, label: entry.label });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -21,10 +21,25 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Middleware ────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:    ["'self'"],
+      scriptSrc:     ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdnjs.cloudflare.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrcElem:  ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrcAttr:  ["'unsafe-inline'"],
+      fontSrc:       ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc:        ["'self'", "data:", "blob:"],
+      connectSrc:    ["'self'", "http://localhost:*", "http://127.0.0.1:*", "ws:", "wss:"],
+      upgradeInsecureRequests: null,
+    },
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 app.use(cors({origin: cfg.CORS_ORIGIN,credentials: true}));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', require('./routes/index'));

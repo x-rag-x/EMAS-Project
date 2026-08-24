@@ -5,7 +5,7 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const M = require('../models');
 const cfg = require('../config');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { authMiddleware, adminOnly, requireRight } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
 const { sanitizeToString } = require('../utils/sanitizeQuery');
 const escapeRegex = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -132,7 +132,7 @@ router.get('/exam-search', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/', authMiddleware, adminOnly, async (req, res) => {
+router.post('/', authMiddleware, adminOnly, requireRight('adderModules'), async (req, res) => {
   try {
     const { name, regNo, academicYear, courseType, branch, deptId, deptName, classId, className, section, email, username, password, isRep, batchTrackId } = req.body;
     
@@ -167,10 +167,27 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
       mustChangePassword: true
     });
 
-    // Create shadow user in M.User
-    await M.User.create({ username: generatedUsername, role: 'student', trackId: generatedTrackId, status: 'active' });
+    const studentObj = stu.toObject();
+    delete studentObj.password;
 
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Added', `${stu.fullName} (${stu.registerNo})`, 'data', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Student Added',
+      `${stu.fullName} (${stu.registerNo})`,
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'admin',
+        subType: 'entry-create',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: null, after: studentObj }
+      }
+    );
     res.status(201).json({ ...stu.toObject(), name: stu.fullName, regNo: stu.registerNo });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -181,6 +198,9 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
     
     const stu = await M.Student.findById(req.params.id);
     if (!stu) return res.status(404).json({ error: 'Student not found' });
+
+    const before = stu.toObject();
+    delete before.password;
 
     const oldUsername = stu.username;
 
@@ -214,19 +234,42 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
       await shadowUser.save();
     }
 
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Updated', stu.fullName, 'data', 'info', req.ip);
+    const after = stu.toObject();
+    delete after.password;
+
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Student Updated',
+      stu.fullName,
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'admin',
+        subType: 'field-edit',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before, after }
+      }
+    );
     res.json({ ...stu.toObject(), name: stu.fullName, regNo: stu.registerNo });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
+router.delete('/:id', authMiddleware, adminOnly, requireRight('deletings'), async (req, res) => {
   try {
     const stu = await M.Student.findById(req.params.id);
     if (!stu) return res.status(404).json({ error: 'Student not found' });
 
+    const snapshot = stu.toObject();
+    delete snapshot.password;
+
     await M.UndoLog.create({
       collectionName: 'students', label: `Student: ${stu.fullName} (${stu.registerNo})`,
-      snapshot: stu.toObject(), deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+      snapshot, deletedBy: req.user.name, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
     });
     
     await M.Student.findByIdAndDelete(req.params.id);
@@ -234,13 +277,30 @@ router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
     // Delete shadow user
     await M.User.deleteOne({ username: stu.username, role: 'student' });
 
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 'Student Deleted', stu.fullName, 'data', 'warning', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Student Deleted',
+      stu.fullName,
+      'data',
+      'warning',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'admin',
+        subType: 'entry-delete',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: snapshot, after: null }
+      }
+    );
     res.json({ deleted: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Bulk Upload Students ─────────────────────────────
-router.post('/bulk-upload', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
+router.post('/bulk-upload', authMiddleware, adminOnly, requireRight('bulkPage'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -331,8 +391,23 @@ router.post('/bulk-upload', authMiddleware, adminOnly, upload.single('file'), as
       }
       added++;
     }
-    await logAction(req.user.trackId || req.user._id, req.user.name, req.user.role, 
-      'Bulk Student Upload', `${added} added, ${skipped} skipped`, 'data', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role, 
+      'Bulk Student Upload',
+      `${added} added, ${skipped} skipped`,
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'admin',
+        subType: 'bulk-action',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights
+      }
+    );
     res.json({ added, skipped, total: rows.length, errors: errors.slice(0, 20), message: `Import complete: ${added} added, ${skipped} skipped` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

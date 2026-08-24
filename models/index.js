@@ -10,6 +10,7 @@ const examModels       = require('./exam.model');
 const yearModels       = require('./year.model');
 const settingsModels   = require('./settings.model');
 const systemModels     = require('./system.model');
+const leaveModels      = require('./leave.model');
 
 module.exports = {
   ...userModels,
@@ -24,4 +25,5 @@ module.exports = {
   ...yearModels,
   ...settingsModels,
   ...systemModels,
+  ...leaveModels,
 };

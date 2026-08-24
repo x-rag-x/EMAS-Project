@@ -29,6 +29,8 @@
       <button class="ss" id="sn-rdef" onclick="nav('rep-def')">&#128308; Defaulters List</button>
     </div>
     <button class="sb-item" id="sn-tt" onclick="goToTimetable()"><span class="ic">&#128197;</span>Timetable<span id="sn-tt-badge" style="display:none;margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--gM);color:#fff;">COORD</span></button>
+    <button class="sb-item" id="sn-leaves" onclick="nav('leaves')"><span class="ic">&#128221;</span>Leave Requests<span class="sb-badge" id="sn-leave-badge" style="display:none;">0</span></button>
+    <button class="sb-item" id="sn-admin-hub" style="display:none;" onclick="window.location.href='selector.html'"><span class="ic">&#128272;</span>Admin Hub<span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--purple);color:#fff;">ADMIN</span></button>
     <button class="sb-item" id="sn-griev" onclick="nav('griev')"><span class="ic">&#128225;</span>Grievance</button>
     <button class="sb-item" id="sn-profile" onclick="nav('profile')"><span class="ic">&#128100;</span>My Profile</button>
   </div>
@@ -204,9 +206,10 @@
         <button class="btn-pri" onclick="startLiveSession()" style="background:#16a34a;box-shadow:none;">Start Live Session</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
       <button class="btnp bsm" onclick="markAll('present')">&#9989; Mark All Present</button>
       <button class="btno bsm" onclick="markAll('absent')">&#10060; Mark All Absent</button>
+      <button class="btno bsm" id="btn-forward-rep" onclick="forwardToRepModal()" style="display:inline-flex;align-items:center;gap:4px;">👥 Forward to Rep</button>
       <div style="flex:1;"></div>
       <button class="btn-pri" onclick="submitAtt()">&#128190; Save Attendance</button>
     </div>
@@ -276,6 +279,123 @@
   </div></div>
 </div>
 
+<!-- LEAVE & PERMISSION MANAGEMENT -->
+<div class="pg" id="pg-leaves">
+  <div class="page-hd">
+    <div>
+      <div class="page-title" style="display:flex;align-items:center;gap:8px;">
+        <span>📝</span> Student Leave &amp; Permission History
+      </div>
+      <div class="page-sub" id="leaves-sub-title">View, filter, and review leave and permission requests submitted by your assigned students.</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn-out" onclick="loadTeacherLeaveHistory()" style="font-size:12px;">🔄 Refresh List</button>
+    </div>
+  </div>
+
+  <!-- KPI SUMMARY CARDS (like admin.html dept tab) -->
+  <div class="t-stat-grid" id="stats-leaves">
+    <div class="t-stat-mini">
+      <div class="t-stat-icon amber">📊</div>
+      <div>
+        <div class="t-stat-val" id="lh-stat-total">0</div>
+        <div class="t-stat-label">Total Requests</div>
+      </div>
+    </div>
+    <div class="t-stat-mini">
+      <div class="t-stat-icon green">✅</div>
+      <div>
+        <div class="t-stat-val" id="lh-stat-approved">0</div>
+        <div class="t-stat-label">Approved</div>
+      </div>
+    </div>
+    <div class="t-stat-mini">
+      <div class="t-stat-icon red">❌</div>
+      <div>
+        <div class="t-stat-val" id="lh-stat-rejected">0</div>
+        <div class="t-stat-label">Rejected</div>
+      </div>
+    </div>
+    <div class="t-stat-mini">
+      <div class="t-stat-icon orange">⏳</div>
+      <div>
+        <div class="t-stat-val" id="lh-stat-pending">0</div>
+        <div class="t-stat-label">Pending Action</div>
+      </div>
+    </div>
+    <div class="t-stat-mini">
+      <div class="t-stat-icon purple">⏱️</div>
+      <div>
+        <div class="t-stat-val" id="lh-stat-onduty">0</div>
+        <div class="t-stat-label">Permissions / OD</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="card" style="padding:16px 20px;margin-bottom:18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;">
+      <div style="flex:1;min-width:140px;">
+        <label class="fl" style="font-size:11px;font-weight:700;">From Date</label>
+        <input type="date" class="fc" id="lh-filter-from" onchange="filterTeacherLeaveTable()">
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label class="fl" style="font-size:11px;font-weight:700;">To Date</label>
+        <input type="date" class="fc" id="lh-filter-to" onchange="filterTeacherLeaveTable()">
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <label class="fl" style="font-size:11px;font-weight:700;">Category</label>
+        <select class="fc" id="lh-filter-cat" onchange="filterTeacherLeaveTable()">
+          <option value="">All Categories</option>
+          <option value="Leave">🌴 Leave</option>
+          <option value="Permission">⏱️ Permission</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <label class="fl" style="font-size:11px;font-weight:700;">Status</label>
+        <select class="fc" id="lh-filter-status" onchange="filterTeacherLeaveTable()">
+          <option value="">All Statuses</option>
+          <option value="Pending">⏳ Pending</option>
+          <option value="Approved">✅ Approved</option>
+          <option value="Rejected">❌ Rejected</option>
+          <option value="Cancelled">⚪ Cancelled</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label class="fl" style="font-size:11px;font-weight:700;">Search Student</label>
+        <input type="text" class="fc" id="lh-filter-search" placeholder="Name or Reg No…" oninput="filterTeacherLeaveTable()">
+      </div>
+      <div style="padding-bottom:2px;">
+        <button class="btn-out bsm" onclick="resetTeacherLeaveFilters()" style="padding:9px 14px;font-size:11.5px;">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table class="tbl" style="width:100%;margin:0;">
+        <thead>
+          <tr>
+            <th>Applied On</th>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Category / Type</th>
+            <th>Dates / Slot</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Action / Remarks</th>
+          </tr>
+        </thead>
+        <tbody id="lh-table-body">
+          <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--tdi);">Loading leave records…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- GRIEVANCE -->
 <div class="pg" id="pg-griev">
   <div class="page-hd">
@@ -323,6 +443,26 @@
         </div>
       </div>
     </div>
+    <div class="prof-section">
+      <div class="prof-section-hd"><div class="prof-section-title">⚙️ Preferences &amp; Defaults</div></div>
+      <div class="prof-section-body">
+        <div class="fields-grid">
+          <div class="field-group" style="grid-column:1/-1;">
+            <label class="fl" style="font-size:12px;font-weight:600;color:var(--td);margin-bottom:6px;display:block;">Default Attendance Status on Take Attendance</label>
+            <select class="fc2" id="prof-def-att-status" style="max-width:320px;">
+              <option value="Present">Present (Default All Present)</option>
+              <option value="Absent">Absent (Default All Absent)</option>
+              <option value="Unmarked">Neutral / Unmarked (Explicit Click)</option>
+            </select>
+            <span style="font-size:11px;color:var(--tmu);margin-top:4px;display:block;">Configure your preferred default starting status when opening a class attendance roster.</span>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <button class="btn-form-pri" onclick="saveTeacherPreferences()" style="padding:8px 22px;">💾 Save Preferences</button>
+        </div>
+      </div>
+    </div>
+
     <div class="prof-section">
       <div class="prof-section-hd"><div class="prof-section-title">🔐 Change Password</div></div>
       <div class="prof-section-body">
@@ -381,6 +521,65 @@
       <div><label class="fl">Details</label><textarea class="fc2" id="gdetail" rows="4" placeholder="Describe the issue in detail…"></textarea></div>
     </div>
     <div class="modal-actions"><button class="btn-form-ghost" onclick="closeModal('mgriev')">Cancel</button><button class="btn-form-pri" onclick="submitGriev()">&#128228; Submit</button></div>
+  </div>
+</div>
+
+<!-- ═══ LEAVE / PERMISSION REVIEW MODAL ═══════════════════════════════════ -->
+<div class="modal-bg" id="m-leave-review">
+  <div class="modal modal-md" style="max-width:580px;border-radius:18px;">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+          <span>📝</span> Student Leave Query
+        </div>
+        <div class="modal-sub" id="lr-student-info">Loading student details…</div>
+      </div>
+      <div class="modal-close" onclick="closeModalBg('m-leave-review')">✖</div>
+    </div>
+
+    <!-- Student Quick Stats Grid -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:var(--gP);border-radius:12px;padding:12px 10px;text-align:center;border:1px solid var(--brl);">
+        <div id="lr-stat-pct" style="font-size:22px;font-weight:800;color:var(--gD);">—%</div>
+        <div style="font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;margin-top:2px;">Attendance</div>
+      </div>
+      <div style="background:var(--gP);border-radius:12px;padding:12px 10px;text-align:center;border:1px solid var(--brl);">
+        <div id="lr-stat-classes" style="font-size:20px;font-weight:800;color:var(--td);">— / —</div>
+        <div style="font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;margin-top:2px;">Attended / Held</div>
+      </div>
+      <div style="background:var(--gP);border-radius:12px;padding:12px 10px;text-align:center;border:1px solid var(--brl);">
+        <div id="lr-stat-past-leaves" style="font-size:20px;font-weight:800;color:#d97706;">—</div>
+        <div style="font-size:10px;font-weight:700;color:var(--tdi);text-transform:uppercase;margin-top:2px;">Past Leaves</div>
+      </div>
+    </div>
+
+    <!-- Leave Request Details Box -->
+    <div style="background:linear-gradient(135deg,rgba(46,125,50,0.06),rgba(46,125,50,0.01));border:1.5px solid rgba(46,125,50,0.18);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span id="lr-category-badge" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:800;padding:3px 9px;border-radius:8px;">Full Day Leave</span>
+        <span id="lr-days-badge" style="font-size:12px;font-weight:700;color:var(--td);">1 Day</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--td);margin-bottom:6px;" id="lr-dates-display">📅 Date: —</div>
+      <div style="font-size:12px;color:var(--tmu);line-height:1.5;background:#fff;border-radius:8px;padding:10px 12px;border:1px solid var(--brl);" id="lr-reason-display">
+        "Reason"
+      </div>
+    </div>
+
+    <!-- Advisor Action Section -->
+    <div style="margin-bottom:16px;">
+      <label class="fl" style="font-size:12px;font-weight:700;color:var(--td);margin-bottom:5px;display:block;">Class Advisor Remarks (Optional)</label>
+      <input type="text" class="fc2" id="lr-remarks" placeholder="Add remarks or instructions for the student…" style="font-size:12.5px;">
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-form-ghost" onclick="closeModalBg('m-leave-review')" style="font-size:12px;">Close</button>
+      <button class="btn bdan bsm" id="lr-reject-btn" onclick="submitLeaveAction('Rejected')" style="padding:8px 16px;font-size:12px;font-weight:700;border-radius:8px;display:flex;align-items:center;gap:5px;">
+        <span>❌ Reject Request</span>
+      </button>
+      <button class="btn-form-pri bsm" id="lr-approve-btn" onclick="submitLeaveAction('Approved')" style="padding:8px 18px;font-size:12px;font-weight:700;border-radius:8px;display:flex;align-items:center;gap:5px;background:#16a34a;">
+        <span>✅ Approve Leave</span>
+      </button>
+    </div>
   </div>
 </div>
 

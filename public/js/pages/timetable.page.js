@@ -27,7 +27,7 @@ const SESSION = (() => {
 const ROLE        = SESSION.role || '';
 const IS_STUDENT  = ROLE === 'student';
 const IS_TEACHER  = ROLE === 'teacher';
-const IS_ADMIN    = ROLE === 'admin';
+const IS_ADMIN    = ROLE === 'admin' || (IS_TEACHER && SESSION.isAdmin && (SESSION.adminRights === 'all' || (Array.isArray(SESSION.adminRights) && (SESSION.adminRights.includes('all') || SESSION.adminRights.includes('timetablePage')))));
 const IS_COORD    = SESSION.isTimeTableCoordinator === true;
 const CAN_EDIT    = IS_COORD || IS_ADMIN;
 const CAN_VIEW    = IS_STUDENT || IS_TEACHER || IS_COORD || IS_ADMIN;
@@ -93,6 +93,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('auth-gate').classList.add('show');
     return;
   }
+  try {
+    const pub = await fetch('/api/settings/public').then(r => r.json());
+    if (pub.institution) {
+      document.title = 'EAMS – Timetable | ' + (pub.institution.institutionShort || 'SIET');
+    }
+    if (!IS_ADMIN && pub.pages?.pageTimeTable) {
+      if (pub.pages.pageTimeTable === 'hidden') {
+        window.location.href = IS_STUDENT ? 'student.html' : 'teacher.html';
+        return;
+      } else if (pub.pages.pageTimeTable === 'disabled') {
+        alert('Timetable Management portal is currently disabled for maintenance.');
+        window.location.href = IS_STUDENT ? 'student.html' : 'teacher.html';
+        return;
+      }
+    }
+  } catch (e) { console.warn('Public settings fetch error', e); }
+
   setupUI();
   buildSidebar();
   await bootstrap();
@@ -134,6 +151,15 @@ function setupUI() {
     document.getElementById('sb-role-lbl').textContent = 'Student';
   }
 
+  const backBtn = document.getElementById('tt-back-btn');
+  if (backBtn) {
+    if (IS_TEACHER && SESSION.isAdmin) {
+      backBtn.textContent = '← Back to Hub';
+    } else {
+      backBtn.textContent = '← Back to Dashboard';
+    }
+  }
+
   document.getElementById('tb-sub').textContent  = subTxt;
   document.getElementById('tb-dept').textContent = deptTxt;
   const rp = document.getElementById('role-pill');
@@ -141,19 +167,25 @@ function setupUI() {
 }
 
 function buildSidebar() {
-  const homeHref = IS_ADMIN ? 'admin.html'
+  const isTeacherWithAdmin = IS_TEACHER && SESSION.isAdmin;
+  const homeHref = isTeacherWithAdmin ? 'selector.html'
+                 : IS_ADMIN ? 'admin.html'
                  : IS_STUDENT ? 'student.html'
                  : 'teacher.html';
 
+  const homeLabel = isTeacherWithAdmin ? 'Admin Hub'
+                  : IS_ADMIN ? 'Admin Panel'
+                  : 'Dashboard';
+
   const items = [
-    { ic:'🏠', lbl: IS_ADMIN ? 'Admin Panel' : IS_STUDENT ? 'Dashboard' : 'Dashboard', href: homeHref },
+    { ic:'🏠', lbl: homeLabel, href: homeHref },
     { ic:'🗓️', lbl:'Timetable', href:'timetable.html', act:true },
     ...(IS_STUDENT ? [{ ic:'✅', lbl:'Attendance', href:'student.html' }] : []),
     ...((IS_TEACHER || IS_COORD) ? [
       { ic:'✅', lbl:'Attendance', href:'teacher.html' },
       { ic:'📊', lbl:'Reports',   href:'teacher.html' },
     ] : []),
-    ...(IS_ADMIN ? [
+    ...(ROLE === 'admin' ? [
       { ic:'🏛️', lbl:'Departments', href:'admin.html' },
       { ic:'⚙️',  lbl:'Control Panel', href:'control.html' },
     ] : []),
@@ -1054,6 +1086,10 @@ function e(s) {
 
 // Navigate back to the portal that opened this page
 function goHome() {
-  const href = IS_ADMIN ? 'admin.html' : IS_STUDENT ? 'student.html' : 'teacher.html';
+  const isTeacherWithAdmin = IS_TEACHER && SESSION.isAdmin;
+  const href = isTeacherWithAdmin ? 'selector.html'
+             : IS_ADMIN ? 'admin.html'
+             : IS_STUDENT ? 'student.html'
+             : 'teacher.html';
   location.href = href;
 }

@@ -27,6 +27,8 @@ const undoRoutes = require('./undo.routes');
 const userRoutes = require('./users.routes');
 const logRoutes = require('./logs.routes');
 const yearRoutes = require('./year.routes');
+const leaveRoutes = require('./leave.routes');
+const controllerRoutes = require('./controller.routes');
 
 // Mount routes
 router.use('/assignments',      assignmentRoutes);
@@ -34,11 +36,14 @@ router.use('/attendance',       attendanceRoutes);
 router.use('/auth',             authRoutes);
 router.use('/calendar',         calendarRoutes);
 router.use('/classes',          classRoutes);
+router.use('/controller',       controllerRoutes);
 router.use('/dashboard',        dashboardRoutes);
 router.use('/depts',            deptRoutes);
+router.use('/departments',      deptRoutes);
 router.use('/exam-attendance',  examAttendanceRoutes);
 router.use('/exams',            examRoutes);
 router.use('/grievances',       grievanceRoutes);
+router.use('/leave',            leaveRoutes);
 router.use('/live-session',     liveSessionRoutes);
 router.use('/manage-admins',    manageAdminRoutes);
 router.use('/notifications',    notifRoutes);

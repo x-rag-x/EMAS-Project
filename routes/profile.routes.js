@@ -38,6 +38,7 @@ router.get('/me', authMiddleware, async (req, res) => {
         department: userDoc.department || '',
         isAdmin: userDoc.isAdmin !== false ? true : false,
         adminRights: userDoc.adminRights || 'all',
+        adminFlag: userDoc.adminFlag || 'superadmin',
       });
     } else if (req.user.role === 'teacher') {
       const specials = Array.isArray(userDoc.specials) ? userDoc.specials : [];
@@ -49,17 +50,19 @@ router.get('/me', authMiddleware, async (req, res) => {
         department: userDoc.department || '',
         designation: userDoc.designation || 'Assistant Professor',
         isHod: specials.some(s => s.option === 'isHod'),
-        HoddeptName: (specials.find(s => s.option === 'isHod') || {}).value || '',
+        HoddeptName: (specials.find(s => s.option === 'isHod') || {}).value || (specials.find(s => s.option === 'isHod') || {}).key || '',
         isClassAdvisor: specials.some(s => s.option === 'isClassAdvisor'),
-        className: (specials.find(s => s.option === 'isClassAdvisor') || {}).value || '',
+        className: (specials.find(s => s.option === 'isClassAdvisor') || {}).key || (specials.find(s => s.option === 'isClassAdvisor') || {}).value || '',
+        advisorClassName: (specials.find(s => s.option === 'isClassAdvisor') || {}).key || (specials.find(s => s.option === 'isClassAdvisor') || {}).value || '',
         isTimeTableCoordinator: specials.some(s => s.option === 'isTimeTableCoordinator'),
-        TTdeptName: (specials.find(s => s.option === 'isTimeTableCoordinator') || {}).value || '',
+        TTdeptName: (specials.find(s => s.option === 'isTimeTableCoordinator') || {}).value || (specials.find(s => s.option === 'isTimeTableCoordinator') || {}).key || '',
         isWarden: specials.some(s => s.option === 'isWarden'),
         isExamCoordinator: specials.some(s => s.option === 'isExamCoordinator'),
         isPlacementCoordinator: specials.some(s => s.option === 'isPlacementCoordinator'),
-        isAdmin: userDoc.isAdmin || false,
-        adminRights: userDoc.adminRights || '',
+        isAdmin: !!userDoc.isAdmin,
+        adminRights: userDoc.adminRights || [],
         specials: specials,
+        preferences: userDoc.preferences || { defaultAttendanceStatus: 'Present' },
       });
     } else if (req.user.role === 'student') {
       Object.assign(base, {
@@ -111,7 +114,7 @@ router.put('/me', authMiddleware, async (req, res) => {
     }
     if (updates.firstName) user.firstName = updates.firstName;
     if (updates.lastName) user.lastName = updates.lastName;
-    if (updates.email !== undefined) user.email = updates.email;
+    if (updates.email !== undefined && req.user.role !== 'student') user.email = updates.email;
 
     if (req.user.role === 'admin' || req.user.role === 'teacher') {
       if (updates.employeeNo !== undefined) user.employeeNo = updates.employeeNo;
@@ -121,25 +124,41 @@ router.put('/me', authMiddleware, async (req, res) => {
       if (req.user.role === 'teacher') {
         if (updates.designation !== undefined) user.designation = updates.designation;
         if (updates.desig !== undefined) user.designation = updates.desig;
+        if (updates.defaultAttendanceStatus) {
+          if (!user.preferences) user.preferences = {};
+          user.preferences.defaultAttendanceStatus = updates.defaultAttendanceStatus;
+        }
+        if (updates.preferences && typeof updates.preferences === 'object') {
+          user.preferences = { ...(user.preferences || {}), ...updates.preferences };
+        }
       }
     }
-    if (req.user.role === 'student') {
-      if (updates.registerNo !== undefined) user.registerNo = updates.registerNo;
-      if (updates.regNo !== undefined) user.registerNo = updates.regNo;
-      if (updates.class !== undefined) user.class = updates.class;
-      if (updates.className !== undefined) user.class = updates.className;
-      if (updates.section !== undefined) user.section = updates.section;
-      if (updates.branch !== undefined) user.branch = updates.branch;
-      if (updates.department !== undefined) user.department = updates.department;
-      if (updates.deptName !== undefined) user.department = updates.deptName;
-    }
+    // LOOP-06: Students can only edit fullName/firstName/lastName (common block above)
+    // Institutional fields (registerNo, class, section, branch, department, email) are admin-managed only
 
     await user.save();
 
     // Shadow user no longer stores name/email, only username/role/trackId/status
     // No sync needed here since those fields don't change in profile self-edit
 
-    await logAction(user.trackId || req.user._id, user.fullName, req.user.role, 'Profile Updated', 'Own profile self-edited', 'data', 'info', req.ip);
+    await logAction(
+      user.trackId || req.user._id,
+      user.fullName,
+      req.user.role,
+      'Profile Updated',
+      'Own profile self-edited',
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: req.user.role === 'admin' ? 'admin' : (req.user.role === 'teacher' ? 'teacher' : 'student'),
+        subType: 'field-edit',
+        trackId: user.trackId || req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: null, after: updates }
+      }
+    );
     const { password: _pw, ...safe } = user.toObject();
     res.json(safe);
   } catch (err) { res.status(500).json({ error: err.message }); }

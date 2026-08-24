@@ -4,7 +4,7 @@ function apiCall(method, path, body) {
     method: method,
     headers: { 'Content-Type': 'application/json', 'Authorization': tok ? 'Bearer ' + tok : '' },
     body: body ? JSON.stringify(body) : undefined
-  }).then(function(r) {
+  }).then(function (r) {
     if (r.status === 401) {
       doLogout();
       throw new Error('Authentication failed');
@@ -13,7 +13,7 @@ function apiCall(method, path, body) {
     if (!ct.includes('application/json')) {
       throw new Error('Non-JSON response (' + r.status + ') from ' + path);
     }
-    return r.json().then(function(data) {
+    return r.json().then(function (data) {
       if (data && data.error) throw new Error(data.error);
       return data;
     });

@@ -8,57 +8,113 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
   try {
     if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
 
-    // ── User record
-    const user = await M.User.findById(req.user._id).select('-password').lean();
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Bug 18: fetch login history for lastLogin / firstLogin
-    const loginHistory = await M.LoginHistory.findOne({ trackId: user.trackId }).lean();
-
-    // ── Student profile — look up by username or trackId
-    let student = await M.Student.findOne({ username: req.user.username }).select('-password').lean();
-    if (!student && req.user.trackId) {
+    // ── Student profile — look up by trackId, username, or _id
+    let student = null;
+    if (req.user.trackId) {
       student = await M.Student.findOne({ trackId: req.user.trackId }).select('-password').lean();
     }
+    if (!student && req.user.username) {
+      student = await M.Student.findOne({ username: req.user.username }).select('-password').lean();
+    }
+    if (!student && req.user._id) {
+      student = await M.Student.findById(req.user._id).select('-password').lean();
+    }
+
+    // ── User shadow record (look up by trackId or username, fallback to req.user)
+    let shadowUser = null;
+    if (req.user.trackId) {
+      shadowUser = await M.User.findOne({ trackId: req.user.trackId }).select('-password').lean();
+    }
+    if (!shadowUser && req.user.username) {
+      shadowUser = await M.User.findOne({ username: req.user.username }).select('-password').lean();
+    }
+
+    const effectiveTrackId = req.user.trackId || (student && student.trackId) || (shadowUser && shadowUser.trackId) || '';
+
+    // Fetch login history for lastLogin / firstLogin
+    const loginHistory = effectiveTrackId ? await M.LoginHistory.findOne({ trackId: effectiveTrackId }).lean() : null;
+
+    // Minimum attendance requirement from settings
+    const academicSetting = await M.Settings.findOne({ key: 'academic' }).lean();
+    const minRequired = academicSetting?.value?.minAttendance || 75;
+
     if (!student) {
-      // No Student profile record at all — return user info with empty attendance so portal loads
-      const academic2 = await M.Settings.findOne({ key: 'academic' });
-      const minReq2 = academic2?.value?.minAttendance || 75;
+      // No Student profile record found — return safe fallback so portal loads
+      const displayName = req.user.fullName || req.user.name || req.user.username || 'Student';
       return res.json({
-        user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: loginHistory?.lastLogin || null, firstLogin: loginHistory?.firstLogin || null, loginCount: loginHistory?.totalLogins || user.loginCount || 0, createdAt: user.createdAt },
-        student: { name: user.name, regNo: '—', deptName: '—', className: '—', year: '—', section: '—', academicYear: '—', courseType: '—', branch: '—', email: user.email || '—', bloodGroup: '—', parentContact: '—' },
-        attendance: { subjects: [], totalPresent: 0, totalAbsent: 0, totalClasses: 0, overall: 0, minRequired: minReq2 },
+        user: {
+          _id: shadowUser?._id || req.user._id,
+          name: displayName,
+          username: req.user.username,
+          email: req.user.email || '',
+          lastLogin: loginHistory?.lastLogin || null,
+          firstLogin: loginHistory?.firstLogin || null,
+          loginCount: loginHistory?.totalLogins || 0,
+          createdAt: req.user.createdAt || new Date(),
+        },
+        student: {
+          name: displayName,
+          firstName: req.user.firstName || '',
+          lastName: req.user.lastName || '',
+          regNo: req.user.registerNo || '—',
+          deptName: req.user.department || '—',
+          className: '—',
+          year: '—',
+          section: '—',
+          academicYear: '—',
+          courseType: '—',
+          branch: '—',
+          email: req.user.email || '—',
+          bloodGroup: '—',
+          isClassRep: false,
+        },
+        attendance: { subjects: [], totalPresent: 0, totalAbsent: 0, totalClasses: 0, overall: 0, minRequired },
       });
+    }
+
+    // Resolve class details if available
+    let cls = null;
+    if (student.classId) {
+      cls = await M.Class.findById(student.classId).lean();
+    }
+    if (!cls && student.class) {
+      cls = await M.Class.findOne({ name: student.class }).lean();
     }
 
     // Normalize student fields for frontend consumption
     const normalizedStudent = {
       ...student,
-      name: student.fullName,
-      regNo: student.registerNo,
-      deptName: student.department,
-      className: student.class || '—',
+      name: student.fullName || req.user.name || req.user.username,
+      firstName: student.firstName || '',
+      lastName: student.lastName || '',
+      regNo: student.registerNo || req.user.registerNo || '—',
+      deptName: student.department || cls?.deptName || '—',
+      className: student.class || cls?.name || '—',
+      year: cls?.year || student.currentYear || '—',
+      section: student.section || cls?.section || '—',
       academicYear: student.admissionYear || '—',
-      isClassRep: student.isRep || false,
+      courseType: student.courseType || 'UG',
+      branch: student.branch || 'None',
+      email: student.email || req.user.email || '',
+      bloodGroup: student.bloodGroup || '—',
+      isClassRep: !!student.isRep,
     };
 
-    // ── Minimum attendance requirement
-    const academic = await M.Settings.findOne({ key: 'academic' });
-    const minRequired = academic?.value?.minAttendance || 75;
-
-    // ── All attendance records for this student's class
+    // ── Attendance query: search by all possible class identifiers and student identifiers
     const studentTrackId = student.trackId || String(student._id);
+    const studentIdentifiers = [studentTrackId, student.registerNo, String(student._id)].filter(Boolean);
 
-    if (!student.classId) {
-      return res.json({
-        user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: loginHistory?.lastLogin || null, firstLogin: loginHistory?.firstLogin || null, loginCount: loginHistory?.totalLogins || user.loginCount || 0, createdAt: user.createdAt },
-        student: normalizedStudent,
-        attendance: { subjects: [], totalPresent: 0, totalAbsent: 0, totalClasses: 0, overall: 0, minRequired },
-      });
+    const classQueries = [];
+    if (student.classId) classQueries.push({ classId: String(student.classId) });
+    if (cls) {
+      if (cls._id) classQueries.push({ classId: String(cls._id) });
+      if (cls.trackId) classQueries.push({ classId: cls.trackId });
+      if (cls.name) classQueries.push({ classId: cls.name });
     }
+    if (student.class) classQueries.push({ classId: student.class });
+    classQueries.push({ 'periods.records.studentTrackId': { $in: studentIdentifiers } });
 
-    const classIdStr = String(student.classId);
-    const classAttDocs = await M.ClassAttendance.find({ classId: classIdStr }).lean();
+    const classAttDocs = await M.ClassAttendance.find({ $or: classQueries }).lean();
 
     const allSubjects = await M.Subject.find().lean();
     const subjectMapLookup = new Map();
@@ -69,7 +125,7 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
     });
 
     // ── Aggregate per subject
-    const subjectMap = {}; // subjectTrackId → { subjectName, teacherName, present, absent, total, dates[] }
+    const subjectMap = {}; // subjectTrackId → { subjectId, subjectTrackId, subjectName, teacherName, present, absent, total, dates[] }
 
     for (const doc of classAttDocs) {
       const dateStr = doc.date ? new Date(doc.date).toISOString().split('T')[0] : '';
@@ -91,7 +147,7 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
           };
         }
         const entry = subjectMap[sid];
-        const myRecord = (period.records || []).find(r => r.studentTrackId === studentTrackId);
+        const myRecord = (period.records || []).find(r => studentIdentifiers.includes(r.studentTrackId));
         if (myRecord) {
           entry.total++;
           if (myRecord.status === 'P') entry.present++;
@@ -114,7 +170,16 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
     const overall = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
 
     res.json({
-      user: { _id: user._id, name: user.name, username: user.username, email: user.email, lastLogin: loginHistory?.lastLogin || null, firstLogin: loginHistory?.firstLogin || null, loginCount: loginHistory?.totalLogins || user.loginCount || 0, createdAt: user.createdAt },
+      user: {
+        _id: shadowUser?._id || student._id,
+        name: normalizedStudent.name,
+        username: student.username || req.user.username,
+        email: normalizedStudent.email,
+        lastLogin: loginHistory?.lastLogin || null,
+        firstLogin: loginHistory?.firstLogin || null,
+        loginCount: loginHistory?.totalLogins || 0,
+        createdAt: student.createdAt || req.user.createdAt || new Date(),
+      },
       student: normalizedStudent,
       attendance: {
         subjects,
@@ -126,6 +191,7 @@ router.get('/me', authMiddleware, checkMaintenance, async (req, res) => {
       },
     });
   } catch (err) {
+    console.error('[StudentPortal Exception]:', err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { sanitizeToString } = require('../utils/sanitizeQuery');
 
 router.get('/summary', authMiddleware, adminOnly, async (req, res) => {
   try {
@@ -11,7 +12,17 @@ router.get('/summary', authMiddleware, adminOnly, async (req, res) => {
       M.Department.countDocuments(),
       M.User.countDocuments({ role: 'teacher', status: 'active' }),
       M.Class.countDocuments(),
-      M.Notification.countDocuments({ status: 'Pending', read: false }),
+      M.Notification.countDocuments({
+        status: 'Pending',
+        read: false,
+        toTeacherId: null,
+        toStudentId: null,
+        leaveRequestId: null,
+        toTeacherTrackId: { $in: ['', null] },
+        toStudentTrackId: { $in: ['', null] },
+        fromRole: { $ne: 'student' },
+        type: { $nin: ['leave-request', 'leave-approval', 'leave-rejection', 'attendance-alert'] }
+      }),
     ]);
     res.json({ students, depts, teachers, classes, pendingNotifs });
   } catch (err) {
@@ -21,6 +32,16 @@ router.get('/summary', authMiddleware, adminOnly, async (req, res) => {
 
 router.get('/counts', authMiddleware, adminOnly, async (req, res) => {
   try {
+    const adminNotifFilter = {
+      toTeacherId: null,
+      toStudentId: null,
+      leaveRequestId: null,
+      toTeacherTrackId: { $in: ['', null] },
+      toStudentTrackId: { $in: ['', null] },
+      fromRole: { $ne: 'student' },
+      type: { $nin: ['leave-request', 'leave-approval', 'leave-rejection', 'attendance-alert'] }
+    };
+
     const [depts, classes, subjects, students, users, teachers, assignments, logs, notifications, pendingNotifs] = await Promise.all([
       M.Department.countDocuments(),
       M.Class.countDocuments(),
@@ -30,8 +51,8 @@ router.get('/counts', authMiddleware, adminOnly, async (req, res) => {
       M.User.countDocuments({ role: 'teacher', status: { $ne: 'inactive' } }),
       M.Assignment.countDocuments(),
       M.Log.countDocuments(),
-      M.Notification.countDocuments(),
-      M.Notification.countDocuments({ status: 'Pending', read: false }),
+      M.Notification.countDocuments(adminNotifFilter),
+      M.Notification.countDocuments(Object.assign({ status: 'Pending', read: false }, adminNotifFilter)),
     ]);
     res.json({ depts, classes, subjects, students, users, teachers, assignments, logs, notifications, pendingNotifs });
   } catch (err) {
@@ -44,7 +65,12 @@ router.get('/counts', authMiddleware, adminOnly, async (req, res) => {
 // Query: ?deptId=&classId=&from=&to=&date=&reportType=overall|specific
 router.get('/attendance-overview', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { deptId, classId, from, to, date, reportType } = req.query;
+    const deptId = sanitizeToString(req.query.deptId);
+    const classId = sanitizeToString(req.query.classId);
+    const from = sanitizeToString(req.query.from);
+    const to = sanitizeToString(req.query.to);
+    const date = sanitizeToString(req.query.date);
+    const reportType = sanitizeToString(req.query.reportType);
     let classIds = [];
     if (classId) {
       classIds = [classId];

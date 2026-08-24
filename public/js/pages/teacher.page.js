@@ -59,6 +59,13 @@ var _memStore = {};
     return Math.floor(diffSeconds / 86400) + 'd ago';
   }
 
+  function showToast(msg, state, details) {
+    if (typeof dbToast === 'function') {
+      var s = state === 'warn' || state === 'error' ? 'error' : (state === 'info' || state === 'saving' ? 'saving' : 'success');
+      dbToast(msg, s, details);
+    }
+  }
+
   // ─── SEED / INITIAL DATA ────────────────────────────────────────────────────
   function ensureDB() {
     // No default seeding — data comes from admin uploads
@@ -162,6 +169,10 @@ var _memStore = {};
           var badge = document.getElementById('sn-tt-badge');
           if (badge) badge.style.display = 'inline-block';
         }
+        if (currentUser.isAdmin) {
+          var adminHubBtn = document.getElementById('sn-admin-hub');
+          if (adminHubBtn) adminHubBtn.style.display = 'flex';
+        }
         return currentUser;
       }).catch(function() { return null; });
   }
@@ -195,7 +206,12 @@ var _memStore = {};
         headers: { 'Authorization': 'Bearer ' + tok }
       })
       .then(function(r) { return r.ok ? r.json() : []; })
-      .then(function(d) { return Array.isArray(d) ? d : []; })
+      .then(function(d) {
+        if (Array.isArray(d)) return d;
+        if (d && Array.isArray(d.data)) return d.data;
+        if (d && Array.isArray(d.students)) return d.students;
+        return [];
+      })
       .catch(function() { return []; });
     });
 
@@ -272,7 +288,12 @@ var _memStore = {};
     populateAllFilters();
     initCalendar();
     renderNotifications();
-    nav('dash');
+    syncTeacherNotifications();
+    setInterval(syncTeacherNotifications, 30000);
+    
+    var urlParams = new URLSearchParams(window.location.search);
+    var initialTab = urlParams.get('tab') || urlParams.get('page') || 'dash';
+    nav(initialTab);
 
     // Pull the real profile + assignment data from the Database now that the
     // shell is visible. Re-render whichever page is currently active once it
@@ -291,6 +312,15 @@ var _memStore = {};
 
   // ─── NAVIGATION ──────────────────────────────────────────────────────────────
   function nav(pageName) {
+    const validTabs = ['dash', 'sched', 'att', 'rep-att', 'rep-def', 'rep-stu', 'leaves', 'griev', 'profile'];
+    if (validTabs.indexOf(pageName) === -1) pageName = 'dash';
+
+    if (window.history && window.history.replaceState) {
+      var url = new URL(window.location);
+      url.searchParams.set('tab', pageName);
+      window.history.replaceState(null, '', url);
+    }
+
     document.querySelectorAll('.pg').forEach(function(p) { p.classList.remove('act'); });
     const targetPage = document.getElementById('pg-' + pageName);
     if (targetPage) targetPage.classList.add('act');
@@ -300,7 +330,7 @@ var _memStore = {};
     const navMap = {
       'dash':    'sn-dash',  'sched':   'sn-sched', 'att':     'sn-att',
       'rep-att': 'sn-ratt',  'rep-def': 'sn-rdef',  'rep-stu': 'sn-stu',
-      'griev':   'sn-griev'
+      'leaves':  'sn-leaves','griev':   'sn-griev'
     };
     if (navMap[pageName]) {
       const navEl = document.getElementById(navMap[pageName]);
@@ -314,6 +344,7 @@ var _memStore = {};
       'rep-att': function() { populateReportFilters(); renderAttendanceRecord(); },
       'rep-def': function() { populateDefaulterFilters(); renderDefaultersList(); },
       'rep-stu': function() { populateStudentListFilters(); renderStudentList(); },
+      'leaves':  loadTeacherLeaveHistory,
       'griev':   renderGrievances,
       'profile': function() { initProfilePage(); syncMyProfile().then(initProfilePage); }
     };
@@ -322,7 +353,22 @@ var _memStore = {};
 
   // ─── TEACHER HELPER FUNCTIONS ────────────────────────────────────────────────
   function getMyAssignments() {
-    return DB.get('assignments').filter(function(a) { return a.teacherId === currentUser._id; });
+    var list = DB.get('assignments') || [];
+    if (!currentUser) return list;
+    var myIds = [
+      String(currentUser._id || ''),
+      String(currentUser.roleId || ''),
+      String(currentUser.id || ''),
+      String(currentUser.empId || '')
+    ].filter(Boolean);
+
+    var filtered = list.filter(function(a) {
+      if (!a) return false;
+      if (!a.teacherId) return true;
+      return myIds.indexOf(String(a.teacherId)) !== -1 ||
+             (currentUser.name && a.teacherName && a.teacherName.toLowerCase() === currentUser.name.toLowerCase());
+    });
+    return filtered.length > 0 ? filtered : list;
   }
 
   function getMyClasses() {
@@ -674,41 +720,294 @@ var _memStore = {};
   var selCal = selectCalendarDate;
 
   // ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+  var _currentReviewLeaveId = null;
+  var _currentReviewNotifId = null;
+
+  function syncTeacherNotifications() {
+    var tok = getToken();
+    if (!tok) return Promise.resolve([]);
+    return fetch('/api/notifications', { headers: { 'Authorization': 'Bearer ' + tok } })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(data) {
+        var rows = Array.isArray(data) ? data : [];
+        DB.set('teacher-notifications', rows);
+        renderNotifications();
+        return rows;
+      }).catch(function() { return []; });
+  }
+
   function renderNotifications() {
-    // Merge teacher-notifications (general) + admin-sent alerts targeted at this teacher
-    const allNotifs    = DB.get('teacher-notifications').filter(function(n) {
-      return !n.toTeacherId || n.toTeacherId === currentUser._id;
-    });
-    const unreadCount  = allNotifs.filter(function(n) { return !n.read; }).length;
-    document.getElementById('nbadge').textContent = unreadCount;
+    var allNotifs = DB.get('teacher-notifications');
+    const unreadCount = allNotifs.filter(function(n) { return !n.read; }).length;
+    var nbadge = document.getElementById('nbadge');
+    if (nbadge) nbadge.textContent = unreadCount;
+
+    var unreadLeaveCount = allNotifs.filter(function(n) {
+      return !n.read && (n.type === 'leave-request' || !!n.leaveRequestId);
+    }).length;
+    var snBadge = document.getElementById('sn-leave-badge');
+    if (snBadge) {
+      snBadge.textContent = unreadLeaveCount;
+      snBadge.style.display = unreadLeaveCount > 0 ? 'inline-block' : 'none';
+    }
 
     const listEl = document.getElementById('ndlist');
+    if (!listEl) return;
     if (!allNotifs.length) {
       listEl.innerHTML = '<div style="padding:28px;text-align:center;color:var(--tdi);font-size:12px;">No notifications.</div>';
       return;
     }
 
     listEl.innerHTML = allNotifs.slice().reverse().map(function(n) {
+      const isLeaveReq = n.type === 'leave-request' || !!n.leaveRequestId;
       const isAlert    = n.type === 'attendance-alert' || n.type === 'alert';
       const isAdminMsg = n.from === 'Administrator';
-      const iconCode   = isAlert ? '&#9888;' : (isAdminMsg ? '&#128276;' : '&#8505;');
-      const iconBg     = isAlert ? 'background:rgba(245,158,11,.12);color:#92400e;'
+      const iconCode   = isLeaveReq ? '&#128221;' : (isAlert ? '&#9888;' : (isAdminMsg ? '&#128276;' : '&#8505;'));
+      const iconBg     = isLeaveReq ? 'background:rgba(16,185,129,.14);color:#059669;'
+                       : (isAlert ? 'background:rgba(245,158,11,.12);color:#92400e;'
                        : isAdminMsg ? 'background:rgba(59,130,246,.1);color:#1d4ed8;'
-                       : 'background:var(--gLt);color:var(--gD);';
+                       : 'background:var(--gLt);color:var(--gD);');
       const priorityBadge = n.priority && n.priority !== 'Normal'
         ? '<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:5px;">' + n.priority + '</span>'
         : '';
-      return '<div class="ndi ' + (n.read ? '' : 'unread') + '" onclick="markNotificationRead(\'' + n._id + '\')">'
+      const clickAction = isLeaveReq
+        ? 'onclick="openLeaveReviewModal(\'' + (n.leaveRequestId || '') + '\',\'' + n._id + '\')"'
+        : 'onclick="markNotificationRead(\'' + n._id + '\')"';
+
+      return '<div class="ndi ' + (n.read ? '' : 'unread') + '" ' + clickAction + ' style="cursor:pointer;">'
         + '<div class="ndic" style="' + iconBg + '">' + iconCode + '</div>'
         + '<div style="flex:1;">'
         + '<div style="font-size:12px;font-weight:700;color:var(--td);display:flex;align-items:center;">' + n.from + priorityBadge + '</div>'
         + '<div style="font-size:11px;color:var(--tmu);margin-top:2px;line-height:1.4;">' + n.message + '</div>'
-        + '<div style="font-size:10px;color:var(--tdi);margin-top:3px;">' + timeAgo(n.time) + '</div>'
+        + '<div style="font-size:10px;color:var(--tdi);margin-top:3px;">' + timeAgo(n.time || n.createdAt) + (isLeaveReq ? ' &bull; <span style="color:var(--gD);font-weight:700;">Click to Review</span>' : '') + '</div>'
         + '</div></div>';
     }).join('');
   }
 
+  function openLeaveReviewModal(leaveRequestId, notifId) {
+    if (!leaveRequestId) return;
+    _currentReviewLeaveId = leaveRequestId;
+    _currentReviewNotifId = notifId;
+
+    document.getElementById('lr-student-info').textContent = 'Loading student details…';
+    document.getElementById('lr-stat-pct').textContent = '—%';
+    document.getElementById('lr-stat-classes').textContent = '— / —';
+    document.getElementById('lr-stat-past-leaves').textContent = '—';
+    document.getElementById('lr-dates-display').textContent = '📅 Date: —';
+    document.getElementById('lr-reason-display').textContent = 'Loading…';
+    document.getElementById('lr-remarks').value = '';
+
+    openModal('m-leave-review');
+
+    var tok = getToken();
+    fetch('/api/leave/detail/' + encodeURIComponent(leaveRequestId), {
+      headers: { 'Authorization': 'Bearer ' + tok }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error || !d.leaveRequest) {
+        showToast(d.error || 'Failed to load leave details', 'warn');
+        return;
+      }
+      var req = d.leaveRequest;
+      var stats = d.studentStats || {};
+
+      document.getElementById('lr-student-info').textContent = req.studentName + ' (' + req.studentRegNo + ') — ' + req.className;
+      
+      var pct = stats.overallPercentage !== undefined ? stats.overallPercentage : 100;
+      var pctEl = document.getElementById('lr-stat-pct');
+      pctEl.textContent = pct + '%';
+      pctEl.style.color = pct >= 75 ? 'var(--gD)' : '#dc2626';
+
+      document.getElementById('lr-stat-classes').textContent = (stats.attendedClasses || 0) + ' / ' + (stats.totalClasses || 0);
+      
+      var pastTotal = (stats.pastLeaveDays || 0) + (stats.pastPermissionDays || 0);
+      document.getElementById('lr-stat-past-leaves').textContent = pastTotal + (pastTotal === 1 ? ' Day' : ' Days');
+
+      document.getElementById('lr-category-badge').textContent = req.category === 'Permission' ? ('⏱️ Permission (' + (req.slot || 'Half Day') + ')') : ('🌴 ' + req.leaveType);
+      document.getElementById('lr-days-badge').textContent = (req.daysCount || (req.category === 'Permission' ? 0.5 : 1)) + ' Day' + (req.daysCount > 1 ? 's' : '');
+
+      var dateDisplay = req.fromDate === req.toDate ? formatDateLong(req.fromDate) : (formatDateShort(req.fromDate) + ' – ' + formatDateLong(req.toDate));
+      document.getElementById('lr-dates-display').textContent = '📅 Date: ' + dateDisplay;
+      document.getElementById('lr-reason-display').textContent = '"' + req.reason + '"';
+
+      if (notifId) {
+        markNotificationRead(notifId);
+      }
+    })
+    .catch(function() {
+      if (typeof dbToast === 'function') dbToast('Error loading leave details', 'error');
+    });
+  }
+  window.openLeaveReviewModal = openLeaveReviewModal;
+
+  function submitLeaveAction(action) {
+    if (!_currentReviewLeaveId) return;
+    var remarks = document.getElementById('lr-remarks').value;
+    var tok = getToken();
+
+    if (typeof dbToast === 'function') dbToast('Submitting ' + action + '…', 'saving');
+    fetch('/api/leave/review/' + encodeURIComponent(_currentReviewLeaveId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body: JSON.stringify({ action: action, remarks: remarks })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) {
+        if (typeof dbToast === 'function') dbToast(res.error, 'error');
+        return;
+      }
+      closeModal('m-leave-review');
+      if (typeof dbToast === 'function') {
+        dbToast('🎉 Leave request ' + action + ' successfully!', 'success');
+      }
+      syncTeacherNotifications();
+      if (document.getElementById('pg-leaves') && document.getElementById('pg-leaves').classList.contains('act')) {
+        loadTeacherLeaveHistory();
+      }
+    })
+    .catch(function() {
+      if (typeof dbToast === 'function') dbToast('Failed to update leave request', 'error');
+    });
+  }
+  window.submitLeaveAction = submitLeaveAction;
+
+  // ─── TEACHER LEAVE & PERMISSION HISTORY ──────────────────────────────────────
+  var _teacherLeaveData = { requests: [], stats: {} };
+
+  function loadTeacherLeaveHistory() {
+    var tok = getToken();
+    if (!tok) return;
+
+    var tbody = document.getElementById('lh-table-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--tdi);">Loading leave records…</td></tr>';
+
+    fetch('/api/leave/advisor-requests', {
+      headers: { 'Authorization': 'Bearer ' + tok }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) {
+        if (typeof dbToast === 'function') dbToast(d.error, 'error');
+        return;
+      }
+      _teacherLeaveData = {
+        requests: Array.isArray(d.requests) ? d.requests : (Array.isArray(d) ? d : []),
+        stats: d.stats || {}
+      };
+
+      // Update KPI stats
+      var stats = _teacherLeaveData.stats;
+      var total = stats.total !== undefined ? stats.total : _teacherLeaveData.requests.length;
+      var approved = stats.approved !== undefined ? stats.approved : _teacherLeaveData.requests.filter(function(r){ return r.status === 'Approved'; }).length;
+      var rejected = stats.rejected !== undefined ? stats.rejected : _teacherLeaveData.requests.filter(function(r){ return r.status === 'Rejected'; }).length;
+      var pending = stats.pending !== undefined ? stats.pending : _teacherLeaveData.requests.filter(function(r){ return r.status === 'Pending'; }).length;
+      var onduty = stats.onDutyCount !== undefined ? stats.onDutyCount : _teacherLeaveData.requests.filter(function(r){ return r.category === 'Permission' || (r.slot && r.slot !== 'Full Day'); }).length;
+
+      var stTotal = document.getElementById('lh-stat-total'); if (stTotal) stTotal.textContent = total;
+      var stAppr  = document.getElementById('lh-stat-approved'); if (stAppr) stAppr.textContent = approved;
+      var stRej   = document.getElementById('lh-stat-rejected'); if (stRej) stRej.textContent = rejected;
+      var stPend  = document.getElementById('lh-stat-pending'); if (stPend) stPend.textContent = pending;
+      var stOd    = document.getElementById('lh-stat-onduty'); if (stOd) stOd.textContent = onduty;
+
+      // Update sidebar badge
+      var sbBadge = document.getElementById('sn-leave-badge');
+      if (sbBadge) {
+        sbBadge.textContent = pending;
+        sbBadge.style.display = pending > 0 ? 'inline-block' : 'none';
+      }
+
+      filterTeacherLeaveTable();
+    })
+    .catch(function(err) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:#ef4444;">Failed to load leave history.</td></tr>';
+      if (typeof dbToast === 'function') dbToast('Error loading leave history', 'error');
+    });
+  }
+  window.loadTeacherLeaveHistory = loadTeacherLeaveHistory;
+
+  function filterTeacherLeaveTable() {
+    var list = _teacherLeaveData.requests || [];
+    var from = document.getElementById('lh-filter-from') ? document.getElementById('lh-filter-from').value : '';
+    var to = document.getElementById('lh-filter-to') ? document.getElementById('lh-filter-to').value : '';
+    var cat = document.getElementById('lh-filter-cat') ? document.getElementById('lh-filter-cat').value : '';
+    var status = document.getElementById('lh-filter-status') ? document.getElementById('lh-filter-status').value : '';
+    var search = document.getElementById('lh-filter-search') ? document.getElementById('lh-filter-search').value.toLowerCase().trim() : '';
+
+    var filtered = list.filter(function(r) {
+      if (from && r.toDate < from) return false;
+      if (to && r.fromDate > to) return false;
+      if (cat && r.category !== cat) return false;
+      if (status && r.status !== status) return false;
+      if (search) {
+        var matchName = (r.studentName || '').toLowerCase().includes(search);
+        var matchReg  = (r.studentRegNo || '').toLowerCase().includes(search);
+        var matchCls  = (r.className || '').toLowerCase().includes(search);
+        if (!matchName && !matchReg && !matchCls) return false;
+      }
+      return true;
+    });
+
+    renderTeacherLeaveTable(filtered);
+  }
+  window.filterTeacherLeaveTable = filterTeacherLeaveTable;
+
+  function resetTeacherLeaveFilters() {
+    if (document.getElementById('lh-filter-from')) document.getElementById('lh-filter-from').value = '';
+    if (document.getElementById('lh-filter-to')) document.getElementById('lh-filter-to').value = '';
+    if (document.getElementById('lh-filter-cat')) document.getElementById('lh-filter-cat').value = '';
+    if (document.getElementById('lh-filter-status')) document.getElementById('lh-filter-status').value = '';
+    if (document.getElementById('lh-filter-search')) document.getElementById('lh-filter-search').value = '';
+    filterTeacherLeaveTable();
+  }
+  window.resetTeacherLeaveFilters = resetTeacherLeaveFilters;
+
+  function renderTeacherLeaveTable(list) {
+    var tbody = document.getElementById('lh-table-body');
+    if (!tbody) return;
+
+    if (!list || !list.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--tdi);">No leave or permission records match the selected filters.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(function(r) {
+      var dateDisplay = r.fromDate === r.toDate ? formatDateShort(r.fromDate) : (formatDateShort(r.fromDate) + ' – ' + formatDateShort(r.toDate));
+      var statusBg = r.status === 'Approved' ? '#dcfce7' : r.status === 'Rejected' ? '#fee2e2' : r.status === 'Cancelled' ? '#f3f4f6' : '#fef3c7';
+      var statusColor = r.status === 'Approved' ? '#166534' : r.status === 'Rejected' ? '#991b1b' : r.status === 'Cancelled' ? '#4b5563' : '#92400e';
+      var statusBadge = '<span style="background:' + statusBg + ';color:' + statusColor + ';font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:8px;">' + r.status + '</span>';
+      
+      var isPending = r.status === 'Pending';
+      var actionHtml = isPending
+        ? '<button class="btn-form-pri bsm" onclick="openLeaveReviewModal(\'' + r._id + '\')" style="padding:4px 10px;font-size:11px;background:#16a34a;">Review</button>'
+        : (r.reviewRemarks ? ('<span style="font-size:11px;color:var(--tmu);">💬 ' + r.reviewRemarks + '</span>') : (r.reviewedBy ? ('<span style="font-size:10.5px;color:var(--tdi);">By ' + r.reviewedBy + '</span>') : '—'));
+
+      var catBadge = r.category === 'Permission'
+        ? '<span style="background:#ede9fe;color:#6d28d9;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;">⏱️ Permission</span>'
+        : '<span style="background:#f0fdf4;color:#15803d;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;">🌴 ' + r.leaveType + '</span>';
+
+      return '<tr>'
+        + '<td style="font-size:11px;color:var(--tdi);white-space:nowrap;">' + formatDateShort(r.createdAt) + '</td>'
+        + '<td><strong>' + r.studentName + '</strong><br><span style="font-size:10.5px;color:var(--tmu);">' + r.studentRegNo + '</span></td>'
+        + '<td>' + r.className + '</td>'
+        + '<td>' + catBadge + '</td>'
+        + '<td>' + dateDisplay + (r.slot && r.slot !== 'Full Day' ? (' <span style="font-size:10px;background:var(--gP);padding:1px 5px;border-radius:4px;font-weight:600;">' + r.slot + '</span>') : '') + '</td>'
+        + '<td><span style="font-weight:700;">' + (r.daysCount || (r.category === 'Permission' ? 0.5 : 1)) + '</span></td>'
+        + '<td style="max-width:180px;white-space:normal;font-size:11.5px;color:var(--td);line-height:1.4;">' + r.reason + '</td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + actionHtml + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
   function markNotificationRead(id) {
+    var tok = getToken();
+    fetch('/api/notifications/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body: JSON.stringify({ read: true })
+    }).catch(function() {});
     DB.update('teacher-notifications', id, { read: true });
     renderNotifications();
   }
@@ -717,7 +1016,7 @@ var _memStore = {};
   function clearAllNotifications(event) {
     if (event) event.stopPropagation();
     DB.get('teacher-notifications').forEach(function(n) {
-      DB.update('teacher-notifications', n._id, { read: true });
+      markNotificationRead(n._id);
     });
     renderNotifications();
   }
@@ -725,6 +1024,7 @@ var _memStore = {};
 
   function toggleNotificationDropdown() {
     document.getElementById('ndrop').classList.toggle('open');
+    syncTeacherNotifications();
   }
   var togNotif = toggleNotificationDropdown;
 
@@ -1050,48 +1350,83 @@ var _memStore = {};
   var attLoadSubs = loadSubjectsForClass;
 
   function loadAttendanceSheet() {
-    showToast("Loading..", 'info');
+    showToast("Loading…", 'saving');
     var classId   = document.getElementById('attcls').value;
     var subjectId = document.getElementById('attsub').value;
     var date      = document.getElementById('attdate').value;
     var period    = document.getElementById('attperiod') ? document.getElementById('attperiod').value : '1';
     if (!classId || !subjectId || !date) { showToast('Select class, subject and date', 'warn'); return; }
 
-    var assignment = getMyAssignments().find(function(a) { return a.classId === classId && a.subjectId === subjectId; });
-    if (!assignment) { showToast('Not assigned to this class / subject', 'warn'); return; }
+    var assignment = getMyAssignments().find(function(a) {
+      return String(a.classId) === String(classId) && String(a.subjectId) === String(subjectId);
+    });
+    if (!assignment) {
+      var clsEl = document.getElementById('attcls');
+      var subEl = document.getElementById('attsub');
+      assignment = {
+        classId: classId,
+        className: (clsEl && clsEl.options[clsEl.selectedIndex]) ? clsEl.options[clsEl.selectedIndex].text : 'Class',
+        subjectId: subjectId,
+        subjectName: (subEl && subEl.options[subEl.selectedIndex]) ? subEl.options[subEl.selectedIndex].text : 'Subject'
+      };
+    }
 
     var tok = getToken();
     if (!tok) { showToast('Not authenticated', 'warn'); return; }
 
-    // Fetch students for the class and any existing records for this session
-    // in parallel from the DB server — no localStorage involved.
+    // Fetch students for the class, existing records for this session,
+    // and approved leaves for this date in parallel from the DB server.
     Promise.all([
-      fetch('/api/students?classId=' + encodeURIComponent(classId), {
+      fetch('/api/students?classId=' + encodeURIComponent(classId) + '&limit=500', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(d) { return Array.isArray(d) ? d : []; })
+        .then(function(d) {
+          if (Array.isArray(d)) return d;
+          if (d && Array.isArray(d.data)) return d.data;
+          if (d && Array.isArray(d.students)) return d.students;
+          return [];
+        })
         .catch(function() { return []; }),
 
-      fetch('/api/attendance?teacherId=' + encodeURIComponent(currentUser._id)
-          + '&classId=' + encodeURIComponent(classId)
-          + '&date='    + encodeURIComponent(date), {
+      fetch('/api/attendance?classId=' + encodeURIComponent(classId)
+          + '&date=' + encodeURIComponent(date)
+          + '&subjectId=' + encodeURIComponent(subjectId), {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(d) { return Array.isArray(d) ? d : []; })
+        .then(function(d) {
+          if (Array.isArray(d)) return d;
+          if (d && Array.isArray(d.data)) return d.data;
+          return [];
+        })
+        .catch(function() { return []; }),
+
+      fetch('/api/leave/approved-for-date?classId=' + encodeURIComponent(classId)
+          + '&date=' + encodeURIComponent(date), {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      }).then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) {
+          if (Array.isArray(d)) return d;
+          if (d && Array.isArray(d.data)) return d.data;
+          return [];
+        })
         .catch(function() { return []; })
     ]).then(function(results) {
-      var classStudents  = results[0];
-      // filter to this subject client-side (route doesn't support subjectId param)
-      var sessionRecords = results[1].filter(function(a) {
+      var classStudents  = results[0] || [];
+      var sessionRecords = (results[1] || []).filter(function(a) {
         return String(a.subjectId) === String(subjectId);
       });
+      var approvedLeaves = results[2] || [];
+      var periodNum = Number(period) || 1;
 
-      if (!classStudents.length) { showToast('No students found in this class', 'warn'); return; }
+      if (!classStudents.length) {
+        showToast('No students found in this class', 'warn');
+        return;
+      }
 
       // Also update local student cache so other functions (student list, reports)
       // pick up fresh data without an extra round-trip.
       (function mergeIntoCache() {
-        var existing = DB.get('students');
+        var existing = DB.get('students') || [];
         var seen = Object.create(null);
         existing.forEach(function(s) { seen[String(s._id)] = true; });
         var merged = existing.concat(classStudents.filter(function(s) { return !seen[String(s._id)]; }));
@@ -1103,14 +1438,40 @@ var _memStore = {};
           return String(a.studentId) === String(student._id) ||
                  (student.trackId && a.studentTrackId === student.trackId);
         });
+
+        var matchingLeave = approvedLeaves.find(function(l) {
+          var matchId = String(l.studentId) === String(student._id) ||
+                        (student.trackId && l.studentTrackId === student.trackId) ||
+                        (student.regNo && l.studentRegNo === student.regNo);
+          if (!matchId) return false;
+          if (l.category === 'Leave' || !l.slot || l.slot === 'Full Day') return true;
+          if (l.slot === 'FN' && periodNum <= 4) return true;
+          if (l.slot === 'AN' && periodNum >= 5) return true;
+          if (Array.isArray(l.periods) && l.periods.includes(periodNum)) return true;
+          return false;
+        });
+
+        var defaultPref = (currentUser && currentUser.preferences && currentUser.preferences.defaultAttendanceStatus)
+          ? currentUser.preferences.defaultAttendanceStatus.toLowerCase()
+          : 'present';
+        var initialStatus = defaultPref === 'unmarked' ? 'unmarked' : (defaultPref === 'absent' ? 'absent' : 'present');
+        if (matchingLeave) {
+          initialStatus = 'absent';
+        }
+        if (rec) {
+          initialStatus = rec.status;
+        }
+
         return Object.assign({}, student, {
-          status:     rec ? rec.status : 'present',
-          existingId: rec ? rec._id    : null
+          status:     initialStatus,
+          existingId: rec ? rec._id : null,
+          onLeave:    !!matchingLeave,
+          leaveBadge: matchingLeave ? ('✈️ On Leave' + (matchingLeave.slot && matchingLeave.slot !== 'Full Day' ? ' (' + matchingLeave.slot + ')' : '')) : ''
         });
       });
 
-      document.getElementById('ainfc').textContent = assignment.className;
-      document.getElementById('ainfs').textContent = assignment.subjectName;
+      document.getElementById('ainfc').textContent = assignment.className || '—';
+      document.getElementById('ainfs').textContent = assignment.subjectName || '—';
       document.getElementById('ainfd').textContent = formatDateLong(date);
       var ainfp = document.getElementById('ainfp');
       if (ainfp) ainfp.textContent = 'Period ' + period;
@@ -1118,7 +1479,9 @@ var _memStore = {};
 
       document.getElementById('attsheet').style.display = 'block';
       renderAttendanceSheet();
-    }).catch(function() {
+      showToast('Loaded ' + classStudents.length + ' students', 'success');
+    }).catch(function(err) {
+      console.error('Error in loadAttendanceSheet:', err);
       showToast('Error loading attendance sheet', 'warn');
     });
   }
@@ -1127,10 +1490,13 @@ var _memStore = {};
   function renderAttendanceSheet() {
     document.getElementById('atttbody').innerHTML = attendanceStudents.map(function(student, index) {
       const isPresent = student.status === 'present';
+      const leaveBadgeHtml = student.onLeave
+        ? '<span style="background:rgba(239,68,68,0.12);color:#dc2626;border:1px solid rgba(239,68,68,0.28);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:7px;display:inline-flex;align-items:center;" title="Approved Leave">' + (student.leaveBadge || '✈️ On Leave') + '</span>'
+        : '';
       return '<tr class="' + (isPresent ? 'pr' : 'ab') + '" id="student-row-' + index + '">'
         + '<td style="font-weight:700;color:var(--tdi);">' + (index + 1) + '</td>'
         + '<td style="font-weight:600;color:var(--tmu);">' + student.regNo + '</td>'
-        + '<td style="font-weight:600;">' + student.name + '</td>'
+        + '<td style="font-weight:600;">' + student.name + leaveBadgeHtml + '</td>'
         + '<td><div class="attog">'
         + '<button class="abp ' + (isPresent ? 'act' : '') + '" onclick="setAttendanceStatus(' + index + ',\'present\')">P</button>'
         + '<button class="aba ' + (!isPresent ? 'act' : '') + '" onclick="setAttendanceStatus(' + index + ',\'absent\')">A</button>'
@@ -1272,14 +1638,24 @@ var _memStore = {};
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
       body:    JSON.stringify(payload)
     })
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(r); })
+    .then(function(r) {
+      if (!r.ok) {
+        return r.json().then(function(errJson) {
+          return Promise.reject(errJson);
+        }).catch(function() {
+          return Promise.reject({ error: 'Server error saving attendance' });
+        });
+      }
+      return r.json();
+    })
     .then(function() {
       return syncMyAttendance();
     }).then(function() {
-      showToast('&#9989; Attendance saved!');
+      dbToast('&#9989; Attendance saved!', 'success');
       renderAttendanceSheet();
-    }).catch(function() {
-      showToast('Error saving attendance — please retry', 'warn');
+    }).catch(function(err) {
+      var msg = (err && err.error) ? ('❌ ' + err.error) : 'Error saving attendance — please retry';
+      showToast(msg, 'warn');
     });
   }
   var submitAtt = submitAttendance;
@@ -1331,8 +1707,10 @@ var _memStore = {};
         }
 
         tbody.innerHTML = rows.map(function(record, index) {
+          var minA     = window._pubSettings && window._pubSettings.academic ? (window._pubSettings.academic.minAttendance || 75) : 75;
+          var lowA     = window._pubSettings && window._pubSettings.academic ? (window._pubSettings.academic.lowAttendanceThreshold || 65) : 65;
           var pct      = record.total ? Math.round(record.present / record.total * 100) : 0;
-          var pctClass = pct >= 75 ? 'ph' : pct >= 50 ? 'pm' : 'pl';
+          var pctClass = pct >= minA ? 'ph' : pct >= lowA ? 'pm' : 'pl';
           return '<tr>'
             + '<td>' + (index + 1) + '</td>'
             + '<td style="font-weight:600;">' + record.studentName + '</td>'
@@ -1364,7 +1742,8 @@ var _memStore = {};
   function renderDefaultersList() {
     const classFilter   = document.getElementById('dfc') ? document.getElementById('dfc').value : '';
     const subjectFilter = document.getElementById('dfs') ? document.getElementById('dfs').value : '';
-    const threshold     = parseInt(document.getElementById('dfth') ? document.getElementById('dfth').value : '75');
+    const defaultTh     = window._pubSettings && window._pubSettings.academic ? (window._pubSettings.academic.minAttendance || 75) : 75;
+    const threshold     = parseInt(document.getElementById('dfth') ? (document.getElementById('dfth').value || defaultTh) : defaultTh);
 
     const allAttendance = DB.get('attendance').filter(function(a) {
       return a.teacherId === currentUser._id
@@ -1577,10 +1956,46 @@ var _memStore = {};
     const assignedClasses = Array.from(new Set(getMyAssignments().map(function(a) { return a.className; })));
     document.getElementById('pdrcls').textContent = assignedClasses.length ? assignedClasses.join(', ') : 'None assigned';
 
+    // Populate Attendance Preference
+    var prefStatusEl = document.getElementById('prof-def-att-status');
+    if (prefStatusEl) {
+      prefStatusEl.value = (currentUser.preferences && currentUser.preferences.defaultAttendanceStatus) || 'Present';
+    }
+
     ['pwcur','pwnew','pwconf'].forEach(function(id) { document.getElementById(id).value = ''; });
     document.getElementById('pwerr').style.display = 'none';
   }
   var initProfile = initProfilePage;
+
+  function saveTeacherPreferences() {
+    var prefStatusEl = document.getElementById('prof-def-att-status');
+    var status = prefStatusEl ? prefStatusEl.value : 'Present';
+    var tok = getToken();
+    if (!tok) return;
+
+    fetch('/api/profile/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + tok
+      },
+      body: JSON.stringify({ defaultAttendanceStatus: status })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res && res.error) {
+          showToast('❌ ' + res.error, 'error');
+          return;
+        }
+        if (!currentUser.preferences) currentUser.preferences = {};
+        currentUser.preferences.defaultAttendanceStatus = status;
+        sessionStorage.setItem('eams_user', JSON.stringify(currentUser));
+        showToast('✅ Preferences saved!', 'success');
+      })
+      .catch(function(err) {
+        showToast('❌ Network error', 'error');
+      });
+  }
 
   function changePassword() {
     const currentPw  = document.getElementById('pwcur').value.trim();
@@ -1715,8 +2130,50 @@ function submitChangePw() {
     setTimeout(closeChangePwModal,1500);
   }).catch(function(){err.textContent='Server error. Try again.';err.style.display='block';});
 }
-window.addEventListener('load',function(){
+function forwardToRepModal() {
+  if (window._pubSettings && window._pubSettings.attendance && window._pubSettings.attendance.forwardToRep === false) {
+    showToast('Delegation to Class Representative is locked by administrator.', 'warn');
+    return;
+  }
+  showToast('👥 Forward to Class Representative: Class Rep delegation feature queued for verification.', 'info');
+}
+
+window.addEventListener('load', function(){
   if(sessionStorage.getItem('eams_mustChangePw')==='1'){ showForcePwModal(); }
+  fetch('/api/settings/public')
+    .then(function(r){ return r.json(); })
+    .then(function(pub){
+      window._pubSettings = pub;
+      if (pub.institution) {
+        var shortN = pub.institution.institutionShort || 'Sri Shakthi';
+        document.title = 'EAMS – Teacher | ' + shortN;
+        var brandEl = document.querySelector('.sb-brand');
+        if (brandEl && pub.institution.institutionName) {
+          brandEl.innerHTML = pub.institution.institutionName + '<small>Teacher Portal</small>';
+        }
+      }
+      if (pub.models) {
+        if (pub.models.modelLeave === false) {
+          var el = document.getElementById('sn-leaves');
+          if (el) el.style.display = 'none';
+        }
+        if (pub.models.modelGrievances === false) {
+          var el = document.getElementById('sn-griev');
+          if (el) el.style.display = 'none';
+        }
+        if (pub.models.modelExportSheet === false) {
+          document.querySelectorAll('.btn-out').forEach(function(b){
+            if (b.textContent && b.textContent.includes('Export CSV')) b.style.display = 'none';
+          });
+        }
+      }
+      if (pub.attendance) {
+        if (pub.attendance.forwardToRep === false) {
+          var fBtn = document.getElementById('btn-forward-rep');
+          if (fBtn) fBtn.style.display = 'none';
+        }
+      }
+    }).catch(function(e){ console.warn(e); });
 });
 
 // Security

@@ -4,6 +4,7 @@ const M = require('../models');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { logAction } = require('../utils/logAction');
 const { sanitizeToString } = require('../utils/sanitizeQuery');
+const { checkModuleGuard } = require('../middleware/portalGuard');
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -39,7 +40,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // POST /api/exam-attendance  — upsert by (examTrackId, date, hallNo, teacherTrackId)
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, checkModuleGuard('modelExams', 'Exams Module'), async (req, res) => {
   try {
     const { examTrackId, date, hallNo, records, isFinalized } = req.body;
     if (!examTrackId || !date || !hallNo) return res.status(400).json({ error: 'examTrackId, date, hallNo required' });
@@ -64,10 +65,26 @@ router.post('/', authMiddleware, async (req, res) => {
     const doc = await M.ExamAttendance.findOneAndUpdate(
       { examTrackId, date: dateObj, hallNo, teacherTrackId: req.user.trackId },
       { $set: updateData },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
     
-    await logAction(req.user._id, req.user.name, req.user.role, 'Exam Attendance Submitted', `Hall ${hallNo} | ${date} | P:${totalPresent} A:${totalAbsent}`, 'attendance', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Exam Attendance Submitted',
+      `Hall ${hallNo} | ${date} | P:${totalPresent} A:${totalAbsent}`,
+      'attendance',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'teacher',
+        subType: 'attendance',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights
+      }
+    );
     res.json(doc);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

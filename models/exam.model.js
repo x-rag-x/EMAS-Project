@@ -4,6 +4,7 @@ const ExamSchema = new mongoose.Schema({
   ExamTrackId      : { type: String, required: true, unique: true},
   batch        : { type: String, required: true },
   academicYear : { type: String, default: '' },
+  year         : { type: String, default: 'I' },
   semester     : { type: String, enum: ['I','II','III','IV', 'V', 'VI', 'VII', 'VIII'], required: true },
   deptName     : { type: String, default: '' },
   examType     : { type: String, enum: ['Internal 1','Internal 2','Practicals','Semester'], required: true },

@@ -15,13 +15,30 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const slot = await M.Timetable.create({ ...req.body, teacherId: req.user._id, teacherName: req.user.name });
-    await logAction(req.user._id, req.user.name, req.user.role, 'Timetable Slot Added', `${req.body.day} ${req.body.start}`, 'data', 'info', req.ip);
+    await logAction(
+      req.user.trackId || req.user._id,
+      req.user.name,
+      req.user.role,
+      'Timetable Slot Added',
+      `${req.body.day} ${req.body.start}`,
+      'data',
+      'info',
+      req.ip,
+      req.user.sessionId,
+      {
+        module: 'admin',
+        subType: 'entry-create',
+        trackId: req.user.trackId,
+        actingWithAdminRights: req.user.actingWithAdminRights,
+        changes: { before: null, after: slot.toObject ? slot.toObject() : slot }
+      }
+    );
     res.status(201).json(slot);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 router.put('/:id', authMiddleware, async (req, res) => {
-  const slot = await M.Timetable.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const slot = await M.Timetable.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
   res.json(slot);
 });
 
@@ -37,9 +54,10 @@ router.get('/section/:classId', authMiddleware, async (req, res) => {
 
 router.put('/section/:classId/slot', authMiddleware, async (req, res) => {
   const u = req.user;
+  const hasTTRight = u.role === 'admin' || (u.role === 'teacher' && u.isAdmin && (u.adminRights === 'all' || (Array.isArray(u.adminRights) && (u.adminRights.includes('all') || u.adminRights.includes('timetablePage')))));
 
-  if (!u.isTimeTableCoordinator && u.role !== 'admin')
-    return res.status(403).json({ error: 'TT Coordinator access required' });
+  if (!u.isTimeTableCoordinator && !hasTTRight)
+    return res.status(403).json({ error: 'TT Coordinator or Timetable Admin access required' });
 
   const { slotKey, payload, _meta } = req.body;
 
@@ -49,7 +67,7 @@ router.put('/section/:classId/slot', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: `Service coordinators may only assign ${u.TTdeptName} subjects` });
   }
 
-  if (!_meta?.coordIsService && u.role !== 'admin') {
+  if (!_meta?.coordIsService && !hasTTRight) {
     const cls = await M.Class.findById(req.params.classId).lean();
     if (cls?.deptId?.toString() !== u.TTdeptName)
       return res.status(403).json({ error: 'You can only edit timetables for your own department' });
@@ -72,19 +90,37 @@ router.put('/section/:classId/slot', authMiddleware, async (req, res) => {
   const doc = await M.SectionTimetable.findOneAndUpdate(
     { classId: req.params.classId },
     update,
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
-  await logAction(u._id, u.name, u.role, 'TT Slot Updated', slotKey, 'data', 'info', req.ip);
+  await logAction(
+    u.trackId || u._id,
+    u.name,
+    u.role,
+    'TT Slot Updated',
+    slotKey,
+    'data',
+    'info',
+    req.ip,
+    u.sessionId,
+    {
+      module: 'admin',
+      subType: 'field-edit',
+      trackId: u.trackId,
+      actingWithAdminRights: u.actingWithAdminRights,
+      changes: { before: null, after: payload }
+    }
+  );
 
   res.json(doc);
 });
 
 router.put('/section/:classId', authMiddleware, async (req, res) => {
   const u = req.user;
+  const hasTTRight = u.role === 'admin' || (u.role === 'teacher' && u.isAdmin && (u.adminRights === 'all' || (Array.isArray(u.adminRights) && (u.adminRights.includes('all') || u.adminRights.includes('timetablePage')))));
 
-  if (!u.isTimeTableCoordinator && u.role !== 'admin')
-    return res.status(403).json({ error: 'TT Coordinator access required' });
+  if (!u.isTimeTableCoordinator && !hasTTRight)
+    return res.status(403).json({ error: 'TT Coordinator or Timetable Admin access required' });
 
   const { slots } = req.body;
   const cls = await M.Class.findById(req.params.classId).lean();
@@ -100,10 +136,26 @@ router.put('/section/:classId', authMiddleware, async (req, res) => {
   const doc = await M.SectionTimetable.findOneAndUpdate(
     { classId: req.params.classId },
     update,
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
-  await logAction(u._id, u.name, u.role, 'TT Saved', req.params.classId, 'data', 'info', req.ip);
+  await logAction(
+    u.trackId || u._id,
+    u.name,
+    u.role,
+    'TT Saved',
+    cls?.name || req.params.classId,
+    'data',
+    'info',
+    req.ip,
+    u.sessionId,
+    {
+      module: 'admin',
+      subType: 'field-edit',
+      trackId: u.trackId,
+      actingWithAdminRights: u.actingWithAdminRights
+    }
+  );
 
   res.json(doc);
 });

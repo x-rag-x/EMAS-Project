@@ -161,10 +161,13 @@ const genSubjectTrackId = () => 'TRSUB_' + crypto.randomBytes(5).toString('hex')
 // ── DB log helper ───────────────────────────────────────────────────────
 async function logSetup(action, details, severity = 'info') {
   try {
-    await M.Log.create({
-      userName: 'START-MENU', role: 'system', action, details,
-      category: 'system', severity, ip: '127.0.0.1', time: new Date()
-    });
+    const { logAction } = require('../utils/logAction');
+    await logAction(
+      null, 'START-MENU', 'system',
+      action, details,
+      'system', severity, '127.0.0.1', '',
+      { module: 'system', subType: 'action', trackId: 'TR-SYS-CLI' }
+    );
   } catch { /* non-fatal */ }
 }
 
@@ -217,7 +220,7 @@ async function addUserMenu() {
 
 // ── Add Admin — fields per models.js Admin schema ─────────────────────
 async function addAdmin() {
-  head('👑  ADD ADMIN  (M.Admin)');
+  head('🏛️  ADD ADMIN / EXECUTIVE  (M.Admin)');
   const fullName   = await ask('Full Name', 'New Administrator');
   if (!fullName) { warn('Full name is required.'); return; }
   const nameParts  = fullName.split(/\s+/).filter(Boolean);
@@ -229,9 +232,23 @@ async function addAdmin() {
   if (await M.Admin.findOne({ username })) { warn(`Username "${username}" already exists in Admin collection.`); return; }
   const employeeNo  = await ask('Employee No', '');
   const department  = await ask('Department (free text, optional)', '');
-  const adminRights = await ask('Admin Rights ("all" or comma list e.g. Manage User)', 'all');
+
+  let adminFlag = 'superadmin';
+  if (username === 'admin') {
+    adminFlag = 'superadmin';
+    info('Username "admin" is reserved as the primary Super Administrator.');
+  } else {
+    console.log(`\n  ${C.dim}Select Admin Role Type:`);
+    console.log(`  1) Principal (Controller Hub - College-wide oversight)`);
+    console.log(`  2) Sub-Admin (Admin Privileges & Workspace Hub access)`);
+    console.log(`  3) Super Admin (Full Admin Console access)${C.reset}`);
+    const flagChoice = await ask('Admin Role Type', '1');
+    adminFlag = flagChoice === '2' ? 'subadmin' : (flagChoice === '3' ? 'superadmin' : 'principal');
+  }
+
+  const adminRights = await ask('Admin Rights ("all" or comma list e.g. controlPage, managePage)', adminFlag === 'subadmin' ? 'controlPage, timetablePage' : 'all');
   const password    = await askPassword('Password', 'admin123');
-  const trackId      = await ask('Track ID', genTrackId('ADMIN'));
+  const trackId      = await ask('Track ID', genTrackId(adminFlag === 'principal' ? 'PRIN' : 'ADMIN'));
   const mustChangePw = await askYN('Force password change on first login?', true);
   const active        = await askYN('Active?', true);
 
@@ -240,12 +257,13 @@ async function addAdmin() {
     fullName, firstName, lastName, username, password: hash,
     employeeNo, department, trackId,
     isAdmin: true,
+    adminFlag,
     adminRights: adminRights === 'all' ? 'all' : adminRights.split(',').map(s => s.trim()).filter(Boolean),
     active, mustChangePassword: mustChangePw,
   });
   await M.User.create({ username, trackId, role: 'admin', status: 'active', online: false });
-  await logSetup('Admin Created (CLI)', `${fullName} (@${username})`);
-  ok(`Admin "${fullName}" (@${username}) created. Password: ${password}`);
+  await logSetup('Admin Created (CLI)', `${fullName} (@${username} - ${adminFlag.toUpperCase()})`);
+  ok(`Admin "${fullName}" (@${username} | Role: ${adminFlag.toUpperCase()}) created. Password: ${password}`);
 }
 
 // ── Add Teacher — fields per models.js Teacher schema ──────────────────
@@ -754,29 +772,65 @@ async function _demoTeachers(count) {
 async function _demoAdmins(count) {
   let created = 0, skipped = 0;
 
+  // 1. Ensure master superadmin 'admin' exists
+  if (!await M.Admin.findOne({ username: 'admin' })) {
+    const hash = await bcrypt.hash('admin123', cfg.BCRYPT_ROUNDS);
+    await M.Admin.create({
+      fullName: 'Super Administrator', firstName: 'Super', lastName: 'Admin',
+      username: 'admin', password: hash, employeeNo: 'ADM001',
+      department: 'Central Administration', trackId: 'TR-ADMIN001',
+      isAdmin: true, adminFlag: 'superadmin', adminRights: 'all',
+      active: true, mustChangePassword: false
+    });
+    if (!await M.User.findOne({ username: 'admin' })) {
+      await M.User.create({ username: 'admin', trackId: 'TR-ADMIN001', role: 'admin', status: 'active', online: false });
+    }
+    ok(`  SuperAdmin "Super Administrator" (@admin | Role: SUPERADMIN) created | pass: admin123`);
+    created++;
+  }
+
+  // 2. Ensure college Principal exists
+  if (!await M.Admin.findOne({ username: 'principal' })) {
+    const hash = await bcrypt.hash('principal123', cfg.BCRYPT_ROUNDS);
+    await M.Admin.create({
+      fullName: 'Dr. P. Principal', firstName: 'Principal', lastName: 'Executive',
+      username: 'principal', password: hash, employeeNo: 'PRIN001',
+      department: 'Office of the Principal', trackId: 'TR-PRIN001',
+      isAdmin: true, adminFlag: 'principal', adminRights: 'all',
+      active: true, mustChangePassword: false
+    });
+    if (!await M.User.findOne({ username: 'principal' })) {
+      await M.User.create({ username: 'principal', trackId: 'TR-PRIN001', role: 'admin', status: 'active', online: false });
+    }
+    ok(`  Principal "Dr. P. Principal" (@principal | Role: PRINCIPAL) created | pass: principal123`);
+    created++;
+  }
+
+  // 3. Create requested additional Sub-Admins
   for (let i = 1; i <= count; i++) {
     const { fullName, firstName, lastName } = genName();
-    const username = `admin${i}`;
+    const username = `subadmin${i}`;
     const password = 'admin@123';
 
     if (await M.Admin.findOne({ username })) {
-      warn(`  Admin "@${username}" already exists — skipping.`);
+      warn(`  SubAdmin "@${username}" already exists — skipping.`);
       skipped++; continue;
     }
 
     const hash    = await bcrypt.hash(password, cfg.BCRYPT_ROUNDS);
-    const trackId = genTrackId('ADMIN');
+    const trackId = genTrackId('SUBADM');
 
     await M.Admin.create({
       fullName, firstName, lastName, username, password: hash,
       employeeNo: `EMP${String(i).padStart(3,'0')}`,
       department: 'Administration',
-      trackId, isAdmin: true, adminRights: 'all',
+      trackId, isAdmin: true, adminFlag: 'subadmin',
+      adminRights: ['controlPage', 'timetablePage', 'managePage', 'reportsModule'],
       active: true, mustChangePassword: true,
     });
     await M.User.create({ username, trackId, role: 'admin', status: 'active', online: false });
 
-    ok(`  Admin "${fullName}" (@${username}) | pass: ${password}`);
+    ok(`  SubAdmin "${fullName}" (@${username} | Role: SUBADMIN) | pass: ${password}`);
     created++;
   }
   await logSetup('Demo Admins Created (CLI)', `${created} created, ${skipped} skipped`);
@@ -1022,7 +1076,7 @@ async function demoStudentsMenu() {
 }
 
 async function demoAdminsMenu() {
-  head('👑  DEMO — ADMINS');
+  head('🏛️  DEMO — ADMINS');
   const raw   = await ask('How many admin accounts?', '2');
   const count = Math.max(1, Math.min(10, parseInt(raw,10) || 2));
   info(`Creating ${count} demo admin(s)…`);
@@ -1214,7 +1268,7 @@ async function demoAllMenu() {
   ok(`Teachers: ${tr.created} created, ${tr.skipped} skipped.`);
 
   // ── Step 6: Admins ──
-  head('👑  Step 6/9 — Admins');
+  head('🏛️  Step 6/9 — Admins');
   const ar = await _demoAdmins(admCount);
   ok(`Admins: ${ar.created} created, ${ar.skipped} skipped.`);
 

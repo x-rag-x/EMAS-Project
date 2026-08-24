@@ -17,7 +17,13 @@ function toggleBulkSidebar() {
   }
 }
 
-function goBack() { window.location.href = "./admin.html"; }
+function goBack() {
+  if (currentUser && currentUser.role === 'teacher') {
+    window.location.href = "selector.html";
+  } else {
+    window.location.href = "admin.html";
+  }
+}
 
 // ── In-memory cache of real backend data ──────────────────────────────────
 // Populated from the API on load and kept in sync as rows are uploaded, so
@@ -152,17 +158,24 @@ function closeNextStepPopup() {
 function showWizComplete() {
   var b = document.getElementById('wizard-banner');
   if (!b) return;
+  var dashLink = (currentUser && currentUser.role === 'teacher') ? 'selector.html' : 'admin.html';
+  var dashLabel = (currentUser && currentUser.role === 'teacher') ? 'Go to Admin Hub →' : 'Go to Dashboard →';
   b.innerHTML = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
     + '<div style="font-size:44px;">🎉</div>'
     + '<div style="flex:1;"><div style="font-size:17px;font-weight:800;margin-bottom:4px;">Setup Complete!</div>'
     + '<div style="font-size:12.5px;opacity:.85;">All institution data imported. Your EAMS is ready.</div></div>'
-    + '<a href="admin.html" style="padding:10px 22px;border-radius:22px;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">Go to Dashboard →</a>'
+    + '<a href="' + dashLink + '" style="padding:10px 22px;border-radius:22px;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">' + dashLabel + '</a>'
     + '</div>';
 }
 
 function bulkTab(btn, tab) {
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url);
+  }
   document.querySelectorAll('.sb-item.bulk-tab').forEach(function (b) { b.classList.remove('act'); });
-  btn.classList.add('act');
+  if (btn) btn.classList.add('act');
   document.querySelectorAll('.bulk-panel').forEach(function (p) { p.style.display = 'none'; });
   var p = document.getElementById('bulk-' + tab);
   if (p) p.style.display = 'block';
@@ -603,13 +616,52 @@ async function parseTeacherRows(rows) {
 var currentUser = null;
 
 (function checkAuthAndBoot() {
-  // Every other protected page in EAMS gates on checkAuth() and bounces
-  // unauthenticated visitors to index.html — this page had no such guard.
-  currentUser = checkAuth('admin');
+  currentUser = checkAuth('admin', 'bulkPage');
   if (!currentUser) return;
+
+  var backBtn = document.querySelector('.sb-back-btn');
+  if (backBtn) {
+    if (currentUser && currentUser.role === 'teacher') {
+      backBtn.textContent = '← Back to Hub';
+      var brandEl = document.querySelector('.sb-brand');
+      if (brandEl) brandEl.textContent = 'EAMS Bulk Tools';
+      var roleEl = document.querySelector('.sb-urole');
+      if (roleEl) roleEl.textContent = 'Teacher (Admin)';
+    } else {
+      backBtn.textContent = '← Back to Dashboard';
+    }
+  }
+
+  fetch('/api/settings/public')
+    .then(function (r) { return r.json(); })
+    .then(function (pub) {
+      if (pub.institution) {
+        var instShort = pub.institution.institutionShort || 'SIET';
+        document.title = 'EAMS – Bulk Operations | ' + instShort;
+      }
+      if (currentUser && currentUser.role !== 'admin') {
+        var pState = pub.pages ? pub.pages.pageBulk : 'enabled';
+        if (pState === 'hidden') {
+          window.location.href = 'teacher.html';
+          return;
+        } else if (pState === 'disabled') {
+          alert('Bulk Operations portal is currently disabled for maintenance.');
+          window.location.href = 'selector.html';
+          return;
+        }
+      }
+    })
+    .catch(function (e) { console.warn('Public settings fetch error', e); });
 
   _cacheReady = loadCache();
   initWizard();
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var initialTab = urlParams.get('tab') || urlParams.get('page');
+  if (initialTab && ['dept', 'teacher', 'class', 'subject', 'student', 'wizard'].indexOf(initialTab) !== -1) {
+    var targetBtn = document.getElementById('wz-tab-' + initialTab);
+    if (targetBtn) bulkTab(targetBtn, initialTab);
+  }
 })();
 
 document.addEventListener('contextmenu', function (e) { e.preventDefault(); });

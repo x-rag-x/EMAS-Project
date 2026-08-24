@@ -13,7 +13,9 @@ const AdminSchema = new mongoose.Schema({
   trackId:      { type: String, trim: true, required:true },
   isAdmin:      { type: Boolean, default: true },
   adminRights:  { type: mongoose.Schema.Types.Mixed, default: 'all' },
+  adminFlag:    { type: String, enum: ['superadmin', 'subadmin', 'principal'], default: 'superadmin' },
   mustChangePassword:   { type: Boolean, default: false },
+  passwordHistory:      { type: [{ hash: { type: String, required: true }, changedAt: { type: Date, default: Date.now } }], select: false, default: [] },
 }, { timestamps: true });
 
 // ── TEACHER User Schema ────────────────────────────────
@@ -38,8 +40,12 @@ const TeacherSchema = new mongoose.Schema({
   }],
   isAdmin:            { type: Boolean, default: false },
   adminRights:        { type: [String], enum : ['all', 'controlPage', 'timetablePage', 'managePage', 'adderModules', 
-    'deletings', 'bulkPage', 'settingsModule', 'reportsModule', 'downloadDatas', 'none'], default: 'none' },
+    'deletings', 'bulkPage', 'settingsPage', 'settingsModule', 'reportsModule', 'downloadDatas', 'none'], default: ['none'] },
+  preferences: {
+    defaultAttendanceStatus: { type: String, enum: ['Present', 'Absent', 'Unmarked'], default: 'Present' }
+  },
   mustChangePassword:   { type: Boolean, default: false },
+  passwordHistory:      { type: [{ hash: { type: String, required: true }, changedAt: { type: Date, default: Date.now } }], select: false, default: [] },
 }, { timestamps: true });
 
 TeacherSchema.index({ deptId: 1 });
@@ -66,6 +72,7 @@ const StudentSchema = new mongoose.Schema({
   trackId:      { type: String, trim: true, required:true },
   isRep:        { type: Boolean, default: false },
   mustChangePassword:   { type: Boolean, default: true },   // once changed, update to false
+  passwordHistory:      { type: [{ hash: { type: String, required: true }, changedAt: { type: Date, default: Date.now } }], select: false, default: [] },
 }, { timestamps: true });
 
 StudentSchema.index({ deptId: 1 });

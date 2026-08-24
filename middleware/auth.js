@@ -37,6 +37,19 @@ async function authMiddleware(req, res, next) {
     if (!session) {return res.status(401).json({error: 'Session not found'});}
     if (!session.active) {return res.status(401).json({error: 'Session expired'});}
     if (session.current === 'Logged Out') {return res.status(401).json({error: 'Logged out'});}
+
+    // Absolute max session lifetime — 2 hours
+    const MAX_SESSION_LIFETIME = 2 * 60 * 60 * 1000;
+    const sessionAge = Date.now() - new Date(session.createdAt || session.loginTime || session.time).getTime();
+    if (sessionAge > MAX_SESSION_LIFETIME) {
+      session.active = false;
+      session.current = 'Logged Out';
+      session.logoutTime = new Date();
+      loginHistory.save().catch(() => {});
+      await M.User.updateOne({ trackId: decoded.trackId }, { $set: { online: false } });
+      return res.status(401).json({ error: 'Session maximum lifetime exceeded. Please login again.' });
+    }
+
     if (session.expiresAt - Date.now() <= 5 * 60 * 1000) {
       session.expiresAt = new Date(session.expiresAt.getTime() + 10 * 60 * 1000);
     }
@@ -55,6 +68,7 @@ async function authMiddleware(req, res, next) {
       isWarden:            specials.some(s => s.option === 'isWarden'),
       isExamCoordinator:   specials.some(s => s.option === 'isExamCoordinator'),
       isPlacementCoordinator: specials.some(s => s.option === 'isPlacementCoordinator'),
+      actingWithAdminRights: specials.some(s => ['isHod', 'isClassAdvisor', 'isWarden', 'isExamCoordinator', 'isPlacementCoordinator', 'isTimeTableCoordinator'].includes(s.option)) || !!userObj.isAdmin,
     };
     req.session = session;
 
@@ -78,8 +92,41 @@ async function authMiddleware(req, res, next) {
 }
 
 function adminOnly(req, res, next) {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  next();
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.user.role === 'admin') return next();
+  if (req.user.role === 'teacher' && req.user.isAdmin === true) return next();
+  return res.status(403).json({ error: 'Admin access required' });
 }
 
-module.exports = { authMiddleware, adminOnly, getRoleModel };
+async function logsAdminOnly(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.user.role === 'admin') return next();
+
+  if (req.user.role === 'teacher' && req.user.isAdmin === true) {
+    const secSettings = await M.Settings.findOne({ key: 'security' }).lean();
+    if (secSettings?.value?.allowSubAdminLogs === true) {
+      return next();
+    }
+  }
+  return res.status(403).json({ error: 'Access denied. Logs are strictly restricted to system administrators.' });
+}
+
+function requireRight(...rights) {
+  return function (req, res, next) {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (req.user.role === 'admin') return next();
+
+    if (req.user.role === 'teacher' && req.user.isAdmin === true) {
+      const userRights = req.user.adminRights;
+      if (userRights === 'all' || (Array.isArray(userRights) && userRights.includes('all'))) {
+        return next();
+      }
+      if (Array.isArray(userRights) && rights.some(r => userRights.includes(r))) {
+        return next();
+      }
+    }
+    return res.status(403).json({ error: `Forbidden. Requires permission: ${rights.join(' or ')}` });
+  };
+}
+
+module.exports = { authMiddleware, adminOnly, logsAdminOnly, requireRight, getRoleModel };
